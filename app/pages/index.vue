@@ -38,6 +38,10 @@ definePageMeta({
   layout: false,
 })
 
+useHead({
+  title: 'Verificação de idade',
+})
+
 const brand = brandAssets
 
 const { confirmAge } = useAgeGate()

@@ -36,6 +36,7 @@
         <p class="mt-4 text-sm font-medium text-zinc-300">Documentos necessários:</p>
         <ul class="mt-2 list-inside list-disc space-y-1 text-sm text-zinc-400">
           <li>1 foto para banner (obrigatória)</li>
+          <li>1 foto de perfil (obrigatória — rosto visível)</li>
           <li>5 fotos para galeria (mínimo 3 obrigatórias)</li>
           <li>Foto do documento de identificação (frente e verso)</li>
           <li>Selfie para verificação</li>
@@ -408,6 +409,47 @@
       </div>
 
       <div>
+        <p class="font-medium text-zinc-200">Foto do perfil *</p>
+        <p class="mt-1 text-xs text-zinc-500">
+          Aparece no anúncio público e na sua conta; você pode trocar depois em
+          <strong class="text-zinc-400">Minha conta → Perfil</strong>.
+        </p>
+        <ul class="mt-2 list-inside list-disc space-y-1 text-xs text-zinc-500">
+          <li>
+            Tamanho sugerido:
+            <strong class="text-zinc-400">{{ REGISTER_PROFILE_AVATAR.suggestedSizeLabel }}</strong>
+            — {{ REGISTER_PROFILE_AVATAR.hint }}
+          </li>
+          <li>Formatos: {{ REGISTER_PROFILE_AVATAR.formatsHint }} Até {{ REGISTER_PROFILE_AVATAR.maxFileMb }} MB.</li>
+        </ul>
+        <div
+          role="button"
+          tabindex="0"
+          class="mt-3 rounded-xl border border-dashed p-6 text-center outline-none transition focus-visible:ring-2 focus-visible:ring-brand"
+          :class="presentationAvatarZoneClass"
+          @click="openPresentationPicker('avatar')"
+          @keydown.enter.prevent="openPresentationPicker('avatar')"
+          @keydown.space.prevent="openPresentationPicker('avatar')"
+          @dragenter.prevent="dragAvatar = true"
+          @dragleave.prevent="onPresentationDragLeave($event, 'avatar')"
+          @dragover.prevent="onPresentationDragOver"
+          @drop.prevent="onPresentationDrop($event, 'avatar')"
+        >
+          <p class="text-sm" :class="avatarError ? 'text-red-400' : avatarUploading ? 'text-brand' : 'text-zinc-500'">
+            {{ avatarHint }}
+          </p>
+          <input
+            id="presentation-avatar-input"
+            type="file"
+            class="sr-only"
+            accept="image/*"
+            @click.stop
+            @change="onAvatarFileInput"
+          />
+        </div>
+      </div>
+
+      <div>
         <p class="font-medium text-zinc-200">
           Fotos da galeria * ({{ galleryRules.min }} a {{ galleryRules.max }} fotos)
         </p>
@@ -504,7 +546,8 @@
           </p>
           <p class="mt-3 text-xs leading-relaxed text-zinc-500">
             Destaque de <strong class="text-zinc-400">{{ premiumTierMin }}</strong> a
-            <strong class="text-zinc-400">{{ premiumTierMax }}</strong>.
+            <strong class="text-zinc-400">{{ premiumTierMax }}</strong>.<br />
+            Clique na estrela para escolher o nível de destaque.
           </p>
           <p class="mt-2 text-xs font-medium text-zinc-400">Nível de destaque (estrelas)</p>
           <div class="mt-2 flex flex-wrap gap-1 text-amber-400">
@@ -714,7 +757,7 @@
 /// <reference path="../../types/qrcode.d.ts" />
 /** Public URL: /cadastro — file name in English (register.vue). API uses men|women|trans. */
 
-import { REGISTER_COVER, REGISTER_GALLERY_DEFAULTS } from '~/config/registerPresentation'
+import { REGISTER_COVER, REGISTER_GALLERY_DEFAULTS, REGISTER_PROFILE_AVATAR } from '~/config/registerPresentation'
 import { cpfDigits, formatCepMask, formatCpfMask, formatPhoneBrMask, phoneDigits } from '~/utils/brFormat'
 
 /** Marca que o usuário já saiu da página /cadastro pelo menos uma vez (próximas visitas = “voltou”). */
@@ -723,6 +766,10 @@ const CADASTRO_REVISIT_KEY = 'prazervip_cadastro_revisitou'
 definePageMeta({
   layout: 'default',
   path: '/cadastro',
+})
+
+useHead({
+  title: 'Cadastro de anunciante',
 })
 
 const totalSteps = 7
@@ -785,6 +832,7 @@ const draft = reactive({
   selfie_media_id: null as number | null,
   video_media_id: null as number | null,
   cover_media_id: null as number | null,
+  portal_avatar_media_id: null as number | null,
   gallery_media_ids: [] as number[],
 })
 
@@ -1044,9 +1092,13 @@ const galleryRules = ref<{ min: number; max: number }>({
 
 const dragCover = ref(false)
 const dragGallery = ref(false)
+const dragAvatar = ref(false)
 const coverUploading = ref(false)
 const coverError = ref('')
 const coverFileName = ref('')
+const avatarUploading = ref(false)
+const avatarError = ref('')
+const avatarFileName = ref('')
 const galleryUploading = ref(0)
 const galleryError = ref('')
 const galleryItems = ref<{ id: number; name: string }[]>([])
@@ -1234,6 +1286,17 @@ const presentationGalleryZoneClass = computed(() => {
   return base
 })
 
+const presentationAvatarZoneClass = computed(() => {
+  const base = 'border-zinc-700 bg-zinc-900/30'
+  if (dragAvatar.value) {
+    return 'border-brand bg-zinc-800/40'
+  }
+  if (draft.portal_avatar_media_id) {
+    return 'border-emerald-800/50 bg-emerald-950/20'
+  }
+  return base
+})
+
 const coverHint = computed(() => {
   if (coverUploading.value) {
     return 'Enviando…'
@@ -1245,6 +1308,19 @@ const coverHint = computed(() => {
     return coverFileName.value || 'Imagem de capa enviada — clique ou arraste para substituir'
   }
   return 'Clique ou arraste uma imagem até aqui'
+})
+
+const avatarHint = computed(() => {
+  if (avatarUploading.value) {
+    return 'Enviando…'
+  }
+  if (avatarError.value) {
+    return avatarError.value
+  }
+  if (draft.portal_avatar_media_id) {
+    return avatarFileName.value || 'Foto de perfil enviada — clique ou arraste para substituir'
+  }
+  return 'Clique ou arraste a foto do rosto até aqui'
 })
 
 const galleryHint = computed(() => {
@@ -1273,8 +1349,13 @@ function isProbablyImageFile(f: File): boolean {
   return false
 }
 
-function openPresentationPicker(which: 'cover' | 'gallery') {
-  const id = which === 'cover' ? 'presentation-cover-input' : 'presentation-gallery-input'
+function openPresentationPicker(which: 'cover' | 'gallery' | 'avatar') {
+  const id =
+    which === 'cover'
+      ? 'presentation-cover-input'
+      : which === 'avatar'
+        ? 'presentation-avatar-input'
+        : 'presentation-gallery-input'
   document.getElementById(id)?.click()
 }
 
@@ -1284,7 +1365,7 @@ function onPresentationDragOver(e: DragEvent) {
   }
 }
 
-function onPresentationDragLeave(e: DragEvent, which: 'cover' | 'gallery') {
+function onPresentationDragLeave(e: DragEvent, which: 'cover' | 'gallery' | 'avatar') {
   const t = e.currentTarget as HTMLElement
   const rel = e.relatedTarget as Node | null
   if (rel && t.contains(rel)) {
@@ -1292,14 +1373,17 @@ function onPresentationDragLeave(e: DragEvent, which: 'cover' | 'gallery') {
   }
   if (which === 'cover') {
     dragCover.value = false
+  } else if (which === 'avatar') {
+    dragAvatar.value = false
   } else {
     dragGallery.value = false
   }
 }
 
-function onPresentationDrop(e: DragEvent, zone: 'cover' | 'gallery') {
+function onPresentationDrop(e: DragEvent, zone: 'cover' | 'gallery' | 'avatar') {
   dragCover.value = false
   dragGallery.value = false
+  dragAvatar.value = false
   const raw = e.dataTransfer?.files
   if (!raw?.length) {
     return
@@ -1308,6 +1392,13 @@ function onPresentationDrop(e: DragEvent, zone: 'cover' | 'gallery') {
     const f = raw[0]
     if (f && isProbablyImageFile(f)) {
       void uploadCoverFile(f)
+    }
+    return
+  }
+  if (zone === 'avatar') {
+    const f = raw[0]
+    if (f && isProbablyImageFile(f)) {
+      void uploadAvatarFile(f)
     }
     return
   }
@@ -1356,6 +1447,41 @@ async function uploadCoverFile(file: File) {
     coverError.value = verificationApiError(e)
   } finally {
     coverUploading.value = false
+  }
+}
+
+function onAvatarFileInput(e: Event) {
+  const input = e.target as HTMLInputElement
+  const f = input.files?.[0]
+  input.value = ''
+  if (f) {
+    void uploadAvatarFile(f)
+  }
+}
+
+async function uploadAvatarFile(file: File) {
+  if (!hasToken.value) {
+    avatarError.value = 'Sessão expirada. Atualize a página e entre de novo.'
+    return
+  }
+  avatarError.value = ''
+  avatarUploading.value = true
+  const fd = new FormData()
+  fd.append('purpose', 'portal_avatar')
+  fd.append('file', file)
+  try {
+    const res = await request<{ id: number; purpose: string }>('/v1/me/media', {
+      method: 'POST',
+      body: fd,
+    })
+    if (res.purpose === 'portal_avatar') {
+      draft.portal_avatar_media_id = res.id
+      avatarFileName.value = file.name
+    }
+  } catch (e: unknown) {
+    avatarError.value = verificationApiError(e)
+  } finally {
+    avatarUploading.value = false
   }
 }
 
@@ -1605,6 +1731,10 @@ function hydrateFromProfile(p: Record<string, unknown>) {
     draft.cover_media_id = Number(p.cover_media_id)
     coverFileName.value = 'Arquivo já salvo'
   }
+  if (p.portal_avatar_media_id != null && Number(p.portal_avatar_media_id) > 0) {
+    draft.portal_avatar_media_id = Number(p.portal_avatar_media_id)
+    avatarFileName.value = 'Arquivo já salvo'
+  }
   const rawGallery = p.gallery_media_ids
   if (Array.isArray(rawGallery) && rawGallery.length > 0) {
     const ids = rawGallery.map((x) => Number(x)).filter((x) => x > 0)
@@ -1647,6 +1777,7 @@ function bodyFromDraft() {
     selfie_media_id: draft.selfie_media_id,
     video_media_id: draft.video_media_id,
     cover_media_id: draft.cover_media_id,
+    portal_avatar_media_id: draft.portal_avatar_media_id,
     gallery_media_ids: draft.gallery_media_ids.length ? draft.gallery_media_ids : null,
   }
 }
@@ -1757,6 +1888,9 @@ function validateStepForNext(s: number): string | null {
     }
     if (!draft.cover_media_id) {
       return 'Envie a foto de capa (banner).'
+    }
+    if (!draft.portal_avatar_media_id) {
+      return 'Envie a foto do perfil (rosto visível).'
     }
     const { min, max } = galleryRules.value
     const n = draft.gallery_media_ids.length

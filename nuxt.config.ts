@@ -6,6 +6,9 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   app: {
     head: {
+      title: 'Prazer.Vip',
+      titleTemplate: (titleChunk?: string | null) =>
+        titleChunk ? `${titleChunk} · Prazer.Vip` : 'Prazer.Vip',
       link: [
         { rel: 'icon', type: 'image/png', href: brandAssets.iconSquare },
         { rel: 'apple-touch-icon', href: brandAssets.iconSquare },

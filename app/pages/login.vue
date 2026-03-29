@@ -87,6 +87,10 @@ definePageMeta({
   path: '/login',
 })
 
+useHead({
+  title: 'Entrar',
+})
+
 const route = useRoute()
 const identifier = ref('')
 const password = ref('')

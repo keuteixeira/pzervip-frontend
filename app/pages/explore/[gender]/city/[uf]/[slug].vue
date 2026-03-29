@@ -40,15 +40,26 @@
       <div>
         <h2 class="text-xl font-semibold text-white">Perfis Premium</h2>
         <p class="mt-1 max-w-2xl text-sm leading-relaxed text-zinc-400">
-          Destaques verificados em {{ ctx.city.name }}. A ordem segue o nível de estrelas contratado (10 a 1).
+          Destaques verificados em {{ ctx.city.name }}.
         </p>
       </div>
 
       <div v-for="group in premiumStarGroups" :key="'stars-' + group.stars" class="space-y-3">
-        <h3 class="flex items-baseline gap-2 text-base font-semibold text-zinc-200">
-          <span class="tabular-nums">{{ group.stars }}</span>
-          <span class="text-amber-400" aria-hidden="true">★</span>
-          <span class="text-sm font-normal text-zinc-500">({{ group.items.length }})</span>
+        <h3
+          class="flex flex-wrap items-center gap-0.5 sm:gap-1"
+          :aria-label="`${group.stars} estrelas, ${group.items.length} perfis`"
+        >
+          <span
+            v-for="n in group.stars"
+            :key="'star-' + group.stars + '-' + n"
+            class="text-xl leading-none text-amber-400 sm:text-2xl"
+            aria-hidden="true"
+          >
+            ★
+          </span>
+          <span class="ml-1.5 text-sm font-normal text-zinc-500 tabular-nums">
+            ({{ group.items.length }})
+          </span>
         </h3>
         <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <li v-for="p in group.items" :key="'p-' + p.id">
@@ -179,4 +190,13 @@ const restList = computed(() =>
     .sort((a, b) => a.displayName.localeCompare(b.displayName, 'pt-BR')),
 )
 const totalFiltered = computed(() => filteredProfiles.value.length)
+
+useHead({
+  title: computed(() => {
+    if (!ctx.value) {
+      return 'Cidade'
+    }
+    return `${genderTitle.value} em ${ctx.value.city.name}`
+  }),
+})
 </script>

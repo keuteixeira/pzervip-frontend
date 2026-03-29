@@ -69,6 +69,9 @@
             <div>
               <p class="mb-1 text-xs font-medium text-zinc-500">Seu link público (somente leitura)</p>
               <input class="input cursor-not-allowed opacity-80" type="text" :value="publicProfileUrl" readonly />
+              <p class="mt-1 text-xs text-zinc-600">
+                Abre a página pública no site (com banner, contato e galeria após moderação).
+              </p>
             </div>
             <button
               type="button"
@@ -164,6 +167,76 @@
         </section>
 
         <section class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
+          <h2 class="text-lg font-semibold text-white">Foto de perfil (público)</h2>
+          <p class="mt-2 text-sm text-zinc-400">
+            Imagem circular ao lado do contato. Fica pendente até moderação, como as restantes mídias.
+          </p>
+          <div class="mt-4">
+            <input
+              ref="avatarFileInput"
+              type="file"
+              accept="image/*"
+              class="hidden"
+              @change="(e) => onSingleMediaPick(e, 'portal_avatar')"
+            />
+            <button
+              type="button"
+              class="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+              :disabled="uploadingAvatar"
+              @click="avatarFileInput?.click()"
+            >
+              {{ uploadingAvatar ? 'Enviando…' : 'Enviar foto de perfil' }}
+            </button>
+            <button
+              v-if="profile.portal_avatar_media_id"
+              type="button"
+              class="ml-2 rounded-lg border border-red-900/50 px-3 py-2 text-sm text-red-300 hover:bg-red-950/40"
+              @click="removeSingleMedia('portal_avatar', profile.portal_avatar_media_id)"
+            >
+              Remover
+            </button>
+            <p v-if="profile.portal_avatar_media_id" class="mt-2 text-xs text-zinc-500">
+              Estado: {{ moderationLabel(profile.portal_avatar_media_id) }}
+            </p>
+          </div>
+        </section>
+
+        <section class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
+          <h2 class="text-lg font-semibold text-white">Áudio (apresentação)</h2>
+          <p class="mt-2 text-sm text-zinc-400">
+            Um único ficheiro de áudio (ex.: mp3). Aparece no perfil público após aprovação.
+          </p>
+          <div class="mt-4">
+            <input
+              ref="audioFileInput"
+              type="file"
+              accept="audio/*,.mp3,.m4a,.wav,.ogg"
+              class="hidden"
+              @change="(e) => onSingleMediaPick(e, 'audio')"
+            />
+            <button
+              type="button"
+              class="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+              :disabled="uploadingAudio"
+              @click="audioFileInput?.click()"
+            >
+              {{ uploadingAudio ? 'Enviando…' : 'Enviar áudio' }}
+            </button>
+            <button
+              v-if="profile.audio_media_id"
+              type="button"
+              class="ml-2 rounded-lg border border-red-900/50 px-3 py-2 text-sm text-red-300 hover:bg-red-950/40"
+              @click="removeSingleMedia('audio', profile.audio_media_id)"
+            >
+              Remover
+            </button>
+            <p v-if="profile.audio_media_id" class="mt-2 text-xs text-zinc-500">
+              Estado: {{ moderationLabel(profile.audio_media_id) }}
+            </p>
+          </div>
+        </section>
+
+        <section class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
           <h2 class="text-lg font-semibold text-white">Galeria (fotos e vídeos)</h2>
           <p class="mt-2 text-sm text-zinc-400">
             Novos arquivos ficam pendentes até a moderação. Remover um item é imediato. Na página pública, vídeos
@@ -247,6 +320,10 @@ definePageMeta({
   path: '/conta/perfil',
 })
 
+useHead({
+  title: 'Editar perfil',
+})
+
 type ApiState = { id: number; name: string; uf: string }
 type ApiCity = { id: number; name: string }
 
@@ -270,6 +347,10 @@ type Profile = {
   account_legal_name?: string | null
   professional_name?: string | null
   public_slug?: string | null
+  profile_type?: 'men' | 'women' | 'trans' | null
+  cover_media_id?: number | null
+  portal_avatar_media_id?: number | null
+  audio_media_id?: number | null
   cpf?: string | null
   mother_name?: string | null
   birth_date?: string | null
@@ -289,7 +370,6 @@ type Profile = {
 
 const { user, fetchMe } = useAuth()
 const { request } = useApi()
-const config = useRuntimeConfig()
 
 const loading = ref(true)
 const profile = ref<Profile | null>(null)
@@ -309,6 +389,10 @@ const savingOrder = ref(false)
 const msg = ref('')
 const err = ref(false)
 const galleryFileInput = ref<HTMLInputElement | null>(null)
+const avatarFileInput = ref<HTMLInputElement | null>(null)
+const audioFileInput = ref<HTMLInputElement | null>(null)
+const uploadingAvatar = ref(false)
+const uploadingAudio = ref(false)
 
 const formSocial = ref({
   instagram: '',
@@ -319,13 +403,29 @@ const formSocial = ref({
 })
 const savingSocial = ref(false)
 
+const exploreGenderSlug = computed(() => {
+  const t = profile.value?.profile_type
+  if (t === 'men') {
+    return 'homens'
+  }
+  if (t === 'women') {
+    return 'mulheres'
+  }
+  if (t === 'trans') {
+    return 'trans'
+  }
+  return 'mulheres'
+})
+
+const requestUrl = useRequestURL()
+
 const publicProfileUrl = computed(() => {
   const slug = profile.value?.public_slug
   if (!slug) {
     return '—'
   }
-  const base = config.public.apiBase.replace(/\/$/, '')
-  return `${base}/v1/public/advertisers/${slug}`
+  const origin = import.meta.client ? window.location.origin : requestUrl.origin
+  return `${origin}/explorar/${exploreGenderSlug.value}/perfil/${slug}`
 })
 
 function maskCpf(raw: string | null | undefined) {
@@ -537,6 +637,48 @@ async function applyGalleryOrder() {
     msg.value = apiErr(e)
   } finally {
     savingOrder.value = false
+  }
+}
+
+async function onSingleMediaPick(e: Event, purpose: 'portal_avatar' | 'audio') {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) {
+    return
+  }
+  const uploading = purpose === 'portal_avatar' ? uploadingAvatar : uploadingAudio
+  uploading.value = true
+  err.value = false
+  msg.value = ''
+  try {
+    const fd = new FormData()
+    fd.append('purpose', purpose)
+    fd.append('file', file)
+    await request<{ id: number }>('/v1/me/media', { method: 'POST', body: fd })
+    msg.value = 'Arquivo enviado. Aparecerá no público após moderação.'
+    await refreshProfile()
+  } catch (e) {
+    err.value = true
+    msg.value = apiErr(e)
+  } finally {
+    uploading.value = false
+  }
+}
+
+async function removeSingleMedia(_purpose: 'portal_avatar' | 'audio', mediaId: number) {
+  if (!confirm('Remover este ficheiro?')) {
+    return
+  }
+  err.value = false
+  msg.value = ''
+  try {
+    await request(`/v1/me/media/${mediaId}`, { method: 'DELETE' })
+    msg.value = 'Removido.'
+    await refreshProfile()
+  } catch (e) {
+    err.value = true
+    msg.value = apiErr(e)
   }
 }
 

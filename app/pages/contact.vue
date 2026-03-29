@@ -91,7 +91,7 @@
         class="w-full rounded-xl bg-brand py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
         :disabled="sending"
       >
-        {{ sending ? 'A enviar…' : 'Enviar mensagem' }}
+        {{ sending ? 'Enviando…' : 'Enviar mensagem' }}
       </button>
     </form>
   </div>
@@ -101,6 +101,10 @@
 definePageMeta({
   layout: 'default',
   path: '/contato',
+})
+
+useHead({
+  title: 'Contato',
 })
 
 const subjectOptions = [

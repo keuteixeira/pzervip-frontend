@@ -138,6 +138,8 @@ export interface ProfileMediaItem {
 
 export interface ProfileSummary {
   id: string
+  /** Slug público na URL `/explorar/.../perfil/:slug` */
+  public_slug: string
   displayName: string
   city: string
   featured?: boolean
@@ -172,6 +174,7 @@ export function getProfilesMock(gender: GenderSlug, uf: string, citySlug: string
     return [
       {
         id: '1',
+        public_slug: 'ana-silva',
         displayName: 'Ana Silva',
         city: cityName,
         neighborhood: 'Centro',
@@ -190,6 +193,7 @@ export function getProfilesMock(gender: GenderSlug, uf: string, citySlug: string
       },
       {
         id: '2',
+        public_slug: 'beatriz-costas',
         displayName: 'Beatriz Costas',
         city: cityName,
         neighborhood: 'Barra',
@@ -205,6 +209,7 @@ export function getProfilesMock(gender: GenderSlug, uf: string, citySlug: string
       },
       {
         id: '3',
+        public_slug: 'carla-santos',
         displayName: 'Carla Santos',
         city: cityName,
         neighborhood: 'Zona Sul',
@@ -220,6 +225,7 @@ export function getProfilesMock(gender: GenderSlug, uf: string, citySlug: string
   return [
     {
       id: '1',
+      public_slug: 'perfil-exemplo-a',
       displayName: 'Perfil exemplo A',
       city: cityName,
       neighborhood: 'Centro',
@@ -236,6 +242,7 @@ export function getProfilesMock(gender: GenderSlug, uf: string, citySlug: string
     },
     {
       id: '2',
+      public_slug: 'perfil-exemplo-b',
       displayName: 'Perfil exemplo B',
       city: cityName,
       neighborhood: 'Zona Norte',
@@ -251,6 +258,7 @@ export function getProfilesMock(gender: GenderSlug, uf: string, citySlug: string
     },
     {
       id: '3',
+      public_slug: 'perfil-exemplo-c',
       displayName: 'Perfil exemplo C',
       city: cityName,
       neighborhood: 'Zona Sul',
@@ -264,9 +272,13 @@ export function getProfilesMock(gender: GenderSlug, uf: string, citySlug: string
 }
 
 export interface ProfileComment {
+  id?: number
   author: string
   text: string
   when: string
+  /** Resposta do anunciante (mock) */
+  is_advertiser?: boolean
+  replies?: ProfileComment[]
 }
 
 export type SocialNetworkKey = 'instagram' | 'x' | 'onlyfans' | 'tiktok' | 'privacy'
@@ -275,6 +287,7 @@ export type ProfileSocialLinks = Partial<Record<SocialNetworkKey, string>>
 
 export interface ProfileDetail {
   id: string
+  public_slug: string
   displayName: string
   locationLine: string
   memberSince: string
@@ -286,13 +299,40 @@ export interface ProfileDetail {
   /** Dígitos com DDI, ex.: 5511999998888 (usado no link do WhatsApp) */
   whatsappPhone?: string
   socialLinks?: ProfileSocialLinks
+  coverUrl?: string
+  avatarUrl?: string
+  audioUrl?: string
+  neighborhood?: string
+  cityName?: string
+  stateUf?: string
+  mapsSearchUrl?: string
+  /** Galeria pública (fotos e vídeos) — ordem: áudio é separado em audioUrl */
+  galleryMedia: ProfileMediaItem[]
 }
 
-const anaSilvaDetail = (id: string): ProfileDetail => ({
-  id,
+const anaSilvaDetail = (): ProfileDetail => ({
+  id: '1',
+  public_slug: 'ana-silva',
   displayName: 'Ana Silva',
   locationLine: 'Centro, São Paulo',
-  memberSince: 'Março 2023',
+  memberSince: 'março de 2023',
+  neighborhood: 'Centro',
+  cityName: 'São Paulo',
+  stateUf: 'SP',
+  mapsSearchUrl:
+    'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Centro, São Paulo, SP — Brasil'),
+  coverUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=1200&q=80',
+  avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=80',
+  audioUrl: undefined,
+  galleryMedia: [
+    { url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=640&q=80', type: 'image' },
+    { url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=640&q=80', type: 'image' },
+    {
+      url: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+      type: 'video',
+    },
+    { url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=640&q=80', type: 'image' },
+  ],
   premium: true,
   tipoAtendimento: 'acompanhante',
   about:
@@ -305,14 +345,26 @@ const anaSilvaDetail = (id: string): ProfileDetail => ({
   ],
   comments: [
     {
+      id: 1,
       author: 'Carlos M.',
       text: 'Pessoa incrível! Super recomendo conhecer.',
-      when: '2 dias atrás',
+      when: 'há 2 dias',
+      replies: [
+        {
+          id: 101,
+          author: 'Ana Silva',
+          text: 'Obrigada pelo carinho! Qualquer dúvida, estou no WhatsApp.',
+          when: 'há 1 dia',
+          is_advertiser: true,
+        },
+      ],
     },
     {
+      id: 2,
       author: 'Marina L.',
       text: 'Ótima companhia, muito divertida e inteligente!',
-      when: '1 semana atrás',
+      when: 'há 1 semana',
+      replies: [],
     },
   ],
   whatsappPhone: '5511999196820',
@@ -323,21 +375,44 @@ const anaSilvaDetail = (id: string): ProfileDetail => ({
   },
 })
 
-export function getProfileDetailMock(gender: GenderSlug, id: string): ProfileDetail | null {
-  if (gender === 'mulheres' && id === '1') {
-    return anaSilvaDetail(id)
+function galleryFromSummary(row: ProfileSummary): ProfileMediaItem[] {
+  return row.gallery?.length ? [...row.gallery] : []
+}
+
+export function getProfileDetailMock(gender: GenderSlug, slug: string): ProfileDetail | null {
+  const genders: GenderSlug[] = ['homens', 'mulheres', 'trans']
+  if (!genders.includes(gender)) {
+    return null
   }
 
-  if (gender === 'mulheres' && (id === '2' || id === '3')) {
-    const row = getProfilesMock('mulheres', 'sp', 'sao-paulo').find((p) => p.id === id)
-    const displayName = row?.displayName ?? `Perfil ${id}`
+  if (gender === 'mulheres' && slug === 'ana-silva') {
+    return anaSilvaDetail()
+  }
+
+  const row =
+    getProfilesMock(gender, 'sp', 'sao-paulo').find((p) => p.public_slug === slug || p.id === slug) ?? null
+
+  if (row) {
+    const cityName = 'São Paulo'
+    const nh = row.neighborhood
     return {
-      id,
-      displayName,
-      locationLine: row?.neighborhood ? `${row.neighborhood}, São Paulo` : 'São Paulo',
-      memberSince: 'Janeiro 2024',
-      premium: row?.premium ?? false,
-      tipoAtendimento: row?.tipo_atendimento ?? 'acompanhante',
+      id: row.id,
+      public_slug: row.public_slug,
+      displayName: row.displayName,
+      locationLine: nh ? `${nh}, ${cityName}` : cityName,
+      memberSince: 'janeiro de 2024',
+      neighborhood: nh,
+      cityName,
+      stateUf: 'SP',
+      mapsSearchUrl:
+        'https://www.google.com/maps/search/?api=1&query=' +
+        encodeURIComponent([nh, cityName, 'SP — Brasil'].filter(Boolean).join(', ')),
+      coverUrl: row.gallery?.[0]?.url,
+      avatarUrl: row.gallery?.[0]?.url,
+      audioUrl: undefined,
+      galleryMedia: galleryFromSummary(row),
+      premium: row.premium ?? false,
+      tipoAtendimento: row.tipo_atendimento ?? 'acompanhante',
       about:
         'Apresentação de exemplo — o conteúdo completo virá da API (equivalente ao perfil público no site).',
       premiumBenefits: [
@@ -346,23 +421,36 @@ export function getProfileDetailMock(gender: GenderSlug, id: string): ProfileDet
         'Resposta garantida em 24h',
         'Prioridade nos resultados',
       ],
-      comments: [{ author: 'Visitante', text: 'Ótima experiência.', when: '3 semanas atrás' }],
-      whatsappPhone: id === '2' ? '5521987654321' : '5511987654321',
+      comments: [
+        {
+          id: 1,
+          author: 'Visitante',
+          text: 'Ótima experiência.',
+          when: 'há 3 semanas',
+          replies: [],
+        },
+      ],
+      whatsappPhone: row.id === '2' ? '5521987654321' : '5511987654321',
       socialLinks:
-        id === '2'
+        row.id === '2'
           ? { onlyfans: 'https://onlyfans.com/', privacy: 'https://www.privacy.com.br/' }
           : { instagram: 'https://www.instagram.com/' },
     }
   }
 
   return {
-    id,
+    id: slug,
+    public_slug: slug,
     displayName: 'Perfil',
     locationLine: 'Brasil',
     memberSince: '2024',
     premium: false,
     tipoAtendimento: 'acompanhante',
     about: 'Texto de apresentação virá do backend.',
+    cityName: 'Brasil',
+    stateUf: '',
+    mapsSearchUrl: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Brasil'),
+    galleryMedia: [],
     premiumBenefits: [
       'Perfil verificado',
       'Fotos de alta qualidade',

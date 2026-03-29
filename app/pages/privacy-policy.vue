@@ -29,7 +29,7 @@
       <h2 class="pt-6 text-xl font-semibold text-white">4. Conservação e partilha</h2>
       <p>
         Os dados são conservados pelo tempo necessário à finalidade ou à lei aplicável. Não vendemos listas de
-        contactos. Prestadores de infraestrutura ou pagamento podem aceder a dados estritamente necessários
+        contatos. Prestadores de infraestrutura ou pagamento podem aceder a dados estritamente necessários
         quando integrados.
       </p>
 
@@ -52,6 +52,10 @@
 definePageMeta({
   layout: 'default',
   path: '/politica-de-privacidade',
+})
+
+useHead({
+  title: 'Política de privacidade',
 })
 
 const updated = '28 de março de 2026'

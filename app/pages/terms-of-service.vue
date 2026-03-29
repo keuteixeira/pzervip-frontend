@@ -37,7 +37,7 @@
         indirectos ou perda de lucros. Nada nestes termos limita direitos que não possam ser limitados por lei.
       </p>
 
-      <h2 class="pt-6 text-xl font-semibold text-white">6. Contacto</h2>
+      <h2 class="pt-6 text-xl font-semibold text-white">6. Contato</h2>
       <p>
         Questões sobre estes termos podem ser enviadas através da página de
         <NuxtLink to="/contato" class="text-brand hover:underline">contato</NuxtLink>.
@@ -50,6 +50,10 @@
 definePageMeta({
   layout: 'default',
   path: '/termos-de-servico',
+})
+
+useHead({
+  title: 'Termos de serviço',
 })
 
 const updated = '28 de março de 2026'

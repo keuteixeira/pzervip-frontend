@@ -19,3 +19,11 @@ export const REGISTER_GALLERY_DEFAULTS = {
   min: 3,
   max: 5,
 } as const
+
+/** Foto do perfil (avatar público) — quadrada ou retrato, rosto visível. */
+export const REGISTER_PROFILE_AVATAR = {
+  suggestedSizeLabel: 'mín. 400 × 400 px',
+  hint: 'Rosto visível, boa iluminação; será usada no perfil público e na área da conta.',
+  maxFileMb: 10,
+  formatsHint: 'JPG, PNG ou WebP.',
+} as const

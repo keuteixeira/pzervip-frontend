@@ -12,5 +12,9 @@ definePageMeta({
   path: '/anunciar',
 })
 
+useHead({
+  title: 'Cadastro de anunciante',
+})
+
 await navigateTo('/cadastro', { replace: true })
 </script>

@@ -31,6 +31,7 @@ export interface AuthUser {
   deletion_grace_ends_at?: string | null
   advertiser_profile?: {
     cpf?: string | null
+    public_slug?: string | null
   }
   /** null = senha ainda não definida pelo usuário (cadastro com senha interna aleatória). */
   password_set_at?: string | null

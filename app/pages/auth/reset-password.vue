@@ -59,6 +59,10 @@ definePageMeta({
   path: '/entrar/redefinir',
 })
 
+useHead({
+  title: 'Nova senha',
+})
+
 const route = useRoute()
 const token = computed(() => {
   const t = route.query.token

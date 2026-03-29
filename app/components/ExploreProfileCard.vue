@@ -1,12 +1,12 @@
 <template>
   <NuxtLink
-    :to="`/explorar/${gender}/perfil/${profile.id}`"
+    :to="`/explorar/${gender}/perfil/${profile.public_slug}`"
     class="group flex flex-col overflow-hidden border border-zinc-800 bg-zinc-900/50 transition hover:border-brand/40 hover:shadow-lg hover:shadow-rose-950/20"
     :class="isCompact ? 'rounded-xl' : 'rounded-2xl'"
   >
     <div
       class="relative overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-950"
-      :class="isCompact ? 'aspect-square' : 'aspect-[4/3]'"
+      :class="isCompact ? 'aspect-[2/1]' : 'aspect-[4/3]'"
     >
       <span
         v-if="profile.premium"
@@ -96,13 +96,23 @@
         {{ profile.displayName }}
       </h3>
       <p
-        v-if="tipoLabel"
-        class="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-brand/90 sm:text-xs"
+        v-if="tipoLabel || profile.neighborhood"
+        class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs text-zinc-400 sm:text-sm"
       >
-        {{ tipoLabel }}
-      </p>
-      <p v-if="profile.neighborhood" class="mt-0.5 text-xs text-zinc-400 sm:text-sm">
-        {{ profile.neighborhood }}
+        <span
+          v-if="tipoLabel"
+          class="text-[10px] font-medium uppercase tracking-wide text-brand/90 sm:text-xs"
+        >
+          {{ tipoLabel }}
+        </span>
+        <span
+          v-if="tipoLabel && profile.neighborhood"
+          class="select-none text-zinc-500"
+          aria-hidden="true"
+        >
+          ·
+        </span>
+        <span v-if="profile.neighborhood">{{ profile.neighborhood }}</span>
       </p>
     </div>
   </NuxtLink>

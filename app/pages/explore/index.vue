@@ -42,6 +42,10 @@ definePageMeta({
   path: '/explorar',
 })
 
+useHead({
+  title: 'Explorar',
+})
+
 const categories = [
   { slug: 'homens', label: 'Homens' },
   { slug: 'mulheres', label: 'Mulheres' },

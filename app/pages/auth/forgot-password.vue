@@ -42,6 +42,10 @@ definePageMeta({
   path: '/entrar/recuperar',
 })
 
+useHead({
+  title: 'Recuperar senha',
+})
+
 const email = ref('')
 const infoMsg = ref<string | null>(null)
 const errorMsg = ref<string | null>(null)

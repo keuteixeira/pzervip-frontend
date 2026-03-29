@@ -262,6 +262,10 @@ definePageMeta({
   path: '/conta',
 })
 
+useHead({
+  title: 'Minha conta',
+})
+
 const { user, fetchMe, logout, fetchDeletionStatus, deleteAccountImmediate, requestAccountDeletion, cancelAccountDeletion } =
   useAuth()
 const { request } = useApi()

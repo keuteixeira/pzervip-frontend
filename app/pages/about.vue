@@ -9,7 +9,7 @@
 
     <section class="mt-10 space-y-4 text-zinc-300">
       <p>
-        O Prazer.Vip é uma plataforma pensada para colocar em contacto anunciantes e visitantes de forma
+        O Prazer.Vip é uma plataforma pensada para colocar em contato anunciantes e visitantes de forma
         organizada por localização — com foco em transparência nas regras de publicação, verificação de perfis
         quando aplicável e respeito pela privacidade.
       </p>
@@ -19,7 +19,7 @@
       </p>
       <p>
         Para sugestões, parcerias ou apoio, utilize o
-        <NuxtLink to="/contato" class="text-brand hover:underline">formulário de contacto</NuxtLink>.
+        <NuxtLink to="/contato" class="text-brand hover:underline">formulário de contato</NuxtLink>.
         Para criar um anúncio, aceda a
         <NuxtLink to="/cadastro" class="text-brand hover:underline">cadastro de anunciante</NuxtLink>.
       </p>
@@ -31,5 +31,9 @@
 definePageMeta({
   layout: 'default',
   path: '/sobre-nos',
+})
+
+useHead({
+  title: 'Sobre nós',
 })
 </script>

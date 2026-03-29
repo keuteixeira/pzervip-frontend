@@ -127,4 +127,10 @@ const totalProfiles = computed(() => {
   }
   return getTotalListingProfiles(gender.value as GenderSlug)
 })
+
+useHead({
+  title: computed(() =>
+    genderOk.value ? `${genderTitle.value} — Escolha sua cidade` : 'Explorar',
+  ),
+})
 </script>
