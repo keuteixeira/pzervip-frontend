@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-zinc-950 text-zinc-100 antialiased;
+}
+
+.highlight-text {
+  background: linear-gradient(135deg, #e64c4c, #ee5b2b);
+  color: #ffffff;
+  padding: 3px 10px;
+}
