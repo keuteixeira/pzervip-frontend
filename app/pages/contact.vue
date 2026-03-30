@@ -111,7 +111,6 @@ const subjectOptions = [
   { value: 'denuncia_perfil', label: 'Denúncia de perfil ou conteúdo' },
   { value: 'duvida_geral', label: 'Dúvida geral' },
   { value: 'sugestao', label: 'Sugestão' },
-  { value: 'parcerias', label: 'Parcerias ou imprensa' },
   { value: 'problema_tecnico', label: 'Problema técnico no site' },
   { value: 'conta_anunciante', label: 'Conta de anunciante / pagamentos' },
   { value: 'outro', label: 'Outro assunto' },
