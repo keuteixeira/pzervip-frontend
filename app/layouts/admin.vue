@@ -67,6 +67,7 @@ const links = [
   { to: '/admin/midias', label: 'Mídias' },
   { to: '/admin/comentarios', label: 'Comentários' },
   { to: '/admin/destaques', label: 'Destaques' },
+  { to: '/admin/chamados', label: 'Chamados' },
 ]
 
 function isActive(to: string) {

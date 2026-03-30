@@ -30,6 +30,12 @@
           >
             Editar perfil
           </NuxtLink>
+          <NuxtLink
+            to="/conta/suporte"
+            class="rounded-lg border border-sky-700/60 bg-sky-900/20 px-4 py-2 text-sm font-medium text-sky-200 transition hover:bg-sky-900/35"
+          >
+            Abrir chamado
+          </NuxtLink>
           <button
             type="button"
             class="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-white"

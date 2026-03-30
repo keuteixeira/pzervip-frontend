@@ -32,7 +32,7 @@
               :to="withMock(`/admin/anunciantes/${row.advertiser_profile.id}`)"
               class="ml-2 text-brand hover:underline"
             >
-              Abrir ficha
+              Visualizar
             </NuxtLink>
           </p>
         </div>

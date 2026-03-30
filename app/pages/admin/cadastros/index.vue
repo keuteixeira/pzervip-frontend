@@ -3,7 +3,7 @@
     <div>
       <h1 class="text-2xl font-bold text-white">Cadastros</h1>
       <p class="mt-1 text-sm text-zinc-500">
-        Aprovar ou recusar cadastros pendentes. Perfis já aprovados são geridos em Anunciantes (pausar, mídias, etc.).
+        Pré-cadastros e análise KYC. Aprovação ou recusa só na ficha do cadastro, após revisão dos dados e mídias.
       </p>
     </div>
 
@@ -22,6 +22,8 @@
       </button>
     </div>
 
+    <p v-if="listError" class="text-sm text-red-400">{{ listError }}</p>
+
     <ul class="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
       <li
         v-for="row in items"
@@ -37,27 +39,12 @@
         </div>
         <div class="flex flex-wrap gap-2">
           <button
-            v-if="row.approval_status !== 'approved'"
             type="button"
-            class="rounded bg-emerald-600 px-2 py-1 text-xs text-white"
-            @click="setStatus(row.id, 'approved')"
+            class="rounded border border-brand/50 bg-brand/15 px-3 py-1.5 text-xs font-medium text-brand hover:bg-brand/25"
+            @click="openCadastro(row.id)"
           >
-            Aprovar
+            Visualizar
           </button>
-          <button
-            v-if="row.approval_status === 'pending'"
-            type="button"
-            class="rounded bg-zinc-700 px-2 py-1 text-xs text-white"
-            @click="setStatus(row.id, 'rejected')"
-          >
-            Recusar
-          </button>
-          <NuxtLink
-            :to="withMock(`/admin/cadastros/${row.id}`)"
-            class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-800"
-          >
-            Abrir
-          </NuxtLink>
         </div>
       </li>
     </ul>
@@ -87,10 +74,11 @@
 <script setup lang="ts">
 import { filterMockCadastros } from '~/data/admin-mocks'
 import { adminApprovalStatusLabel, adminFormStatusLabel } from '~/utils/admin-labels'
+import { useAdminMock } from '~/composables/useAdminMock'
 
 definePageMeta({
-  layout: 'admin',
-  middleware: ['admin'],
+  layout: 'admin' as any,
+  middleware: ['admin' as any],
 })
 
 useHead({ title: 'Cadastros' })
@@ -100,6 +88,7 @@ const { isMock, withMock } = useAdminMock()
 
 const statusFilter = ref('pending')
 const page = ref(1)
+const listError = ref<string | null>(null)
 const items = ref<
   {
     id: number
@@ -119,6 +108,7 @@ const filters = [
 ]
 
 async function load() {
+  listError.value = null
   if (isMock.value) {
     const q = statusFilter.value === 'all' ? 'all' : statusFilter.value
     const list = filterMockCadastros(q)
@@ -126,34 +116,30 @@ async function load() {
     meta.value = { current_page: 1, last_page: 1, total: list.length }
     return
   }
-  const q = statusFilter.value === 'all' ? 'all' : statusFilter.value
-  const res = await request<{
-    data: typeof items.value
-    current_page: number
-    last_page: number
-    total: number
-  }>(`/v1/admin/profiles?approval_status=${encodeURIComponent(q)}&page=${page.value}`)
-  items.value = res.data
-  meta.value = {
-    current_page: res.current_page,
-    last_page: res.last_page,
-    total: res.total,
+  try {
+    const q = statusFilter.value === 'all' ? 'all' : statusFilter.value
+    const res = await request<{
+      data: typeof items.value
+      current_page: number
+      last_page: number
+      total: number
+    }>(`/v1/admin/profiles?approval_status=${encodeURIComponent(q)}&page=${page.value}`)
+    items.value = res.data
+    meta.value = {
+      current_page: res.current_page,
+      last_page: res.last_page,
+      total: res.total,
+    }
+  } catch {
+    listError.value = 'Não foi possível carregar a lista.'
+    items.value = []
+    meta.value = null
   }
 }
 
-async function setStatus(id: number, approval_status: 'approved' | 'rejected') {
-  if (isMock.value) {
-    const row = items.value.find((r) => r.id === id)
-    if (row) {
-      row.approval_status = approval_status
-    }
-    return
-  }
-  await request(`/v1/admin/profiles/${id}`, {
-    method: 'PATCH',
-    body: { approval_status },
-  })
-  await load()
+function openCadastro(id: number) {
+  const path = withMock(`/admin/cadastros/${id}`)
+  return navigateTo(path)
 }
 
 onMounted(() => load())
