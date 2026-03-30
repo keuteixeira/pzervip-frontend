@@ -10,10 +10,23 @@ export interface CityItem {
   thumbUrl: string
 }
 
-export interface RegionItem {
+export type RegionSlug = 'sudeste' | 'nordeste' | 'centro-oeste' | 'sul' | 'norte'
+
+export interface StateItem {
   uf: string
   name: string
+  region: RegionSlug
   cities: CityItem[]
+  totalProfiles: number
+  totalCities: number
+}
+
+export interface RegionItem {
+  slug: RegionSlug
+  name: string
+  states: StateItem[]
+  totalProfiles: number
+  totalStates: number
 }
 
 export function cityThumbUrl(uf: string, slug: string): string {
@@ -32,37 +45,72 @@ function scaleCount(baseMulheres: number, gender: GenderSlug): number {
 
 type CityRaw = { slug: string; name: string; baseMulheres: number }
 
-const REGIONS_BASE: { uf: string; name: string; cities: CityRaw[] }[] = [
+type StateRaw = { uf: string; name: string; region: RegionSlug; cities: CityRaw[] }
+
+type StateDirectoryRaw = { uf: string; name: string; region: RegionSlug }
+
+const STATES_BASE: StateRaw[] = [
   {
     uf: 'SP',
     name: 'São Paulo',
+    region: 'sudeste',
     cities: [
       { slug: 'sao-paulo', name: 'São Paulo', baseMulheres: 89 },
       { slug: 'campinas', name: 'Campinas', baseMulheres: 22 },
+      { slug: 'guarulhos', name: 'Guarulhos', baseMulheres: 20 },
+      { slug: 'sao-bernardo-do-campo', name: 'São Bernardo do Campo', baseMulheres: 18 },
+      { slug: 'santo-andre', name: 'Santo André', baseMulheres: 17 },
+      { slug: 'osasco', name: 'Osasco', baseMulheres: 16 },
+      { slug: 'sao-jose-dos-campos', name: 'São José dos Campos', baseMulheres: 16 },
+      { slug: 'sorocaba', name: 'Sorocaba', baseMulheres: 15 },
+      { slug: 'ribeirao-preto', name: 'Ribeirão Preto', baseMulheres: 14 },
+      { slug: 'sao-jose-do-rio-preto', name: 'São José do Rio Preto', baseMulheres: 13 },
+      { slug: 'maua', name: 'Mauá', baseMulheres: 12 },
+      { slug: 'mogi-das-cruzes', name: 'Mogi das Cruzes', baseMulheres: 12 },
+      { slug: 'jundiai', name: 'Jundiaí', baseMulheres: 11 },
       { slug: 'santos', name: 'Santos', baseMulheres: 11 },
+      { slug: 'diadema', name: 'Diadema', baseMulheres: 11 },
+      { slug: 'piracicaba', name: 'Piracicaba', baseMulheres: 10 },
+      { slug: 'bauru', name: 'Bauru', baseMulheres: 10 },
+      { slug: 'sao-vicente', name: 'São Vicente', baseMulheres: 9 },
+      { slug: 'taubate', name: 'Taubaté', baseMulheres: 8 },
+      { slug: 'franca', name: 'Franca', baseMulheres: 8 },
     ],
   },
   {
     uf: 'RJ',
     name: 'Rio de Janeiro',
+    region: 'sudeste',
     cities: [
       { slug: 'rio-de-janeiro', name: 'Rio de Janeiro', baseMulheres: 67 },
       { slug: 'niteroi', name: 'Niterói', baseMulheres: 15 },
+      { slug: 'duque-de-caxias', name: 'Duque de Caxias', baseMulheres: 14 },
+      { slug: 'nova-iguacu', name: 'Nova Iguaçu', baseMulheres: 13 },
     ],
   },
   {
     uf: 'MG',
     name: 'Minas Gerais',
-    cities: [{ slug: 'belo-horizonte', name: 'Belo Horizonte', baseMulheres: 45 }],
+    region: 'sudeste',
+    cities: [
+      { slug: 'belo-horizonte', name: 'Belo Horizonte', baseMulheres: 45 },
+      { slug: 'uberlandia', name: 'Uberlândia', baseMulheres: 18 },
+      { slug: 'contagem', name: 'Contagem', baseMulheres: 14 },
+    ],
   },
   {
-    uf: 'RS',
-    name: 'Rio Grande do Sul',
-    cities: [{ slug: 'porto-alegre', name: 'Porto Alegre', baseMulheres: 78 }],
+    uf: 'ES',
+    name: 'Espírito Santo',
+    region: 'sudeste',
+    cities: [
+      { slug: 'vitoria', name: 'Vitória', baseMulheres: 16 },
+      { slug: 'vila-velha', name: 'Vila Velha', baseMulheres: 14 },
+    ],
   },
   {
     uf: 'BA',
     name: 'Bahia',
+    region: 'nordeste',
     cities: [
       { slug: 'salvador', name: 'Salvador', baseMulheres: 52 },
       { slug: 'feira-de-santana', name: 'Feira de Santana', baseMulheres: 12 },
@@ -70,18 +118,117 @@ const REGIONS_BASE: { uf: string; name: string; cities: CityRaw[] }[] = [
     ],
   },
   {
+    uf: 'PE',
+    name: 'Pernambuco',
+    region: 'nordeste',
+    cities: [
+      { slug: 'recife', name: 'Recife', baseMulheres: 34 },
+      { slug: 'olinda', name: 'Olinda', baseMulheres: 11 },
+    ],
+  },
+  {
+    uf: 'CE',
+    name: 'Ceará',
+    region: 'nordeste',
+    cities: [
+      { slug: 'fortaleza', name: 'Fortaleza', baseMulheres: 31 },
+      { slug: 'caucaia', name: 'Caucaia', baseMulheres: 8 },
+    ],
+  },
+  {
     uf: 'DF',
     name: 'Distrito Federal',
+    region: 'centro-oeste',
     cities: [{ slug: 'brasilia', name: 'Brasília', baseMulheres: 33 }],
+  },
+  {
+    uf: 'GO',
+    name: 'Goiás',
+    region: 'centro-oeste',
+    cities: [
+      { slug: 'goiania', name: 'Goiânia', baseMulheres: 22 },
+      { slug: 'aparecida-de-goiania', name: 'Aparecida de Goiânia', baseMulheres: 12 },
+    ],
+  },
+  {
+    uf: 'MT',
+    name: 'Mato Grosso',
+    region: 'centro-oeste',
+    cities: [{ slug: 'cuiaba', name: 'Cuiabá', baseMulheres: 14 }],
+  },
+  {
+    uf: 'RS',
+    name: 'Rio Grande do Sul',
+    region: 'sul',
+    cities: [{ slug: 'porto-alegre', name: 'Porto Alegre', baseMulheres: 28 }],
+  },
+  {
+    uf: 'PR',
+    name: 'Paraná',
+    region: 'sul',
+    cities: [{ slug: 'curitiba', name: 'Curitiba', baseMulheres: 27 }],
+  },
+  {
+    uf: 'SC',
+    name: 'Santa Catarina',
+    region: 'sul',
+    cities: [{ slug: 'florianopolis', name: 'Florianópolis', baseMulheres: 19 }],
+  },
+  {
+    uf: 'PA',
+    name: 'Pará',
+    region: 'norte',
+    cities: [{ slug: 'belem', name: 'Belém', baseMulheres: 20 }],
+  },
+  {
+    uf: 'AM',
+    name: 'Amazonas',
+    region: 'norte',
+    cities: [{ slug: 'manaus', name: 'Manaus', baseMulheres: 21 }],
   },
 ]
 
-function sumCounts(region: RegionItem): number {
-  return region.cities.reduce((s, c) => s + c.count, 0)
+const STATE_DIRECTORY: StateDirectoryRaw[] = [
+  // Sudeste
+  { uf: 'SP', name: 'São Paulo', region: 'sudeste' },
+  { uf: 'RJ', name: 'Rio de Janeiro', region: 'sudeste' },
+  { uf: 'MG', name: 'Minas Gerais', region: 'sudeste' },
+  { uf: 'ES', name: 'Espírito Santo', region: 'sudeste' },
+  // Nordeste
+  { uf: 'BA', name: 'Bahia', region: 'nordeste' },
+  { uf: 'PE', name: 'Pernambuco', region: 'nordeste' },
+  { uf: 'CE', name: 'Ceará', region: 'nordeste' },
+  { uf: 'MA', name: 'Maranhão', region: 'nordeste' },
+  { uf: 'PB', name: 'Paraíba', region: 'nordeste' },
+  { uf: 'RN', name: 'Rio Grande do Norte', region: 'nordeste' },
+  { uf: 'AL', name: 'Alagoas', region: 'nordeste' },
+  { uf: 'PI', name: 'Piauí', region: 'nordeste' },
+  { uf: 'SE', name: 'Sergipe', region: 'nordeste' },
+  // Centro-Oeste
+  { uf: 'DF', name: 'Distrito Federal', region: 'centro-oeste' },
+  { uf: 'GO', name: 'Goiás', region: 'centro-oeste' },
+  { uf: 'MT', name: 'Mato Grosso', region: 'centro-oeste' },
+  { uf: 'MS', name: 'Mato Grosso do Sul', region: 'centro-oeste' },
+  // Sul
+  { uf: 'RS', name: 'Rio Grande do Sul', region: 'sul' },
+  { uf: 'PR', name: 'Paraná', region: 'sul' },
+  { uf: 'SC', name: 'Santa Catarina', region: 'sul' },
+  // Norte
+  { uf: 'AM', name: 'Amazonas', region: 'norte' },
+  { uf: 'PA', name: 'Pará', region: 'norte' },
+  { uf: 'RO', name: 'Rondônia', region: 'norte' },
+  { uf: 'RR', name: 'Roraima', region: 'norte' },
+  { uf: 'AP', name: 'Amapá', region: 'norte' },
+  { uf: 'AC', name: 'Acre', region: 'norte' },
+  { uf: 'TO', name: 'Tocantins', region: 'norte' },
+]
+
+function sumCounts(cities: CityItem[]): number {
+  return cities.reduce((s, c) => s + c.count, 0)
 }
 
-const buildRegions = (gender: GenderSlug): RegionItem[] => {
-  return REGIONS_BASE.map((r) => {
+const buildStates = (gender: GenderSlug): StateItem[] => {
+  const mapped = STATES_BASE.map((r) => {
     const cities: CityItem[] = r.cities
       .map((c) => {
         const count = scaleCount(c.baseMulheres, gender)
@@ -95,18 +242,114 @@ const buildRegions = (gender: GenderSlug): RegionItem[] => {
       .filter((c) => c.count > 0)
       .sort((a, b) => b.count - a.count)
 
-    return { uf: r.uf, name: r.name, cities }
+    return {
+      uf: r.uf,
+      name: r.name,
+      region: r.region,
+      cities,
+      totalProfiles: sumCounts(cities),
+      totalCities: cities.length,
+    }
   })
-    .filter((r) => r.cities.length > 0)
-    .sort((a, b) => sumCounts(b) - sumCounts(a))
+
+  const mapByUf = new Map(mapped.map((s) => [s.uf, s]))
+  const merged = STATE_DIRECTORY.map((dir) => {
+    const found = mapByUf.get(dir.uf)
+    if (found) {
+      return found
+    }
+    return {
+      uf: dir.uf,
+      name: dir.name,
+      region: dir.region,
+      cities: [],
+      totalProfiles: 0,
+      totalCities: 0,
+    } satisfies StateItem
+  })
+
+  return merged.sort((a, b) => b.totalProfiles - a.totalProfiles)
 }
 
-export function getRegionsByGender(gender: GenderSlug): RegionItem[] {
-  return buildRegions(gender)
+function cityLimitByUf(uf: string): number {
+  return uf.toUpperCase() === 'SP' ? 18 : 9
+}
+
+function regionName(slug: RegionSlug): string {
+  const map: Record<RegionSlug, string> = {
+    sudeste: 'Sudeste',
+    nordeste: 'Nordeste',
+    'centro-oeste': 'Centro-Oeste',
+    sul: 'Sul',
+    norte: 'Norte',
+  }
+  return map[slug]
+}
+
+const REGION_ORDER: RegionSlug[] = ['sudeste', 'nordeste', 'centro-oeste', 'sul', 'norte']
+const DEFAULT_STATES_PER_REGION = 9
+
+export function getRegionsByGender(
+  gender: GenderSlug,
+  opts?: { showAllCityUfs?: string[]; showAllStateRegions?: RegionSlug[] },
+): RegionItem[] {
+  const states = buildStates(gender)
+  const allCityUfs = new Set((opts?.showAllCityUfs ?? []).map((x) => x.toUpperCase()))
+  const allStateRegions = new Set(opts?.showAllStateRegions ?? [])
+
+  return REGION_ORDER.map((regionSlug) => {
+    const statesInRegion = states
+      .filter((s) => s.region === regionSlug)
+      .sort((a, b) => b.totalProfiles - a.totalProfiles)
+
+    const visibleStates = allStateRegions.has(regionSlug)
+      ? statesInRegion
+      : statesInRegion.slice(0, DEFAULT_STATES_PER_REGION)
+
+    const statesWithCityLimit = visibleStates.map((state) => {
+      const maxCities = cityLimitByUf(state.uf)
+      const fullList = state.cities
+      const visibleCities = allCityUfs.has(state.uf) ? fullList : fullList.slice(0, maxCities)
+      return {
+        ...state,
+        cities: visibleCities,
+      }
+    })
+
+    return {
+      slug: regionSlug,
+      name: regionName(regionSlug),
+      states: statesWithCityLimit,
+      totalProfiles: statesInRegion.reduce((acc, s) => acc + s.totalProfiles, 0),
+      totalStates: statesInRegion.length,
+    }
+  }).filter((r) => r.states.length > 0)
 }
 
 export function getTotalListingProfiles(gender: GenderSlug): number {
-  return getRegionsByGender(gender).reduce((acc, r) => acc + sumCounts(r), 0)
+  return buildStates(gender).reduce((acc, s) => acc + s.totalProfiles, 0)
+}
+
+export function getStateByGender(
+  gender: GenderSlug,
+  uf: string,
+  opts?: { showAllCities?: boolean },
+): StateItem | null {
+  const state = buildStates(gender).find((s) => s.uf.toLowerCase() === uf.toLowerCase()) ?? null
+  if (!state) {
+    return null
+  }
+  const maxCities = cityLimitByUf(state.uf)
+  return {
+    ...state,
+    cities: opts?.showAllCities ? state.cities : state.cities.slice(0, maxCities),
+  }
+}
+
+export function getStatesByRegion(gender: GenderSlug, region: RegionSlug): StateItem[] {
+  return buildStates(gender)
+    .filter((s) => s.region === region)
+    .sort((a, b) => b.totalProfiles - a.totalProfiles)
 }
 
 export function getCity(
@@ -114,16 +357,25 @@ export function getCity(
   uf: string,
   citySlug: string,
 ): { region: RegionItem; city: CityItem } | null {
-  const regions = getRegionsByGender(gender)
-  const region = regions.find((x) => x.uf.toLowerCase() === uf.toLowerCase())
-  if (!region) {
+  const states = buildStates(gender)
+  const state = states.find((x) => x.uf.toLowerCase() === uf.toLowerCase())
+  if (!state) {
     return null
   }
-  const city = region.cities.find((c) => c.slug === citySlug)
+  const city = state.cities.find((c) => c.slug === citySlug)
   if (!city) {
     return null
   }
-  return { region, city }
+  return {
+    region: {
+      slug: state.region,
+      name: regionName(state.region),
+      states: [state],
+      totalProfiles: state.totalProfiles,
+      totalStates: 1,
+    },
+    city,
+  }
 }
 
 /** Query `?atendimento=` na listagem por cidade */
@@ -138,7 +390,7 @@ export interface ProfileMediaItem {
 
 export interface ProfileSummary {
   id: string
-  /** Slug público na URL `/explorar/.../perfil/:slug` */
+  /** Slug público na URL `/acompanhante/:slug` ou `/massagista/:slug` */
   public_slug: string
   displayName: string
   city: string

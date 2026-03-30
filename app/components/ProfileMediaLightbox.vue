@@ -34,9 +34,15 @@
         <img
           v-else
           :src="item.url"
-          :alt="altText"
+          :alt="item.caption || altText"
           class="max-h-[85vh] max-w-full object-contain"
         />
+        <p
+          v-if="item.caption"
+          class="max-w-[min(100%,42rem)] truncate px-4 text-center text-sm text-zinc-400"
+        >
+          {{ item.caption }}
+        </p>
         <div class="flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
@@ -62,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-export type LightboxItem = { kind: 'audio' | 'video' | 'image'; url: string }
+export type LightboxItem = { kind: 'audio' | 'video' | 'image'; url: string; caption?: string }
 
 const props = defineProps<{
   items: LightboxItem[]

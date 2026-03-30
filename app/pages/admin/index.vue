@@ -1,11 +1,8 @@
 <script setup lang="ts">
 definePageMeta({
   layout: 'admin',
-  middleware: ['admin'],
+  middleware: ['admin', 'admin-redirect-home'],
 })
-
-const { withMock } = useAdminMock()
-await navigateTo(withMock('/admin/cadastros'), { replace: true })
 </script>
 
 <template>

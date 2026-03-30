@@ -25,7 +25,7 @@
           <NuxtLink
             v-for="item in categories"
             :key="item.slug"
-            :to="`/explorar/${item.slug}`"
+            :to="genderLink(item.slug)"
             class="group flex min-h-[52px] items-center justify-center rounded-2xl border border-zinc-700/80 bg-zinc-900/70 px-8 py-3.5 text-center text-lg font-semibold text-white shadow-sm transition hover:border-brand/60 hover:bg-zinc-900 hover:text-brand sm:flex-1 sm:max-w-[200px]"
           >
             {{ item.label }}
@@ -51,6 +51,16 @@ const categories = [
   { slug: 'mulheres', label: 'Mulheres' },
   { slug: 'trans', label: 'Trans' },
 ] as const
+
+const route = useRoute()
+
+function genderLink(slug: string) {
+  const next = route.query.next
+  if (typeof next === 'string' && next.includes('__GENDER__')) {
+    return next.replace('__GENDER__', slug)
+  }
+  return `/explorar/${slug}`
+}
 
 const year = new Date().getFullYear()
 

@@ -1,24 +1,47 @@
 import type { Ref } from 'vue'
 
-/** Primeira mensagem de validação Laravel (422) para um dos campos listados. */
-function laravelErrorMessage(e: unknown, fields: string[]): string | null {
+type LaravelErrorPayload = { errors?: Record<string, string[]>; message?: string }
+
+function getLaravelErrorPayload(e: unknown): LaravelErrorPayload | null {
   const err = e as {
-    data?: { errors?: Record<string, string[]>; message?: string }
-    response?: { _data?: { errors?: Record<string, string[]>; message?: string } }
+    data?: LaravelErrorPayload
+    response?: { _data?: LaravelErrorPayload }
+    cause?: { data?: LaravelErrorPayload }
   }
-  const d = err.data ?? err.response?._data
-  if (d?.errors) {
-    for (const f of fields) {
-      const arr = d.errors[f]
-      if (arr?.[0]) {
+  return err.data ?? err.response?._data ?? err.cause?.data ?? null
+}
+
+/** Primeira mensagem 422: tenta `fields` em ordem, depois qualquer campo, depois `message`. */
+function laravelErrorMessage(e: unknown, fields?: string[]): string | null {
+  const d = getLaravelErrorPayload(e)
+  if (!d) {
+    return null
+  }
+  if (d.errors) {
+    if (fields && fields.length > 0) {
+      for (const f of fields) {
+        const arr = d.errors[f]
+        if (arr?.[0]) {
+          return arr[0]
+        }
+      }
+    }
+    for (const k of Object.keys(d.errors)) {
+      const arr = d.errors[k]
+      if (Array.isArray(arr) && typeof arr[0] === 'string' && arr[0].length > 0) {
         return arr[0]
       }
     }
   }
-  if (typeof d?.message === 'string' && d.message.length > 0) {
+  if (typeof d.message === 'string' && d.message.length > 0) {
     return d.message
   }
   return null
+}
+
+/** Para telas que tratam erro fora do `useAuth` (ex.: cadastro). */
+export function extractLaravelErrorMessage(e: unknown, fields?: string[]): string | null {
+  return laravelErrorMessage(e, fields)
 }
 
 export interface AuthUser {
@@ -51,20 +74,20 @@ export function useAuth() {
   const loading = ref(false)
   const error: Ref<string | null> = ref(null)
 
-  async function login(identifier: string, password: string) {
+  async function login(email: string, password: string) {
     loading.value = true
     error.value = null
     try {
       const res = await request<{ token: string; user: AuthUser }>('/v1/login', {
         method: 'POST',
-        body: { identifier: identifier.trim(), password },
+        body: { email: email.trim(), password },
       })
       token.value = res.token
       user.value = res.user
       return res
     } catch (e: unknown) {
       error.value =
-        laravelErrorMessage(e, ['identifier', 'email']) ?? 'Não foi possível entrar. Verifique os dados.'
+        laravelErrorMessage(e, ['email']) ?? 'Não foi possível entrar. Verifique os dados.'
       throw e
     } finally {
       loading.value = false
@@ -84,6 +107,26 @@ export function useAuth() {
       return res
     } catch (e: unknown) {
       error.value = laravelErrorMessage(e, ['email', 'cpf', 'name']) ?? 'Erro ao cadastrar.'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /** Retoma pré-cadastro em rascunho (mesmo nome, e-mail e CPF) quando a senha ainda não foi definida. */
+  async function resumeDraftRegistration(payload: { name: string; email: string; cpf: string }) {
+    loading.value = true
+    error.value = null
+    try {
+      const res = await request<{ token: string; user: AuthUser }>('/v1/register/resume', {
+        method: 'POST',
+        body: payload,
+      })
+      token.value = res.token
+      user.value = res.user
+      return res
+    } catch (e: unknown) {
+      error.value = laravelErrorMessage(e, ['email', 'cpf', 'name']) ?? 'Não foi possível retomar o cadastro.'
       throw e
     } finally {
       loading.value = false
@@ -220,6 +263,7 @@ export function useAuth() {
     error,
     login,
     register,
+    resumeDraftRegistration,
     fetchMe,
     fetchDeletionStatus,
     deleteAccountImmediate,

@@ -1,6 +1,6 @@
 <template>
   <NuxtLink
-    :to="`/explorar/${gender}/perfil/${profile.public_slug}`"
+    :to="publicProfileHref"
     class="group flex flex-col overflow-hidden border border-zinc-800 bg-zinc-900/50 transition hover:border-brand/40 hover:shadow-lg hover:shadow-rose-950/20"
     :class="isCompact ? 'rounded-xl' : 'rounded-2xl'"
   >
@@ -121,6 +121,7 @@
 <script setup lang="ts">
 import type { ProfileMediaItem, ProfileSummary } from '~/data/mock-catalog'
 import { formatArrivalBadge } from '~/utils/arrival-badge'
+import { buildPublicProfilePath } from '~/utils/public-profile-url'
 
 const props = defineProps<{
   gender: string
@@ -130,6 +131,10 @@ const props = defineProps<{
 }>()
 
 const isCompact = computed(() => props.compact === true)
+
+const publicProfileHref = computed(() =>
+  buildPublicProfilePath(props.profile.public_slug, props.profile.tipo_atendimento),
+)
 
 function seededShuffle<T>(items: T[], seedStr: string): T[] {
   const arr = [...items]
@@ -141,7 +146,7 @@ function seededShuffle<T>(items: T[], seedStr: string): T[] {
   for (let i = arr.length - 1; i > 0; i--) {
     seed = (seed * 1103515245 + 12345) >>> 0
     const j = seed % (i + 1)
-    ;[arr[i], arr[j]] = [arr[j], arr[i]!]
+    ;[arr[i]!, arr[j]!] = [arr[j]!, arr[i]!]
   }
   return arr
 }
@@ -164,6 +169,9 @@ watchEffect((onCleanup) => {
   const slides = carouselSlides.value
   activeSlide.value = 0
   if (slides.length <= 1) {
+    return
+  }
+  if (import.meta.server) {
     return
   }
   const id = setInterval(() => {

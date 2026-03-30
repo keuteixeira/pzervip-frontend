@@ -97,6 +97,10 @@ export const ADMIN_MOCK_PROFILE_DETAIL = {
   highlight_stars_cached: 4,
   destaque_remaining_seconds: 2_592_000,
   user_paused_listing: false,
+  public_profile_visible_when_paused: false,
+  listing_visibility_locked_until: null as string | null,
+  available_now_activated_at: null as string | null,
+  social_links: { instagram: 'https://instagram.com/exemplo' } as Record<string, string>,
   neighborhood: 'Jardins',
   state_id: 26,
   city_id: 3550308,
@@ -266,6 +270,7 @@ export const ADMIN_MOCK_MEDIA_PENDING = [
       id: 201,
       professional_name: 'Juliana Premium',
       public_slug: 'juliana-premium-sp',
+      approval_status: 'approved',
     },
   },
   {
@@ -280,6 +285,7 @@ export const ADMIN_MOCK_MEDIA_PENDING = [
       id: 202,
       professional_name: 'Rafa Elite',
       public_slug: 'rafa-elite-rj',
+      approval_status: 'approved',
     },
   },
   {
@@ -294,6 +300,7 @@ export const ADMIN_MOCK_MEDIA_PENDING = [
       id: 203,
       professional_name: 'Studio Aurora',
       public_slug: 'studio-aurora-bh',
+      approval_status: 'approved',
     },
   },
 ]

@@ -20,7 +20,7 @@ export default defineNuxtConfig({
     port: 5175,
   },
   modules: ['@nuxtjs/tailwindcss'],
-  css: ['~/assets/css/main.css'],
+  css: ['sweetalert2/dist/sweetalert2.min.css', '~/assets/css/main.css'],
   runtimeConfig: {
     public: {
       apiBase:

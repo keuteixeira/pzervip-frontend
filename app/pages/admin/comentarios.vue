@@ -26,7 +26,7 @@
       <li v-for="c in items" :key="c.id" class="space-y-2 px-4 py-4">
         <div class="flex flex-wrap items-baseline justify-between gap-2">
           <p class="text-sm font-medium text-white">{{ c.author_display || 'Anônimo' }}</p>
-          <span class="text-xs text-zinc-500">{{ c.status }} · #{{ c.id }}</span>
+          <span class="text-xs text-zinc-500">{{ adminCommentStatusLabel(c.status) }} · #{{ c.id }}</span>
         </div>
         <p class="text-sm text-zinc-300 whitespace-pre-wrap">{{ c.body }}</p>
         <p v-if="c.advertiser_profile" class="text-xs text-zinc-500">
@@ -83,6 +83,7 @@
 
 <script setup lang="ts">
 import { filterMockComments } from '~/data/admin-mocks'
+import { adminCommentStatusLabel } from '~/utils/admin-labels'
 
 definePageMeta({
   layout: 'admin',

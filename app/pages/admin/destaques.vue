@@ -44,8 +44,8 @@
               <span v-if="o.user">{{ o.user.name }}</span>
               <span v-else class="text-zinc-600">—</span>
             </td>
-            <td class="px-4 py-3">{{ o.gateway }}</td>
-            <td class="px-4 py-3">{{ o.payment_status }}</td>
+            <td class="px-4 py-3">{{ adminGatewayLabel(o.gateway) }}</td>
+            <td class="px-4 py-3">{{ adminPaymentStatusLabel(o.payment_status) }}</td>
             <td class="px-4 py-3">{{ formatBrl(o.amount_brl) }}</td>
             <td class="px-4 py-3">{{ o.stars }}</td>
             <td class="px-4 py-3">{{ o.period_months ?? '—' }}</td>
@@ -80,6 +80,7 @@
 
 <script setup lang="ts">
 import { filterMockHighlightOrders } from '~/data/admin-mocks'
+import { adminGatewayLabel, adminPaymentStatusLabel } from '~/utils/admin-labels'
 
 definePageMeta({
   layout: 'admin',

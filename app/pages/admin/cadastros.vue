@@ -2,7 +2,9 @@
   <div class="space-y-6">
     <div>
       <h1 class="text-2xl font-bold text-white">Cadastros</h1>
-      <p class="mt-1 text-sm text-zinc-500">Aprovar ou recusar novos cadastros (fila de análise).</p>
+      <p class="mt-1 text-sm text-zinc-500">
+        Aprovar ou recusar cadastros pendentes. Perfis já aprovados são geridos em Anunciantes (pausar, mídias, etc.).
+      </p>
     </div>
 
     <div class="flex flex-wrap gap-2">
@@ -29,22 +31,23 @@
         <div>
           <p class="font-medium text-white">{{ row.user?.name || row.professional_name || 'Perfil' }}</p>
           <p class="text-xs text-zinc-500">
-            Status: {{ row.approval_status }} · Formulário: {{ row.form_status }} · ID {{ row.id }}
+            Cadastro: {{ adminApprovalStatusLabel(row.approval_status) }} · Formulário:
+            {{ adminFormStatusLabel(row.form_status) }} · ID {{ row.id }}
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
           <button
+            v-if="row.approval_status !== 'approved'"
             type="button"
-            class="rounded bg-emerald-600 px-2 py-1 text-xs text-white disabled:opacity-40"
-            :disabled="row.approval_status === 'approved'"
+            class="rounded bg-emerald-600 px-2 py-1 text-xs text-white"
             @click="setStatus(row.id, 'approved')"
           >
             Aprovar
           </button>
           <button
+            v-if="row.approval_status === 'pending'"
             type="button"
-            class="rounded bg-zinc-700 px-2 py-1 text-xs text-white disabled:opacity-40"
-            :disabled="row.approval_status === 'rejected'"
+            class="rounded bg-zinc-700 px-2 py-1 text-xs text-white"
             @click="setStatus(row.id, 'rejected')"
           >
             Recusar
@@ -83,6 +86,7 @@
 
 <script setup lang="ts">
 import { filterMockCadastros } from '~/data/admin-mocks'
+import { adminApprovalStatusLabel, adminFormStatusLabel } from '~/utils/admin-labels'
 
 definePageMeta({
   layout: 'admin',

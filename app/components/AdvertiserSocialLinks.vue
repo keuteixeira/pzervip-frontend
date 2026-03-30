@@ -1,5 +1,5 @@
 <template>
-  <div v-if="items.length > 0" class="flex flex-wrap gap-3">
+  <div v-if="items.length > 0" class="flex flex-wrap justify-center gap-3">
     <a
       v-for="it in items"
       :key="it.key"

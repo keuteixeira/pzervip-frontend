@@ -20,46 +20,88 @@
       </p>
     </header>
 
-    <section v-for="region in regions" :key="region.uf" class="space-y-4">
+    <section v-for="region in regions" :key="region.slug" class="space-y-4">
       <div class="flex items-baseline justify-between gap-4 border-b border-zinc-800 pb-2">
-        <h2 class="text-xl font-semibold text-white">{{ region.name }}</h2>
-        <span class="text-xs uppercase tracking-wide text-zinc-500">{{ region.uf }}</span>
+        <h2
+          class="inline-flex items-center px-4 py-1.5 text-xl font-extrabold tracking-wide text-white text-center"
+        >
+          {{ region.name }}
+        </h2>
+        <span class="text-xs uppercase tracking-wide text-zinc-500">
+          <span class="tabular-nums">{{ region.totalProfiles }}</span>
+          {{ region.totalProfiles === 1 ? ' perfil' : ' perfis' }}
+        </span>
       </div>
-      <ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <li v-for="c in region.cities" :key="`${region.uf}-${c.slug}`">
-          <NuxtLink
-            :to="`/explorar/${gender}/cidade/${region.uf.toLowerCase()}/${c.slug}`"
-            class="group block overflow-hidden rounded-3xl bg-[#111317] shadow-lg ring-1 ring-zinc-800/80 transition hover:ring-brand/50"
-          >
-            <div class="relative h-48 w-full overflow-hidden bg-zinc-800">
-              <img
-                :src="c.thumbUrl"
-                :alt="`Foto em destaque em ${c.name}`"
-                class="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                width="640"
-                height="384"
-                loading="lazy"
-                decoding="async"
-              />
-              <div
-                class="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/20 to-[#111317]"
-                aria-hidden="true"
-              />
-              <span
-                class="absolute right-3 top-3 rounded-full bg-[#E64C4C] px-3 py-1 text-xs font-medium text-white shadow-sm"
+
+      <div class="space-y-6">
+        <article
+          v-for="state in region.states"
+          :key="state.uf"
+          class="space-y-3 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h3 class="text-lg font-semibold text-white">
+              {{ state.name }}
+              <span class="ml-1 text-sm font-normal text-zinc-500">({{ state.uf }})</span>
+            </h3>
+            <span class="text-xs text-zinc-500">
+              <span class="tabular-nums">{{ state.totalProfiles }}</span>
+              {{ state.totalProfiles === 1 ? ' perfil' : ' perfis' }}
+            </span>
+          </div>
+
+          <ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <li v-for="c in state.cities" :key="`${state.uf}-${c.slug}`">
+              <NuxtLink
+                :to="`/explorar/${gender}/cidade/${state.uf.toLowerCase()}/${c.slug}`"
+                class="group block overflow-hidden rounded-3xl bg-[#111317] shadow-lg ring-1 ring-zinc-800/80 transition hover:ring-brand/50"
               >
-                <span class="tabular-nums">{{ c.count }}</span>
-                {{ c.count === 1 ? ' perfil' : ' perfis' }}
-              </span>
-            </div>
-            <div class="flex items-center justify-center px-4 py-6">
-              <h3 class="text-center text-xl font-bold text-white transition group-hover:text-[#E64C4C]">
-                {{ c.name }}
-              </h3>
-            </div>
-          </NuxtLink>
-        </li>
-      </ul>
+                <div class="relative h-48 w-full overflow-hidden bg-zinc-800">
+                  <img
+                    :src="c.thumbUrl"
+                    :alt="`Foto em destaque em ${c.name}`"
+                    class="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                    width="640"
+                    height="384"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div
+                    class="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/20 to-[#111317]"
+                    aria-hidden="true"
+                  />
+                  <span
+                    class="absolute right-3 top-3 rounded-full bg-[#E64C4C] px-3 py-1 text-xs font-medium text-white shadow-sm"
+                  >
+                    <span class="tabular-nums">{{ c.count }}</span>
+                    {{ c.count === 1 ? ' perfil' : ' perfis' }}
+                  </span>
+                </div>
+                <div class="flex items-center justify-center px-4 py-6">
+                  <h4 class="text-center text-xl font-bold text-white transition group-hover:text-[#E64C4C]">
+                    {{ c.name }}
+                  </h4>
+                </div>
+              </NuxtLink>
+            </li>
+          </ul>
+
+          <div v-if="state.totalCities > statePreviewLimit(state.uf)" class="pt-1 text-sm text-center">
+            <NuxtLink
+              :to="`/explorar/${gender}/estado/${state.uf.toLowerCase()}`"
+              class="text-brand hover:underline"
+            >
+              Ver todas as cidades de {{ state.name }}
+            </NuxtLink>
+          </div>
+        </article>
+      </div>
+
+      <div class="text-sm text-center">
+        <NuxtLink :to="`/explorar/${gender}/regiao/${region.slug}`" class="text-brand hover:underline">
+          Ver todos os estados da região {{ region.name }}
+        </NuxtLink>
+      </div>
     </section>
 
     <section
@@ -113,6 +155,10 @@ const genderPhrase = computed(() => {
   }
   return genderTitle.value.toLowerCase()
 })
+
+function statePreviewLimit(uf: string): number {
+  return uf.toUpperCase() === 'SP' ? 18 : 9
+}
 
 const regions = computed(() => {
   if (!genderOk.value) {

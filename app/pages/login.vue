@@ -15,14 +15,15 @@
 
     <form class="space-y-4" @submit.prevent="onSubmit">
       <div>
-        <label class="mb-1 block text-sm font-medium text-zinc-300" for="identifier">E-mail ou CPF</label>
+        <label class="mb-1 block text-sm font-medium text-zinc-300" for="login-email">E-mail</label>
         <input
-          id="identifier"
-          v-model="identifier"
-          type="text"
+          id="login-email"
+          v-model="email"
+          type="email"
           required
-          autocomplete="username"
-          placeholder="seu@email.com ou 000.000.000-00"
+          autocomplete="email"
+          inputmode="email"
+          placeholder="seu@email.com"
           class="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white outline-none ring-brand focus:ring-2"
         />
       </div>
@@ -52,26 +53,6 @@
       </button>
     </form>
 
-    <div
-      v-if="isDev"
-      class="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/50 p-4 text-sm text-zinc-400"
-    >
-      <p class="font-medium text-zinc-300">Ambiente de desenvolvimento</p>
-      <p class="mt-1">
-        Conta demo (rode no backend:
-        <code class="rounded bg-zinc-800 px-1 py-0.5 text-xs">php artisan db:seed --class=DemoAdvertiserSeeder</code>
-        ):
-      </p>
-      <p class="mt-2 font-mono text-xs text-zinc-300">{{ demoEmail }} / {{ demoPassword }}</p>
-      <button
-        type="button"
-        class="mt-3 w-full rounded-lg border border-zinc-600 py-2 text-zinc-200 transition hover:bg-zinc-800"
-        @click="fillDemo"
-      >
-        Preencher e-mail e senha demo
-      </button>
-    </div>
-
     <p class="text-center text-sm text-zinc-500">
       Novo por aqui?
       <NuxtLink to="/cadastro" class="text-brand hover:underline">Criar conta</NuxtLink>
@@ -92,9 +73,9 @@ useHead({
 })
 
 const route = useRoute()
-const identifier = ref('')
+const email = ref('')
 const password = ref('')
-const { login, loading, error, user } = useAuth()
+const { login, loading, error } = useAuth()
 const errorMsg = ref<string | null>(null)
 
 const resetOkMsg = computed(() => {
@@ -117,16 +98,17 @@ const demoEmail = 'demo@prazervip.local'
 const demoPassword = 'demo123456'
 
 function fillDemo() {
-  identifier.value = demoEmail
+  email.value = demoEmail
   password.value = demoPassword
 }
 
 async function onSubmit() {
   errorMsg.value = null
   try {
-    await login(identifier.value, password.value)
-    if (user.value?.role === 'admin') {
-      await navigateTo('/admin')
+    const res = await login(email.value, password.value)
+    // Usar `res.user` (não só `user.value`): evita corrida com estado reativo após o POST.
+    if (res.user.role === 'admin') {
+      await navigateTo('/admin/cadastros')
     } else {
       await navigateTo('/conta')
     }

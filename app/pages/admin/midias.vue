@@ -25,6 +25,9 @@
           </p>
           <p v-if="row.advertiser_profile" class="text-sm text-zinc-400">
             Perfil: {{ row.advertiser_profile.professional_name || '—' }}
+            <span v-if="row.advertiser_profile.approval_status" class="text-zinc-500">
+              · cadastro {{ adminApprovalStatusLabel(row.advertiser_profile.approval_status) }}
+            </span>
             <NuxtLink
               :to="withMock(`/admin/anunciantes/${row.advertiser_profile.id}`)"
               class="ml-2 text-brand hover:underline"
@@ -88,6 +91,7 @@
 
 <script setup lang="ts">
 import { ADMIN_MOCK_MEDIA_PENDING } from '~/data/admin-mocks'
+import { adminApprovalStatusLabel } from '~/utils/admin-labels'
 
 definePageMeta({
   layout: 'admin',
@@ -107,7 +111,12 @@ type Row = {
   file_name: string
   mime_type: string
   mock_preview_url?: string | null
-  advertiser_profile: { id: number; professional_name: string | null; public_slug: string | null } | null
+  advertiser_profile: {
+    id: number
+    professional_name: string | null
+    public_slug: string | null
+    approval_status?: string
+  } | null
 }
 
 const loading = ref(true)

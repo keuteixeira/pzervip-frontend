@@ -28,7 +28,7 @@
             to="/conta/perfil"
             class="rounded-lg border border-brand/50 bg-brand/10 px-4 py-2 text-sm font-medium text-brand transition hover:bg-brand/20"
           >
-            Editar perfil público
+            Editar perfil
           </NuxtLink>
           <button
             type="button"
@@ -38,67 +38,34 @@
             Sair
           </button>
         </div>
-      </section>
-
-      <section v-if="deletionStatus" class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
-        <h2 class="text-lg font-semibold text-white">Privacidade e exclusão</h2>
-        <p class="mt-2 text-sm leading-relaxed text-zinc-400">
-          <template v-if="deletionStatus.deletion_requested_at">
-            Exclusão solicitada em
-            <span class="text-zinc-300">{{ formatDate(deletionStatus.deletion_requested_at) }}</span>.
-            Remoção efetiva prevista até
-            <span class="font-medium text-amber-200/90">{{ formatDate(deletionStatus.deletion_grace_ends_at) }}</span>.
-          </template>
-          <template v-else-if="deletionStatus.can_delete_immediately">
-            Seu perfil ainda não foi aprovado. Você pode excluir a conta agora; seus dados serão removidos
-            (registro mantido de forma anonimizada para auditoria).
-          </template>
-          <template v-else-if="deletionStatus.can_request_scheduled_deletion">
-            Seu perfil já foi aprovado. A exclusão entra em fila com período de carência; depois todos os dados
-            pessoais são removidos (soft delete + anonimização).
-          </template>
-        </p>
-
-        <div class="mt-6 flex flex-wrap gap-3">
-          <button
-            v-if="deletionStatus.can_delete_immediately && !deletionStatus.deletion_requested_at"
-            type="button"
-            class="rounded-lg bg-red-600/90 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600"
-            :disabled="actionLoading"
-            @click="onImmediateDelete"
+        <div
+          v-if="profileOk && profileDetail?.approval_status === 'approved'"
+          class="mt-4 flex flex-wrap gap-2 border-t border-zinc-800/80 pt-4"
+        >
+          <span class="w-full text-xs font-medium uppercase tracking-wide text-zinc-600">Atalhos</span>
+          <NuxtLink
+            v-for="l in profileSectionLinks"
+            :key="l.secao"
+            :to="`/conta/perfil?secao=${l.secao}`"
+            class="rounded-full border border-zinc-700/90 bg-zinc-950/40 px-3 py-1.5 text-xs font-medium text-zinc-400 transition hover:border-brand/40 hover:text-brand"
           >
-            Excluir conta e dados agora
-          </button>
-          <button
-            v-if="deletionStatus.can_request_scheduled_deletion && !deletionStatus.deletion_requested_at"
-            type="button"
-            class="rounded-lg bg-red-600/90 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600"
-            :disabled="actionLoading"
-            @click="onRequestScheduled"
-          >
-            Solicitar exclusão da conta
-          </button>
-          <button
-            v-if="deletionStatus.deletion_requested_at"
-            type="button"
-            class="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
-            :disabled="actionLoading"
-            @click="onCancelScheduled"
-          >
-            Cancelar pedido de exclusão
-          </button>
+            {{ l.label }}
+          </NuxtLink>
         </div>
-        <p v-if="actionMsg" class="mt-4 text-sm" :class="actionErr ? 'text-red-400' : 'text-emerald-400'">
-          {{ actionMsg }}
-        </p>
       </section>
 
       <section v-if="profileOk && profileDetail" class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
-        <h2 class="text-lg font-semibold text-white">Perfil (API)</h2>
+        <h2 class="text-lg font-semibold text-white">Perfil</h2>
         <p class="mt-2 text-sm text-zinc-400">
-          Nome profissional:
+          <strong>Nome profissional: </strong> 
           <span class="text-zinc-200">{{ profileDetail.professional_name ?? '—' }}</span>
         </p>
+        <div class="mt-3 border-t border-zinc-800/80 pt-3">
+          <p class="mt-2 text-sm text-zinc-400">
+            <strong>Local no anúncio: </strong> 
+            <template v-if="profileLocationLoading">Carregando…</template>
+            <template v-else>{{ profileLocationSummary ?? '—' }}</template></p>
+        </div>
       </section>
 
       <section
@@ -146,7 +113,9 @@
 
         <div v-if="!profileDetail.user_paused_listing" class="mt-6 space-y-4">
           <p class="text-sm font-medium text-zinc-300">Inativar perfil</p>
-          <p class="text-xs text-zinc-500">Escolha o que acontece com o link público do seu anúncio:</p>
+          <p class="text-xs text-zinc-500">
+            Marque uma das opções abaixo e só então use o botão para inativar.
+          </p>
           <div class="space-y-2 text-sm text-zinc-300">
             <label class="flex cursor-pointer items-start gap-2">
               <input v-model="pauseChoice" type="radio" value="hide" class="mt-1" />
@@ -159,8 +128,8 @@
           </div>
           <button
             type="button"
-            class="rounded-lg border border-amber-700/60 bg-amber-950/40 px-4 py-2 text-sm font-medium text-amber-100/90 transition hover:bg-amber-950/60"
-            :disabled="listingLoading || !!profileDetail.listing_pause_cooldown_active"
+            class="rounded-lg border border-amber-700/60 bg-amber-950/40 px-4 py-2 text-sm font-medium text-amber-100/90 transition hover:bg-amber-950/60 disabled:cursor-not-allowed disabled:opacity-45"
+            :disabled="listingLoading || !!profileDetail.listing_pause_cooldown_active || pauseChoice === null"
             @click="onPauseProfile"
           >
             Inativar perfil
@@ -244,6 +213,58 @@
         </p>
       </section>
 
+      <section v-if="deletionStatus" class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
+        <h2 class="text-lg font-semibold text-white">Privacidade e exclusão</h2>
+        <p class="mt-2 text-sm leading-relaxed text-zinc-400">
+          <template v-if="deletionStatus.deletion_requested_at">
+            Exclusão solicitada em
+            <span class="text-zinc-300">{{ formatDate(deletionStatus.deletion_requested_at) }}</span>.
+            Remoção efetiva prevista até
+            <span class="font-medium text-amber-200/90">{{ formatDate(deletionStatus.deletion_grace_ends_at) }}</span>.
+          </template>
+          <template v-else-if="deletionStatus.can_delete_immediately">
+            Seu perfil ainda não foi aprovado. Você pode excluir a conta agora; seus dados serão removidos
+            (registro mantido de forma anonimizada para auditoria).
+          </template>
+          <template v-else-if="deletionStatus.can_request_scheduled_deletion">
+            Seu perfil já foi aprovado. Caso solicite a exclusão o mesmo acontecerá em até 30 dias do solicitado, nesse período é possível desistir da exclusão.
+          </template>
+        </p>
+
+        <div class="mt-6 flex flex-wrap gap-3">
+          <button
+            v-if="deletionStatus.can_delete_immediately && !deletionStatus.deletion_requested_at"
+            type="button"
+            class="rounded-lg bg-red-600/90 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600"
+            :disabled="actionLoading"
+            @click="onImmediateDelete"
+          >
+            Excluir conta e dados agora
+          </button>
+          <button
+            v-if="deletionStatus.can_request_scheduled_deletion && !deletionStatus.deletion_requested_at"
+            type="button"
+            class="rounded-lg bg-red-600/90 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600"
+            :disabled="actionLoading"
+            @click="onRequestScheduled"
+          >
+            Solicitar exclusão da conta
+          </button>
+          <button
+            v-if="deletionStatus.deletion_requested_at"
+            type="button"
+            class="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+            :disabled="actionLoading"
+            @click="onCancelScheduled"
+          >
+            Cancelar pedido de exclusão
+          </button>
+        </div>
+        <p v-if="actionMsg" class="mt-4 text-sm" :class="actionErr ? 'text-red-400' : 'text-emerald-400'">
+          {{ actionMsg }}
+        </p>
+      </section>
+
       <section v-else-if="user && user.account_status === 'pending_activation'" class="rounded-2xl border border-amber-900/40 bg-amber-950/20 p-6">
         <p class="text-sm text-amber-100/90">
           Sua conta ainda aguarda liberação do administrador. Você pode excluir os dados abaixo se não quiser mais
@@ -256,6 +277,7 @@
 
 <script setup lang="ts">
 import type { AccountDeletionStatus } from '~/composables/useAuth'
+import { useSwal } from '~/composables/useSwal'
 
 definePageMeta({
   layout: 'default',
@@ -269,6 +291,7 @@ useHead({
 const { user, fetchMe, logout, fetchDeletionStatus, deleteAccountImmediate, requestAccountDeletion, cancelAccountDeletion } =
   useAuth()
 const { request } = useApi()
+const { swalConfirm } = useSwal()
 
 const loading = ref(true)
 const actionLoading = ref(false)
@@ -277,10 +300,17 @@ const actionErr = ref(false)
 
 const deletionStatus = ref<AccountDeletionStatus | null>(null)
 
+type ApiState = { id: number; name: string; uf: string }
+type ApiCity = { id: number; name: string }
+
 type ProfileDetail = {
   professional_name?: string | null
   approval_status?: string
   uuid?: string
+  state_id?: number | null
+  city_id?: number | null
+  neighborhood?: string | null
+  has_venue?: boolean | null
   user_paused_listing?: boolean
   public_profile_visible_when_paused?: boolean
   listing_pause_cooldown_active?: boolean
@@ -297,10 +327,20 @@ type ProfileDetail = {
 
 const profileDetail = ref<ProfileDetail | null>(null)
 const profileOk = ref(false)
+const profileLocationSummary = ref<string | null>(null)
+const profileLocationLoading = ref(false)
+
+const profileSectionLinks = [
+  { secao: 'dados', label: 'Dados pessoais' },
+  { secao: 'perfil', label: 'Nome e link' },
+  { secao: 'local', label: 'Local' },
+  { secao: 'redes', label: 'Redes' },
+  { secao: 'midias', label: 'Mídias' },
+] as const
 const listingLoading = ref(false)
 const listingMsg = ref<string | null>(null)
 const listingErr = ref(false)
-const pauseChoice = ref<'hide' | 'keep'>('hide')
+const pauseChoice = ref<'hide' | 'keep' | null>(null)
 
 const availableNowLoading = ref(false)
 const availableNowMsg = ref<string | null>(null)
@@ -322,7 +362,67 @@ function syncPauseChoiceFromProfile() {
   if (!p) {
     return
   }
+  if (!p.user_paused_listing) {
+    pauseChoice.value = null
+    return
+  }
   pauseChoice.value = p.public_profile_visible_when_paused ? 'keep' : 'hide'
+}
+
+/** Cidade, UF e bairro (se público), alinhado ao perfil público (has_venue). */
+async function hydrateProfileLocationSummary() {
+  profileLocationSummary.value = null
+  const p = profileDetail.value
+  if (!p) {
+    return
+  }
+
+  const showNeighborhood = p.has_venue !== false
+  const nh = showNeighborhood ? (p.neighborhood ?? '').trim() : ''
+
+  if (!p.state_id) {
+    profileLocationSummary.value = nh
+      ? nh
+      : 'Estado e cidade ainda não informados. Defina em Editar perfil → Local.'
+    return
+  }
+
+  profileLocationLoading.value = true
+  try {
+    const states = await request<ApiState[]>('/v1/states')
+    const st = states.find((s) => s.id === p.state_id)
+    const uf = st?.uf ?? ''
+    const stateName = st?.name ?? ''
+
+    let cityName = ''
+    if (p.city_id) {
+      const cities = await request<ApiCity[]>(`/v1/states/${p.state_id}/cities`)
+      const ct = cities.find((c) => c.id === p.city_id)
+      cityName = ct?.name ?? ''
+    }
+
+    const parts: string[] = []
+    if (cityName && uf) {
+      parts.push(`${cityName} — ${uf}`)
+    } else if (cityName) {
+      parts.push(cityName)
+    } else if (stateName && uf) {
+      parts.push(`${stateName} (${uf})`)
+    }
+
+    if (nh) {
+      parts.push(nh)
+    }
+
+    profileLocationSummary.value =
+      parts.length > 0
+        ? parts.join(' · ')
+        : 'Complete cidade e estado em Editar perfil → Local.'
+  } catch {
+    profileLocationSummary.value = 'Não foi possível carregar o local. Tente atualizar a página.'
+  } finally {
+    profileLocationLoading.value = false
+  }
 }
 
 function listingApiMessage(e: unknown): string {
@@ -352,12 +452,25 @@ async function load() {
     } catch {
       profileDetail.value = null
       profileOk.value = false
+      profileLocationSummary.value = null
     }
     await fetchMe()
   } finally {
     loading.value = false
   }
 }
+
+watch(
+  profileDetail,
+  (p) => {
+    if (!p) {
+      profileLocationSummary.value = null
+      return
+    }
+    void hydrateProfileLocationSummary()
+  },
+  { deep: true },
+)
 
 onMounted(() => load())
 
@@ -367,7 +480,14 @@ async function onLogout() {
 }
 
 async function onImmediateDelete() {
-  if (!confirm('Excluir conta e dados agora? Esta ação não pode ser desfeita.')) {
+  const ok = await swalConfirm({
+    title: 'Excluir conta agora?',
+    text: 'Todos os dados serão removidos de imediato. Esta ação não pode ser desfeita.',
+    icon: 'warning',
+    confirmButtonText: 'Sim, excluir agora',
+    cancelButtonText: 'Cancelar',
+  })
+  if (!ok) {
     return
   }
   actionLoading.value = true
@@ -386,7 +506,12 @@ async function onImmediateDelete() {
 }
 
 async function onRequestScheduled() {
-  if (!confirm('Solicitar exclusão? Após o prazo os dados serão removidos. Você pode cancelar antes.')) {
+  const ok = await swalConfirm({
+    title: 'Solicitar exclusão da conta?',
+    text: 'Após o prazo configurado, os dados serão removidos. Você pode cancelar o pedido antes disso.',
+    icon: 'question',
+  })
+  if (!ok) {
     return
   }
   actionLoading.value = true
@@ -421,11 +546,15 @@ async function onCancelScheduled() {
 }
 
 async function onPauseProfile() {
-  if (
-    !confirm(
-      'Inativar o perfil? Você poderá reativar quando quiser; após reativar, a próxima inativação só será permitida após o período de carência.',
-    )
-  ) {
+  if (pauseChoice.value === null) {
+    return
+  }
+  const okPause = await swalConfirm({
+    title: 'Inativar o perfil?',
+    text: 'Você poderá reativar quando quiser. Depois de reativar, a próxima inativação só será permitida após o período de carência.',
+    icon: 'question',
+  })
+  if (!okPause) {
     return
   }
   listingLoading.value = true
@@ -451,7 +580,12 @@ async function onPauseProfile() {
 }
 
 async function onReactivateProfile() {
-  if (!confirm('Reativar o perfil na plataforma?')) {
+  const ok = await swalConfirm({
+    title: 'Reativar o perfil?',
+    text: 'Seu anúncio voltará a aparecer na plataforma conforme as regras de visibilidade.',
+    icon: 'question',
+  })
+  if (!ok) {
     return
   }
   listingLoading.value = true
@@ -474,11 +608,12 @@ async function onReactivateProfile() {
 }
 
 async function onActivateAvailableNow() {
-  if (
-    !confirm(
-      'Ativar o badge «Disponível agora»? Ele ficará visível na listagem pelo tempo indicado e só poderá voltar a ser ativado após o intervalo de espera.',
-    )
-  ) {
+  const ok = await swalConfirm({
+    title: 'Ativar o selo «Disponível agora»?',
+    text: 'Ele ficará visível na listagem pelo tempo indicado e só poderá ser ativado de novo após o intervalo de espera.',
+    icon: 'question',
+  })
+  if (!ok) {
     return
   }
   availableNowLoading.value = true

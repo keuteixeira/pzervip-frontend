@@ -5,7 +5,8 @@
         <NuxtLink :to="withMock('/admin/cadastros')" class="text-sm text-zinc-500 hover:text-brand">← Cadastros</NuxtLink>
         <h1 class="mt-2 text-2xl font-bold text-white">{{ detail?.professional_name || 'Revisão de cadastro' }}</h1>
         <p class="text-sm text-zinc-500">
-          ID {{ id }} · {{ detail?.approval_status }} · {{ detail?.form_status }} · {{ detail?.public_slug }}
+          ID {{ id }} · {{ adminApprovalStatusLabel(detail?.approval_status) }} ·
+          {{ adminFormStatusLabel(detail?.form_status) }} · {{ detail?.public_slug || '—' }}
         </p>
       </div>
       <div v-if="detail && detail.approval_status === 'pending'" class="flex flex-wrap gap-2">
@@ -97,7 +98,9 @@
             <div class="min-w-0">
               <p class="text-sm font-medium text-brand">{{ m.kind_label || m.collection_name }}</p>
               <p class="truncate text-sm text-white">{{ m.file_name }}</p>
-              <p class="text-xs text-zinc-500">{{ m.mime_type || '—' }} · moderação: {{ m.moderation_status }}</p>
+              <p class="text-xs text-zinc-500">
+                {{ m.mime_type || '—' }} · moderação: {{ adminMediaModerationStatusLabel(m.moderation_status) }}
+              </p>
             </div>
             <div class="flex flex-shrink-0 flex-wrap gap-2">
               <button
@@ -126,7 +129,13 @@
 </template>
 
 <script setup lang="ts">
+import { useSwal } from '~/composables/useSwal'
 import { getMockCadastroMediaList, getMockCadastroReviewDetail } from '~/data/admin-mocks'
+import {
+  adminApprovalStatusLabel,
+  adminFormStatusLabel,
+  adminMediaModerationStatusLabel,
+} from '~/utils/admin-labels'
 
 definePageMeta({
   layout: 'admin',
@@ -137,6 +146,7 @@ const route = useRoute()
 const id = computed(() => Number(route.params.id))
 const { request } = useApi()
 const { isMock, withMock } = useAdminMock()
+const { swalConfirm } = useSwal()
 
 useHead(() => ({ title: `Cadastro #${route.params.id}` }))
 
@@ -262,7 +272,14 @@ async function openMedia(m: MediaRow) {
 }
 
 async function removeMedia(m: MediaRow) {
-  if (!confirm(`Remover "${m.file_name}" deste cadastro?`)) {
+  const ok = await swalConfirm({
+    title: 'Remover arquivo do cadastro?',
+    text: `Deseja remover «${m.file_name}» deste cadastro?`,
+    icon: 'warning',
+    confirmButtonText: 'Sim, remover',
+    cancelButtonText: 'Cancelar',
+  })
+  if (!ok) {
     return
   }
   if (isMock.value) {

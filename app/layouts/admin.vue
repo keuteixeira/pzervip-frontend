@@ -3,8 +3,17 @@
     <header class="border-b border-zinc-800 bg-zinc-900/80">
       <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4">
         <div class="flex items-center gap-6">
-          <NuxtLink :to="withMock('/admin/cadastros')" class="text-lg font-semibold text-white hover:text-brand">
-            Admin Prazer.Vip
+          <NuxtLink
+            :to="withMock('/admin/cadastros')"
+            class="flex shrink-0 items-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            aria-label="Painel administrativo — início"
+          >
+            <img
+              :src="brandAssets.logoHorizontal"
+              alt="Prazer.Vip"
+              class="h-8 w-auto max-w-[min(200px,45vw)] object-contain object-left"
+              loading="eager"
+            />
           </NuxtLink>
           <nav class="flex flex-wrap gap-1 text-sm">
             <NuxtLink
@@ -46,6 +55,8 @@
 </template>
 
 <script setup lang="ts">
+import { brandAssets } from '~/config/brand-assets'
+
 const route = useRoute()
 const { logout } = useAuth()
 const { isMock, withMock } = useAdminMock()

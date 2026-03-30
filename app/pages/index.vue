@@ -15,7 +15,7 @@
       Conteúdo exclusivo para maiores de 18 anos
     </h1>
     <p class="mt-4 max-w-md text-sm leading-relaxed text-zinc-400">
-      Ao continuar, confirmas que tens idade legal no teu país para visualizar este site e que aceitas
+      Ao continuar, confirma que tem idade legal para visualizar este site e que aceita
       os nossos termos de utilização.
     </p>
     <button
@@ -26,7 +26,7 @@
       Sou maior de 18 anos — Entrar
     </button>
     <p class="mt-8 text-xs text-zinc-600">
-      Se não tens idade legal, deves sair deste site.
+      Se não tem idade legal, clique <a href="https://www.google.com" class="text-brand hover:underline">aqui</a>.
     </p>
   </div>
 </template>

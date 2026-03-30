@@ -37,7 +37,7 @@
         <ul class="mt-2 list-inside list-disc space-y-1 text-sm text-zinc-400">
           <li>1 foto para banner (obrigatória)</li>
           <li>1 foto de perfil (obrigatória — rosto visível)</li>
-          <li>5 fotos para galeria (mínimo 3 obrigatórias)</li>
+          <li>Mídias para galeria — fotos e/ou vídeos (quantidade mínima obrigatória na etapa)</li>
           <li>Foto do documento de identificação (frente e verso)</li>
           <li>Selfie para verificação</li>
           <li>Vídeo de verificação (autenticar o cadastro)</li>
@@ -79,7 +79,7 @@
             {{ purgeOpen ? 'Ocultar' : 'Excluir pré-cadastro incompleto' }}
           </button>
           <p class="mt-2 text-xs text-zinc-500">
-            Você voltou ao cadastro: se começou antes e não finalizou, informe o mesmo e-mail e CPF para apagar o rascunho
+            Se começou antes e não finalizou e deseja excluir o pré cadastro, informe o mesmo e-mail e CPF para apagar o rascunho
             e liberar os dados.
           </p>
           <div v-show="purgeOpen" class="mt-4 space-y-3 rounded-xl border border-rose-900/40 bg-rose-950/10 p-4">
@@ -118,6 +118,12 @@
           </div>
         </div>
       </div>
+      <div
+        v-else-if="resumingCadastroSession"
+        class="rounded-xl border border-zinc-700 bg-zinc-900/40 p-4 text-sm text-zinc-400"
+      >
+        <p>Retomando seu cadastro…</p>
+      </div>
       <div v-else class="rounded-xl border border-emerald-900/40 bg-emerald-950/20 p-4 text-sm text-emerald-200">
         <p>Sessão ativa — continue preenchendo o perfil.</p>
         <p class="mt-2 text-xs text-emerald-300/90">
@@ -135,8 +141,7 @@
       <div v-if="needsAccountPassword" class="space-y-3 rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
         <p class="text-sm font-medium text-white">Senha para entrar no site</p>
         <p class="text-xs text-zinc-500">
-          Defina uma senha para usar em <strong class="text-zinc-400">Entrar</strong> com e-mail ou CPF depois de concluir
-          esta etapa.
+          Defina uma senha para usar em <strong class="text-zinc-400">Entrar</strong> com e-mail depois da aprovação do cadastro.
         </p>
         <input v-model="accountPassword" type="password" autocomplete="new-password" placeholder="Senha (mín. 8) *" class="input" />
         <input
@@ -176,7 +181,7 @@
             type="text"
             inputmode="tel"
             autocomplete="tel"
-            placeholder="(11) 98765-4321"
+            placeholder="O mesmo que será usado no seu perfil"
             maxlength="20"
             class="input"
             @input="onWhatsappInput"
@@ -207,12 +212,6 @@
         <input v-model="draft.address.number" type="text" placeholder="Número *" class="input" />
         <input v-model="draft.address.complement" type="text" placeholder="Complemento" class="input" />
         <input v-model="draft.address.neighborhood" type="text" placeholder="Bairro *" class="input sm:col-span-2" />
-        <div class="sm:col-span-2 rounded-lg border border-zinc-800 bg-zinc-950/40 px-4 py-2 text-sm text-zinc-400">
-          <span v-if="draft.address.city || draft.address.state_uf">
-            {{ draft.address.city }}{{ draft.address.city && draft.address.state_uf ? ' — ' : '' }}{{ draft.address.state_uf }}
-          </span>
-          <span v-else>Preencha o CEP para localizar cidade e UF.</span>
-        </div>
       </div>
     </section>
 
@@ -238,9 +237,21 @@
         @drop.prevent="onVerificationDrop($event, doc)"
       >
         <p class="font-medium text-zinc-200">{{ doc.label }}</p>
+        <div
+          v-if="doc.key === 'video'"
+          class="mt-4 rounded-lg border border-amber-900/50 bg-amber-950/25 p-4 text-left text-sm text-amber-100/95"
+        >
+          <p class="font-medium text-amber-200">Grave um vídeo falando:</p>
+          <p class="mt-2 italic leading-relaxed text-white">
+            “Meu nome é [nome profissional], e quero anunciar no site Prazer.Vip em {{ hoje }}”
+          </p>
+        </div>
         <p
-          class="mt-2 text-xs"
-          :class="verificationErrors[doc.key] ? 'text-red-400' : 'text-zinc-500'"
+          class="text-xs"
+          :class="[
+            doc.key === 'video' ? 'mt-4' : 'mt-2',
+            verificationErrors[doc.key] ? 'text-red-400' : 'text-zinc-500',
+          ]"
         >
           {{ verificationHint(doc) }}
         </p>
@@ -252,13 +263,6 @@
           @click.stop
           @change="onVerificationInputChange($event, doc)"
         />
-      </div>
-      <div class="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4 text-left text-sm text-zinc-400">
-        <p class="font-medium text-zinc-300">Vídeo de verificação</p>
-        <p class="mt-2">
-          Grave um vídeo falando: <em>“Meu nome é [nome profissional], e quero anunciar no site Prazer.Vip em
-          {{ hoje }}”</em>
-        </p>
       </div>
     </section>
 
@@ -367,7 +371,7 @@
       <textarea
         v-model="draft.bio"
         rows="6"
-        placeholder="Texto de apresentação * — serviços, especialidades, experiência. Não inclua telefone (regra do site atual)."
+        placeholder="Texto de apresentação * — serviços, especialidades, experiência. Não inclua telefones ou links."
         class="input min-h-[140px] resize-y"
       />
 
@@ -451,12 +455,10 @@
 
       <div>
         <p class="font-medium text-zinc-200">
-          Fotos da galeria * ({{ galleryRules.min }} a {{ galleryRules.max }} fotos)
+          Fotos e vídeos da galeria * ({{ galleryRules.min }} a {{ galleryRules.max }} mídias)
         </p>
         <p class="mt-1 text-xs text-zinc-500">
-          Envie imagens nítidas; quantidade mínima e máxima podem ser ajustadas no servidor (variáveis
-          <code class="rounded bg-zinc-800 px-1 py-0.5 text-[10px]">GALLERY_MIN_PHOTOS</code> /
-          <code class="rounded bg-zinc-800 px-1 py-0.5 text-[10px]">GALLERY_MAX_PHOTOS</code>).
+          Envie fotos nítidas e/ou vídeos curtos; é obrigatório atingir a quantidade mínima de mídias.
         </p>
         <div
           role="button"
@@ -478,7 +480,7 @@
             id="presentation-gallery-input"
             type="file"
             class="sr-only"
-            accept="image/*"
+            accept="image/*,video/*"
             multiple
             @click.stop
             @change="onGalleryFileInput"
@@ -523,7 +525,7 @@
           <p class="mt-2 text-2xl font-bold text-white">Gratuito</p>
           <ul class="mt-4 space-y-2 text-sm text-zinc-400">
             <li>Perfil básico na plataforma</li>
-            <li>Até 5 fotos na galeria</li>
+            <li>Até 5 mídias na galeria (fotos e/ou vídeos)</li>
             <li>Aprovação em até {{ approvalDaysBasic }} dias úteis</li>
           </ul>
         </button>
@@ -758,6 +760,7 @@
 /** Public URL: /cadastro — file name in English (register.vue). API uses men|women|trans. */
 
 import { REGISTER_COVER, REGISTER_GALLERY_DEFAULTS, REGISTER_PROFILE_AVATAR } from '~/config/registerPresentation'
+import { extractLaravelErrorMessage } from '~/composables/useAuth'
 import { cpfDigits, formatCepMask, formatCpfMask, formatPhoneBrMask, phoneDigits } from '~/utils/brFormat'
 
 /** Marca que o usuário já saiu da página /cadastro pelo menos uma vez (próximas visitas = “voltou”). */
@@ -774,6 +777,8 @@ useHead({
 
 const totalSteps = 7
 const step = ref(1)
+/** Com cookie de sessão: true até posicionar o passo (evita flash “Sessão ativa” na etapa 1). */
+const resumingCadastroSession = ref(false)
 const busy = ref(false)
 const formError = ref<string | null>(null)
 const cepLoading = ref(false)
@@ -793,7 +798,8 @@ const accountPassword = ref('')
 const accountPasswordConfirmation = ref('')
 
 const { token, request } = useApi()
-const { register, fetchMe, user, deleteDraftRegistration, setPassword } = useAuth()
+const { register, resumeDraftRegistration, fetchMe, user, deleteDraftRegistration, setPassword } =
+  useAuth()
 const hasToken = computed(() => !!token.value)
 
 const form = reactive({
@@ -1333,9 +1339,9 @@ const galleryHint = computed(() => {
   const { min, max } = galleryRules.value
   const n = draft.gallery_media_ids.length
   if (n >= max) {
-    return `Limite de ${max} foto(s) atingido. Remova uma foto para substituir.`
+    return `Limite de ${max} mídia(s) atingido. Remova uma para substituir.`
   }
-  return `Clique ou arraste imagens (até mais ${max - n}). São necessárias no mínimo ${min} foto(s).`
+  return `Clique ou arraste fotos ou vídeos (até mais ${max - n}). São necessárias no mínimo ${min} mídia(s).`
 })
 
 /** Detecta imagem por MIME ou extensão (alguns SOs deixam type vazio). */
@@ -1344,6 +1350,20 @@ function isProbablyImageFile(f: File): boolean {
     return true
   }
   if (!f.type && /\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i.test(f.name)) {
+    return true
+  }
+  return false
+}
+
+/** Imagem ou vídeo aceitos na galeria do cadastro (alinhado ao backend). */
+function isProbablyGalleryMediaFile(f: File): boolean {
+  if (f.type.startsWith('image/') || f.type.startsWith('video/')) {
+    return true
+  }
+  if (
+    !f.type &&
+    /\.(jpe?g|png|gif|webp|heic|heif|bmp|mp4|webm|mov|m4v|3gp)$/i.test(f.name)
+  ) {
     return true
   }
   return false
@@ -1486,16 +1506,17 @@ async function uploadAvatarFile(file: File) {
 }
 
 async function addGalleryFiles(files: File[]) {
-  const arr = files.filter(isProbablyImageFile)
+  const arr = files.filter(isProbablyGalleryMediaFile)
   if (arr.length === 0) {
-    galleryError.value = 'Selecione apenas arquivos de imagem (JPG, PNG, WebP, etc.).'
+    galleryError.value =
+      'Selecione imagens (JPG, PNG, WebP, etc.) ou vídeos (MP4, WebM, MOV, etc.).'
     return
   }
   galleryError.value = ''
   const max = galleryRules.value.max
   const remaining = max - draft.gallery_media_ids.length
   if (remaining <= 0) {
-    galleryError.value = `Limite de ${max} fotos atingido.`
+    galleryError.value = `Limite de ${max} mídia(s) atingido.`
     return
   }
   const slice = arr.slice(0, remaining)
@@ -1648,12 +1669,11 @@ onMounted(async () => {
   }
   await fetchMe()
   if (hasToken.value) {
+    resumingCadastroSession.value = true
     try {
-      const p = await request<Record<string, unknown>>('/v1/me/profile')
-      hydrateFromProfile(p)
-      step.value = Math.min(Math.max(Number(p.current_step) || 1, 1), totalSteps)
-    } catch {
-      /* perfil novo */
+      await loadProfileIntoWizard()
+    } finally {
+      resumingCadastroSession.value = false
     }
   }
 })
@@ -1739,7 +1759,33 @@ function hydrateFromProfile(p: Record<string, unknown>) {
   if (Array.isArray(rawGallery) && rawGallery.length > 0) {
     const ids = rawGallery.map((x) => Number(x)).filter((x) => x > 0)
     draft.gallery_media_ids = ids
-    galleryItems.value = ids.map((id, i) => ({ id, name: `Foto ${i + 1}` }))
+    galleryItems.value = ids.map((id, i) => ({ id, name: `Mídia ${i + 1}` }))
+  }
+}
+
+/** Com token válido: carrega perfil salvo e posiciona o passo (incl. etapa 2 se falta senha). */
+async function loadProfileIntoWizard(): Promise<boolean> {
+  if (!hasToken.value) {
+    return false
+  }
+  await fetchMe()
+  try {
+    const p = await request<Record<string, unknown>>('/v1/me/profile')
+    hydrateFromProfile(p)
+    let s = Math.min(Math.max(Number(p.current_step) || 1, 1), totalSteps)
+    if (needsAccountPassword.value && s < 2) {
+      s = 2
+    }
+    // Com sessão, a etapa 1 não tem formulário (só “Sessão ativa”) — nunca ficar preso aqui.
+    if (s < 2) {
+      s = 2
+    }
+    step.value = s
+    return true
+  } catch {
+    // Mesmo sem hidratar o perfil, com token o cadastro continua a partir da etapa 2.
+    step.value = 2
+    return false
   }
 }
 
@@ -1814,10 +1860,35 @@ function buildStep1Error(): string | null {
   return `Preencha: ${missing.join(', ')}.`
 }
 
+/** Data no formato YYYY-MM-DD (componente de nascimento). */
+function isAtLeast18YearsOld(isoDate: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate.trim())
+  if (!m) {
+    return false
+  }
+  const y = Number(m[1])
+  const mo = Number(m[2]) - 1
+  const d = Number(m[3])
+  const birth = new Date(y, mo, d)
+  if (birth.getFullYear() !== y || birth.getMonth() !== mo || birth.getDate() !== d) {
+    return false
+  }
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const monthDiff = today.getMonth() - birth.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age -= 1
+  }
+  return age >= 18
+}
+
 function validateStepForNext(s: number): string | null {
   if (s === 2) {
     if (!draft.birth_date) {
       return 'Informe a data de nascimento.'
+    }
+    if (!isAtLeast18YearsOld(draft.birth_date)) {
+      return 'É necessário ter pelo menos 18 anos para continuar o cadastro.'
     }
     if (!draft.mother_name.trim()) {
       return 'Informe o nome completo da mãe.'
@@ -1895,10 +1966,10 @@ function validateStepForNext(s: number): string | null {
     const { min, max } = galleryRules.value
     const n = draft.gallery_media_ids.length
     if (n < min) {
-      return `Envie no mínimo ${min} foto(s) na galeria.`
+      return `Envie no mínimo ${min} mídia(s) na galeria (fotos e/ou vídeos).`
     }
     if (n > max) {
-      return `No máximo ${max} foto(s) na galeria.`
+      return `No máximo ${max} mídia(s) na galeria.`
     }
     return null
   }
@@ -1917,11 +1988,42 @@ async function next() {
     try {
       const lookup = await request<{
         registration_state: string
+        resume_allowed?: boolean
         message: string | null
       }>('/v1/register/lookup', {
         method: 'POST',
         body: { email: form.email.trim(), cpf: d },
       })
+
+      if (lookup.registration_state === 'draft' && lookup.resume_allowed) {
+        resumingCadastroSession.value = true
+        try {
+          try {
+            await resumeDraftRegistration({
+              name: form.name.trim(),
+              email: form.email.trim(),
+              cpf: d,
+            })
+          } catch (e: unknown) {
+            formError.value =
+              extractLaravelErrorMessage(e, ['name', 'cpf', 'email']) ??
+              'Não foi possível retomar o cadastro. Verifique nome, e-mail e CPF.'
+            return
+          }
+          draft.contact_email = form.email.trim()
+          const profileLoaded = await loadProfileIntoWizard()
+          if (profileLoaded) {
+            try {
+              await persistStep()
+            } catch {
+              /* token e etapa já válidos; sync do passo é opcional */
+            }
+          }
+        } finally {
+          resumingCadastroSession.value = false
+        }
+        return
+      }
 
       if (lookup.registration_state !== 'no_account') {
         formError.value =
