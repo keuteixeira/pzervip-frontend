@@ -47,7 +47,7 @@
         </p>
       </div>
 
-      <div v-if="!hasToken" class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
+      <div v-if="showStep1CreateForm" class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
         <h3 class="text-lg font-medium text-white">Criar conta</h3>
         <p class="text-xs text-zinc-500">
           Nome e CPF devem ser os mesmos do documento. E-mail e CPF são únicos.
@@ -122,16 +122,19 @@
         v-else-if="resumingCadastroSession"
         class="rounded-xl border border-zinc-700 bg-zinc-900/40 p-4 text-sm text-zinc-400"
       >
-        <p>Retomando seu cadastro…</p>
+        <p>Carregando o progresso desta página…</p>
       </div>
-      <div v-else class="rounded-xl border border-emerald-900/40 bg-emerald-950/20 p-4 text-sm text-emerald-200">
-        <p>Sessão ativa — continue preenchendo o perfil.</p>
-        <p class="mt-2 text-xs text-emerald-300/90">
-          Para apagar este rascunho e liberar e-mail e CPF, use
-          <NuxtLink to="/conta" class="underline hover:text-white">Minha conta</NuxtLink>
-          (exclusão) ou encerre a sessão — na etapa 1, a opção de excluir pré-cadastro só aparece se você já tiver
-          visitado esta página antes e preencher nome, e-mail e CPF.
+      <div v-else class="rounded-xl border border-zinc-700 bg-zinc-900/40 p-4 text-sm text-zinc-300">
+        <p class="font-medium text-white">Continuar nesta página</p>
+        <p class="mt-1 text-xs text-zinc-500">
+          Use «Próximo» para seguir. Se fechou o site ou abriu em outra aba, informe de novo nome, e-mail e CPF na etapa
+          1 para retomar o rascunho com segurança.
         </p>
+        <ul class="mt-3 space-y-1 text-zinc-400">
+          <li v-if="user?.name"><span class="text-zinc-500">Nome:</span> {{ user.name }}</li>
+          <li v-if="user?.email"><span class="text-zinc-500">E-mail:</span> {{ user.email }}</li>
+          <li><span class="text-zinc-500">CPF:</span> {{ cpfDisplay }}</li>
+        </ul>
       </div>
     </section>
 
@@ -181,8 +184,8 @@
             type="text"
             inputmode="tel"
             autocomplete="tel"
-            placeholder="O mesmo que será usado no seu perfil"
-            maxlength="20"
+            placeholder="O mesmo que será usado no seu anúncio"
+            maxlength="15"
             class="input"
             @input="onWhatsappInput"
           />
@@ -525,7 +528,7 @@
           <p class="mt-2 text-2xl font-bold text-white">Gratuito</p>
           <ul class="mt-4 space-y-2 text-sm text-zinc-400">
             <li>Perfil básico na plataforma</li>
-            <li>Até 5 mídias na galeria (fotos e/ou vídeos)</li>
+            <li>Até {{ galleryRules.max }} mídias na galeria (fotos e/ou vídeos)</li>
             <li>Aprovação em até {{ approvalDaysBasic }} dias úteis</li>
           </ul>
         </button>
@@ -759,12 +762,17 @@
 /// <reference path="../../types/qrcode.d.ts" />
 /** Public URL: /cadastro — file name in English (register.vue). API uses men|women|trans. */
 
+import {
+  CADASTRO_TAB_KEY,
+  clearCadastroTabMarker,
+  markCadastroTabActive,
+  useRegisterCadastroRouteGuard,
+} from '~/composables/useRegisterCadastroTabSession'
 import { REGISTER_COVER, REGISTER_GALLERY_DEFAULTS, REGISTER_PROFILE_AVATAR } from '~/config/registerPresentation'
-import { extractLaravelErrorMessage } from '~/composables/useAuth'
 import { cpfDigits, formatCepMask, formatCpfMask, formatPhoneBrMask, phoneDigits } from '~/utils/brFormat'
+import { extractLaravelErrorMessage } from '~/utils/laravelApiErrors'
 
-/** Marca que o usuário já saiu da página /cadastro pelo menos uma vez (próximas visitas = “voltou”). */
-const CADASTRO_REVISIT_KEY = 'prazervip_cadastro_revisitou'
+useRegisterCadastroRouteGuard()
 
 definePageMeta({
   layout: 'default',
@@ -777,13 +785,12 @@ useHead({
 
 const totalSteps = 7
 const step = ref(1)
-/** Com cookie de sessão: true até posicionar o passo (evita flash “Sessão ativa” na etapa 1). */
+/** True enquanto carrega o rascunho nesta aba (evita flash na etapa 1). */
 const resumingCadastroSession = ref(false)
 const busy = ref(false)
 const formError = ref<string | null>(null)
 const cepLoading = ref(false)
 const cepError = ref<string | null>(null)
-const hasReturnedToCadastro = ref(false)
 const purgeOpen = ref(false)
 const purgeBusy = ref(false)
 const purgeError = ref<string | null>(null)
@@ -801,6 +808,30 @@ const { token, request } = useApi()
 const { register, resumeDraftRegistration, fetchMe, user, deleteDraftRegistration, setPassword } =
   useAuth()
 const hasToken = computed(() => !!token.value)
+
+/**
+ * Formulário nome/e-mail/CPF: só esconder para anunciante em rascunho (não ativo) com token nesta aba.
+ * Admin, sem user ainda, ou anunciante já ativo: sempre formulário (não mostrar «Continuar nesta página»).
+ */
+const showStep1CreateForm = computed(() => {
+  const u = user.value
+  if (!hasToken.value) {
+    return true
+  }
+  if (!u) {
+    return true
+  }
+  if (u.role === 'admin') {
+    return true
+  }
+  if (u.role !== 'advertiser') {
+    return true
+  }
+  if (u.account_status === 'active') {
+    return true
+  }
+  return false
+})
 
 const form = reactive({
   name: '',
@@ -847,9 +878,9 @@ const step1IdentityComplete = computed(() => {
   return Boolean(form.name.trim() && form.email.trim() && d.length === 11)
 })
 
-/** Só na 2ª+ visita à página e com nome, e-mail e CPF preenchidos (fluxo “voltou”). */
+/** Com nome, e-mail e CPF preenchidos, sem token de API (ex.: liberar e-mail/CPF antes de criar conta). */
 const showPurgeSection = computed(
-  () => !hasToken.value && hasReturnedToCadastro.value && step1IdentityComplete.value,
+  () => showStep1CreateForm.value && !hasToken.value && step1IdentityComplete.value,
 )
 
 /** Conta criada na etapa 1 ainda sem senha escolhida pelo usuário. */
@@ -1664,24 +1695,47 @@ async function fetchViaCep() {
 }
 
 onMounted(async () => {
-  if (import.meta.client) {
-    hasReturnedToCadastro.value = localStorage.getItem(CADASTRO_REVISIT_KEY) === '1'
+  if (!import.meta.client) {
+    return
   }
+  const tabActive = sessionStorage.getItem(CADASTRO_TAB_KEY) === '1'
+
   await fetchMe()
-  if (hasToken.value) {
+
+  /** Só derruba cookie de rascunho (form_status draft): não deslogar admin nem anunciante ativo / cadastro já enviado. */
+  if (!tabActive && token.value && user.value?.role === 'advertiser' && user.value.account_status !== 'active') {
+    try {
+      const p = await request<{ form_status?: string }>('/v1/me/profile')
+      if (p.form_status === 'draft') {
+        token.value = null
+        user.value = null
+      }
+    } catch {
+      token.value = null
+      user.value = null
+    }
+  }
+
+  if (
+    tabActive &&
+    token.value &&
+    user.value?.role === 'advertiser' &&
+    user.value.account_status !== 'active'
+  ) {
     resumingCadastroSession.value = true
     try {
       await loadProfileIntoWizard()
+      markCadastroTabActive()
     } finally {
       resumingCadastroSession.value = false
     }
+    return
   }
-})
 
-onBeforeUnmount(() => {
-  if (import.meta.client) {
-    localStorage.setItem(CADASTRO_REVISIT_KEY, '1')
+  if (tabActive) {
+    clearCadastroTabMarker()
   }
+  step.value = 1
 })
 
 watch(showPurgeSection, (v) => {
@@ -1776,7 +1830,7 @@ async function loadProfileIntoWizard(): Promise<boolean> {
     if (needsAccountPassword.value && s < 2) {
       s = 2
     }
-    // Com sessão, a etapa 1 não tem formulário (só “Sessão ativa”) — nunca ficar preso aqui.
+    // Com token nesta aba, a etapa 1 mostra resumo — não ficar preso na etapa 1.
     if (s < 2) {
       s = 2
     }
@@ -1978,7 +2032,7 @@ function validateStepForNext(s: number): string | null {
 
 async function next() {
   formError.value = null
-  if (step.value === 1 && !hasToken.value) {
+  if (step.value === 1 && showStep1CreateForm.value) {
     const err = buildStep1Error()
     if (err) {
       formError.value = err
@@ -1993,6 +2047,7 @@ async function next() {
       }>('/v1/register/lookup', {
         method: 'POST',
         body: { email: form.email.trim(), cpf: d },
+        skipAuth: true,
       })
 
       if (lookup.registration_state === 'draft' && lookup.resume_allowed) {
@@ -2019,6 +2074,7 @@ async function next() {
               /* token e etapa já válidos; sync do passo é opcional */
             }
           }
+          markCadastroTabActive()
         } finally {
           resumingCadastroSession.value = false
         }
@@ -2040,6 +2096,7 @@ async function next() {
         cpf: d,
       })
       await fetchMe()
+      markCadastroTabActive()
       draft.contact_email = form.email.trim()
       step.value = 2
       await persistStep()
@@ -2051,7 +2108,8 @@ async function next() {
     }
     return
   }
-  if (step.value === 1 && hasToken.value) {
+  if (step.value === 1 && hasToken.value && !showStep1CreateForm.value) {
+    markCadastroTabActive()
     step.value = 2
     return
   }
