@@ -2,7 +2,7 @@
   <div class="space-y-8">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <NuxtLink :to="withMock('/admin/anunciantes')" class="text-sm text-zinc-500 hover:text-brand">← Anunciantes</NuxtLink>
+        <NuxtLink to="/admin/anunciantes" class="text-sm text-zinc-500 hover:text-brand">← Anunciantes</NuxtLink>
         <h1 class="mt-2 text-2xl font-bold text-white">{{ detail?.professional_name || 'Perfil' }}</h1>
         <p class="text-sm text-zinc-500">
           ID {{ id }} · {{ adminApprovalStatusLabel(detail?.approval_status) }} · {{ detail?.public_slug || '—' }}
@@ -77,7 +77,7 @@
             Abrir perfil público (nova aba)
           </NuxtLink>
           <NuxtLink
-            :to="withMock(`/admin/cadastros/${id}`)"
+            :to="`/admin/cadastros/${id}`"
             class="inline-flex rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-800"
           >
             Revisão de cadastro (KYC completo)
@@ -237,6 +237,10 @@
             <dt class="text-zinc-500">Termos aceitos</dt>
             <dd class="text-zinc-300">{{ detail.registration.terms_accepted ? 'Sim' : 'Não' }}</dd>
           </template>
+          <template v-if="detail.registration.privacy_policy_accepted != null">
+            <dt class="text-zinc-500">Política de privacidade aceita</dt>
+            <dd class="text-zinc-300">{{ detail.registration.privacy_policy_accepted ? 'Sim' : 'Não' }}</dd>
+          </template>
         </dl>
         <div v-if="detail.registration.address_json && typeof detail.registration.address_json === 'object'" class="mt-4">
           <h3 class="text-sm font-medium text-zinc-400">Endereço (cadastro)</h3>
@@ -258,7 +262,7 @@
           </ul>
         </div>
         <NuxtLink
-          :to="withMock(`/admin/cadastros/${id}`)"
+          :to="`/admin/cadastros/${id}`"
           class="mt-4 inline-block text-sm text-brand hover:underline"
         >
           Abrir tela de revisão de cadastro (remover arquivos, aprovar) →
@@ -367,8 +371,6 @@ import {
   adminProfileTypeLabel,
   adminServiceTypeLabel,
 } from '~/utils/admin-labels'
-import { ADMIN_MOCK_MEDIA_FOR_PROFILE, getMockAnuncianteDetail } from '~/data/admin-mocks'
-
 definePageMeta({
   layout: 'admin',
   middleware: ['admin'],
@@ -377,7 +379,6 @@ definePageMeta({
 const route = useRoute()
 const id = computed(() => Number(route.params.id))
 const { request } = useApi()
-const { isMock, withMock } = useAdminMock()
 
 useHead(() => ({ title: `Anunciante #${route.params.id}` }))
 
@@ -417,6 +418,7 @@ type ProfileDetail = {
     address_json?: AddressJson | null
     has_venue?: boolean
     terms_accepted?: boolean
+    privacy_policy_accepted?: boolean
     current_step?: number | null
     registration_paid_at?: string | null
     id_document_front_media_id?: number | null
@@ -461,7 +463,6 @@ const mediaList = ref<
     file_name: string
     mime_type?: string
     moderation_status: string
-    mock_preview_url?: string | null
   }[]
 >([])
 const openingMediaId = ref<number | null>(null)
@@ -529,14 +530,6 @@ function applyDetailToForm(p: ProfileDetail) {
 async function load() {
   loading.value = true
   errorMsg.value = null
-  if (isMock.value) {
-    const p = getMockAnuncianteDetail(id.value) as unknown as ProfileDetail
-    detail.value = p
-    applyDetailToForm(p)
-    mediaList.value = ADMIN_MOCK_MEDIA_FOR_PROFILE.map((m) => ({ ...m }))
-    loading.value = false
-    return
-  }
   try {
     const p = await request<ProfileDetail>(`/v1/admin/profiles/${id.value}`)
     detail.value = p
@@ -553,18 +546,6 @@ async function load() {
 
 async function saveDetails() {
   saveMsg.value = ''
-  if (isMock.value && detail.value) {
-    detail.value = {
-      ...detail.value,
-      professional_name: form.professional_name || null,
-      bio: form.bio || null,
-      whatsapp: form.whatsapp || null,
-      user_paused_listing: form.user_paused_listing,
-    }
-    saveMsg.value = 'Modo demo: alteração só nesta tela.'
-    saveOk.value = true
-    return
-  }
   saving.value = true
   try {
     const p = await request<ProfileDetail>(`/v1/admin/profiles/${id.value}/details`, {
@@ -589,18 +570,6 @@ async function saveDetails() {
 
 async function grantDestaque() {
   grantMsg.value = ''
-  if (isMock.value && detail.value) {
-    const monthSec = 30 * 24 * 60 * 60
-    const add = grant.months * monthSec
-    detail.value = {
-      ...detail.value,
-      destaque_remaining_seconds: detail.value.destaque_remaining_seconds + add,
-      highlight_stars_cached: grant.stars,
-    }
-    grantMsg.value = 'Modo demo: valores atualizados só nesta tela.'
-    grantOk.value = true
-    return
-  }
   granting.value = true
   try {
     const p = await request<ProfileDetail>(`/v1/admin/profiles/${id.value}/grant-destaque`, {
@@ -621,13 +590,6 @@ async function grantDestaque() {
 }
 
 async function openMedia(m: (typeof mediaList.value)[number]) {
-  if (isMock.value) {
-    const u = m.mock_preview_url
-    if (u) {
-      window.open(u, '_blank', 'noopener,noreferrer')
-    }
-    return
-  }
   openingMediaId.value = m.id
   try {
     const res = await request<{ url: string }>(
@@ -642,13 +604,6 @@ async function openMedia(m: (typeof mediaList.value)[number]) {
 }
 
 async function setMediaModeration(mediaId: number, moderation_status: 'approved' | 'rejected') {
-  if (isMock.value) {
-    const m = mediaList.value.find((x) => x.id === mediaId)
-    if (m) {
-      m.moderation_status = moderation_status
-    }
-    return
-  }
   await request(`/v1/admin/profiles/${id.value}/media/${mediaId}`, {
     method: 'PATCH',
     body: { moderation_status },
@@ -659,7 +614,6 @@ async function setMediaModeration(mediaId: number, moderation_status: 'approved'
 
 onMounted(() => load())
 
-watch(isMock, () => load())
 watch(id, () => load())
 </script>
 

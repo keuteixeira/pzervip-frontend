@@ -61,15 +61,6 @@
             </li>
             <li>
               <NuxtLink
-                to="/termos-de-servico"
-                class="flex items-center gap-2 text-zinc-400 transition hover:text-brand"
-              >
-                <span class="text-zinc-600" aria-hidden="true">📋</span>
-                Termos de serviço
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink
                 to="/sobre-nos"
                 class="flex items-center gap-2 text-zinc-400 transition hover:text-brand"
               >

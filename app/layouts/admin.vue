@@ -4,7 +4,7 @@
       <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4">
         <div class="flex items-center gap-6">
           <NuxtLink
-            :to="withMock('/admin/cadastros')"
+            to="/admin/cadastros"
             class="flex shrink-0 items-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             aria-label="Painel administrativo — início"
           >
@@ -19,7 +19,7 @@
             <NuxtLink
               v-for="l in links"
               :key="l.to"
-              :to="withMock(l.to)"
+              :to="l.to"
               class="rounded-lg px-3 py-2 transition"
               :class="
                 isActive(l.to) ? 'bg-brand/20 text-white' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
@@ -41,13 +41,6 @@
         </div>
       </div>
     </header>
-    <div
-      v-if="isMock"
-      class="border-b border-amber-800/60 bg-amber-950/40 px-4 py-2 text-center text-sm text-amber-100"
-    >
-      <strong class="text-amber-200">Modo demonstração</strong> — dados fictícios (query
-      <code class="rounded bg-zinc-900 px-1 py-0.5 text-xs">?mock=1</code>). Remova da URL para usar a API real.
-    </div>
     <main class="mx-auto max-w-7xl px-4 py-8">
       <slot />
     </main>
@@ -59,11 +52,11 @@ import { brandAssets } from '~/config/brand-assets'
 
 const route = useRoute()
 const { logout } = useAuth()
-const { isMock, withMock } = useAdminMock()
 
 const links = [
   { to: '/admin/cadastros', label: 'Cadastros' },
   { to: '/admin/anunciantes', label: 'Anunciantes' },
+  { to: '/admin/formulario-cadastro', label: 'Formulário' },
   { to: '/admin/midias', label: 'Mídias' },
   { to: '/admin/comentarios', label: 'Comentários' },
   { to: '/admin/destaques', label: 'Destaques' },
@@ -76,6 +69,9 @@ function isActive(to: string) {
   }
   if (to === '/admin/cadastros') {
     return route.path === '/admin/cadastros' || route.path.startsWith('/admin/cadastros/')
+  }
+  if (to === '/admin/formulario-cadastro') {
+    return route.path === '/admin/formulario-cadastro' || route.path.startsWith('/admin/formulario-cadastro/')
   }
   return route.path === to || route.path.startsWith(`${to}/`)
 }

@@ -2,7 +2,7 @@
   <div class="space-y-8">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
-        <NuxtLink :to="withMock('/admin/cadastros')" class="text-sm text-zinc-500 hover:text-brand">← Cadastros</NuxtLink>
+        <NuxtLink to="/admin/cadastros" class="text-sm text-zinc-500 hover:text-brand">← Cadastros</NuxtLink>
         <h1 class="mt-2 text-2xl font-bold text-white">{{ detail?.professional_name || 'Revisão de cadastro' }}</h1>
         <p class="text-sm text-zinc-500">
           ID {{ id }} · {{ adminApprovalStatusLabel(detail?.approval_status) }} ·
@@ -76,6 +76,10 @@
             <label class="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
               <input v-model="edit.terms_accepted" type="checkbox" class="rounded border-zinc-600" />
               Termos aceitos
+            </label>
+            <label class="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+              <input v-model="edit.privacy_policy_accepted" type="checkbox" class="rounded border-zinc-600" />
+              Política de privacidade aceita
             </label>
           </div>
           <label class="block text-sm text-zinc-300">
@@ -160,22 +164,95 @@
       </section>
 
       <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
-        <h2 class="text-lg font-semibold text-white">Arquivos enviados</h2>
-        <p class="mt-1 text-sm text-zinc-500">Abrir para conferir ou remover do cadastro.</p>
-        <ul v-if="mediaList.length" class="mt-4 space-y-3">
-          <li
-            v-for="m in mediaList"
-            :key="m.id"
-            class="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3 sm:flex-row sm:items-center sm:justify-between"
+        <h2 class="text-lg font-semibold text-white">Arquivos</h2>
+        <p class="mt-1 text-sm text-zinc-500">
+          <strong class="font-medium text-zinc-400">Documentos pessoais</strong> — apenas visualização.
+          <strong class="ml-1 font-medium text-zinc-400">Mídias</strong> — capa, perfil, galeria, áudio e vídeos da galeria podem ser removidos se necessário.
+        </p>
+
+        <div class="mt-4 flex flex-wrap gap-2 border-b border-zinc-800 pb-3" role="tablist" aria-label="Tipo de arquivo">
+          <button
+            type="button"
+            role="tab"
+            class="rounded-lg border px-3 py-1.5 text-sm transition-colors"
+            :class="
+              filesTab === 'documentos'
+                ? 'border-brand bg-brand/20 text-white'
+                : 'border-zinc-700 text-zinc-400 hover:border-zinc-600'
+            "
+            :aria-selected="filesTab === 'documentos'"
+            @click="filesTab = 'documentos'"
           >
-            <div class="min-w-0">
-              <p class="text-sm font-medium text-brand">{{ m.kind_label || m.collection_name }}</p>
-              <p class="truncate text-sm text-white">{{ m.file_name }}</p>
-              <p class="text-xs text-zinc-500">
-                {{ m.mime_type || '—' }} · moderação: {{ adminMediaModerationStatusLabel(m.moderation_status) }}
-              </p>
-            </div>
-            <div class="flex flex-shrink-0 flex-wrap gap-2">
+            Documentos pessoais
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="rounded-lg border px-3 py-1.5 text-sm transition-colors"
+            :class="
+              filesTab === 'midias'
+                ? 'border-brand bg-brand/20 text-white'
+                : 'border-zinc-700 text-zinc-400 hover:border-zinc-600'
+            "
+            :aria-selected="filesTab === 'midias'"
+            @click="filesTab = 'midias'"
+          >
+            Mídias
+          </button>
+        </div>
+
+        <!-- Documentos pessoais -->
+        <div v-show="filesTab === 'documentos'" class="mt-4 space-y-3">
+          <ul class="space-y-3">
+            <li
+              v-for="(row, idx) in documentSlotRows"
+              :key="'doc-slot-' + idx"
+              class="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-zinc-200">{{ row.label }}</p>
+                <template v-if="row.state === 'empty'">
+                  <p class="mt-1 text-sm text-zinc-500">Nenhum arquivo enviado.</p>
+                </template>
+                <template v-else-if="row.state === 'missing'">
+                  <p class="mt-1 text-sm text-amber-400">
+                    O cadastro referencia a mídia #{{ row.expectedId }}, mas nenhum arquivo foi encontrado. Pode ser necessário pedir reenvio.
+                  </p>
+                </template>
+                <template v-else-if="row.media">
+                  <p class="mt-1 truncate text-sm text-white">{{ row.media.file_name }}</p>
+                  <p class="text-xs text-zinc-500">
+                    {{ row.media.mime_type || '—' }} · moderação:
+                    {{ adminMediaModerationStatusLabel(row.media.moderation_status) }}
+                  </p>
+                </template>
+              </div>
+              <div v-if="row.media" class="flex flex-shrink-0">
+                <button
+                  type="button"
+                  class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
+                  :disabled="openingId === row.media.id"
+                  @click="openMedia(row.media)"
+                >
+                  {{ openingId === row.media.id ? 'Abrindo…' : 'Ver arquivo' }}
+                </button>
+              </div>
+            </li>
+          </ul>
+          <ul v-if="orphanDocumentMedia.length" class="space-y-3 border-t border-zinc-800 pt-4">
+            <li class="text-xs font-medium uppercase tracking-wide text-zinc-500">Outros na biblioteca (documento / verificação)</li>
+            <li
+              v-for="m in orphanDocumentMedia"
+              :key="'doc-orphan-' + m.id"
+              class="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-zinc-300">{{ m.kind_label || m.collection_name }}</p>
+                <p class="truncate text-sm text-white">{{ m.file_name }}</p>
+                <p class="text-xs text-zinc-500">
+                  {{ m.mime_type || '—' }} · moderação: {{ adminMediaModerationStatusLabel(m.moderation_status) }}
+                </p>
+              </div>
               <button
                 type="button"
                 class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
@@ -184,18 +261,140 @@
               >
                 {{ openingId === m.id ? 'Abrindo…' : 'Ver arquivo' }}
               </button>
-              <button
-                type="button"
-                class="rounded bg-red-900/50 px-2 py-1 text-xs text-red-200 hover:bg-red-900/70 disabled:opacity-40"
-                :disabled="removingId === m.id"
-                @click="removeMedia(m)"
+            </li>
+          </ul>
+        </div>
+
+        <!-- Mídias -->
+        <div v-show="filesTab === 'midias'" class="mt-4 space-y-6">
+          <ul class="space-y-3">
+            <li
+              v-for="(row, idx) in midiaSingleSlotRows"
+              :key="'mid-slot-' + idx"
+              class="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-zinc-200">{{ row.label }}</p>
+                <template v-if="row.state === 'empty'">
+                  <p class="mt-1 text-sm text-zinc-500">Nenhum arquivo enviado.</p>
+                </template>
+                <template v-else-if="row.state === 'missing'">
+                  <p class="mt-1 text-sm text-amber-400">
+                    O cadastro referencia a mídia #{{ row.expectedId }}, mas nenhum arquivo foi encontrado.
+                  </p>
+                </template>
+                <template v-else-if="row.media">
+                  <p class="mt-1 truncate text-sm text-white">{{ row.media.file_name }}</p>
+                  <p class="text-xs text-zinc-500">
+                    {{ row.media.mime_type || '—' }} · moderação:
+                    {{ adminMediaModerationStatusLabel(row.media.moderation_status) }}
+                  </p>
+                </template>
+              </div>
+              <div v-if="row.media" class="flex flex-shrink-0 flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
+                  :disabled="openingId === row.media.id"
+                  @click="openMedia(row.media)"
+                >
+                  {{ openingId === row.media.id ? 'Abrindo…' : 'Ver arquivo' }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded bg-red-900/50 px-2 py-1 text-xs text-red-200 hover:bg-red-900/70 disabled:opacity-40"
+                  :disabled="removingId === row.media.id"
+                  @click="removeMedia(row.media)"
+                >
+                  {{ removingId === row.media.id ? 'Removendo…' : 'Remover' }}
+                </button>
+              </div>
+            </li>
+          </ul>
+
+          <div>
+            <h3 class="text-sm font-medium text-zinc-300">Galeria (fotos e vídeos)</h3>
+            <ul v-if="gallerySlotRows.length" class="mt-3 space-y-3">
+              <li
+                v-for="(row, idx) in gallerySlotRows"
+                :key="'gal-' + idx + '-' + (row.media?.id ?? row.expectedId ?? 'e')"
+                class="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3 sm:flex-row sm:items-center sm:justify-between"
               >
-                {{ removingId === m.id ? 'Removendo…' : 'Remover' }}
-              </button>
-            </div>
-          </li>
-        </ul>
-        <p v-else class="mt-4 text-sm text-zinc-500">Nenhuma mídia listada.</p>
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-zinc-200">{{ row.label }}</p>
+                  <template v-if="row.state === 'empty'">
+                    <p class="mt-1 text-sm text-zinc-500">Nenhuma foto ou vídeo na galeria.</p>
+                  </template>
+                  <template v-else-if="row.state === 'missing'">
+                    <p class="mt-1 text-sm text-amber-400">
+                      Referência #{{ row.expectedId }} sem arquivo correspondente na biblioteca.
+                    </p>
+                  </template>
+                  <template v-else-if="row.media">
+                    <p class="mt-1 truncate text-sm text-white">{{ row.media.file_name }}</p>
+                    <p class="text-xs text-zinc-500">
+                      {{ row.media.mime_type || '—' }} · moderação:
+                      {{ adminMediaModerationStatusLabel(row.media.moderation_status) }}
+                    </p>
+                  </template>
+                </div>
+                <div v-if="row.media" class="flex flex-shrink-0 flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
+                    :disabled="openingId === row.media.id"
+                    @click="openMedia(row.media)"
+                  >
+                    {{ openingId === row.media.id ? 'Abrindo…' : 'Ver arquivo' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded bg-red-900/50 px-2 py-1 text-xs text-red-200 hover:bg-red-900/70 disabled:opacity-40"
+                    :disabled="removingId === row.media.id"
+                    @click="removeMedia(row.media)"
+                  >
+                    {{ removingId === row.media.id ? 'Removendo…' : 'Remover' }}
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <ul v-if="orphanMidiaMedia.length" class="space-y-3 border-t border-zinc-800 pt-4">
+            <li class="text-xs font-medium uppercase tracking-wide text-zinc-500">Outros na biblioteca (mídia)</li>
+            <li
+              v-for="m in orphanMidiaMedia"
+              :key="'mid-orphan-' + m.id"
+              class="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-brand">{{ m.kind_label || m.collection_name }}</p>
+                <p class="truncate text-sm text-white">{{ m.file_name }}</p>
+                <p class="text-xs text-zinc-500">
+                  {{ m.mime_type || '—' }} · moderação: {{ adminMediaModerationStatusLabel(m.moderation_status) }}
+                </p>
+              </div>
+              <div class="flex flex-shrink-0 flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
+                  :disabled="openingId === m.id"
+                  @click="openMedia(m)"
+                >
+                  {{ openingId === m.id ? 'Abrindo…' : 'Ver arquivo' }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded bg-red-900/50 px-2 py-1 text-xs text-red-200 hover:bg-red-900/70 disabled:opacity-40"
+                  :disabled="removingId === m.id"
+                  @click="removeMedia(m)"
+                >
+                  {{ removingId === m.id ? 'Removendo…' : 'Remover' }}
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
       </section>
     </template>
   </div>
@@ -203,13 +402,37 @@
 
 <script setup lang="ts">
 import { useSwal } from '~/composables/useSwal'
-import { getMockCadastroMediaList, getMockCadastroReviewDetail } from '~/data/admin-mocks'
 import {
   adminApprovalStatusLabel,
   adminFormStatusLabel,
   adminMediaModerationStatusLabel,
 } from '~/utils/admin-labels'
-import { useAdminMock } from '~/composables/useAdminMock'
+
+const DOCUMENT_SLOTS = [
+  { regKey: 'id_document_front_media_id' as const, label: 'Documento — frente' },
+  { regKey: 'id_document_back_media_id' as const, label: 'Documento — verso' },
+  { regKey: 'selfie_media_id' as const, label: 'Selfie de verificação' },
+  { regKey: 'video_media_id' as const, label: 'Vídeo de verificação' },
+]
+
+const MIDIA_SINGLE_SLOTS = [
+  { regKey: 'cover_media_id' as const, label: 'Banner (capa)' },
+  { regKey: 'portal_avatar_media_id' as const, label: 'Foto de perfil' },
+  { regKey: 'audio_media_id' as const, label: 'Áudio' },
+]
+
+const DOC_COLLECTION_SET = new Set(['id_document_front', 'id_document_back', 'selfie', 'video'])
+const MIDIA_COLLECTION_SET = new Set(['gallery', 'cover', 'portal_avatar', 'audio'])
+
+type SlotState = 'empty' | 'ok' | 'missing'
+
+function normMediaId(raw: unknown): number | null {
+  if (raw == null) {
+    return null
+  }
+  const n = Number(raw)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
 
 definePageMeta({
   layout: 'admin' as any,
@@ -219,8 +442,9 @@ definePageMeta({
 const route = useRoute()
 const id = computed(() => Number(route.params.id))
 const { request } = useApi()
-const { isMock, withMock } = useAdminMock()
-const { swalConfirm } = useSwal()
+const { swalConfirm, swalAlert } = useSwal()
+
+const filesTab = ref<'documentos' | 'midias'>('documentos')
 
 useHead(() => ({ title: `Cadastro #${route.params.id}` }))
 
@@ -237,8 +461,17 @@ type Registration = {
   address_json?: AddressJson | null
   has_venue?: boolean
   terms_accepted?: boolean
+  privacy_policy_accepted?: boolean
   current_step?: number | null
   registration_paid_at?: string | null
+  id_document_front_media_id?: number | null
+  id_document_back_media_id?: number | null
+  selfie_media_id?: number | null
+  video_media_id?: number | null
+  cover_media_id?: number | null
+  portal_avatar_media_id?: number | null
+  audio_media_id?: number | null
+  gallery_media_ids?: number[] | null
 }
 
 type ProfileDetail = {
@@ -257,14 +490,13 @@ type ProfileDetail = {
 }
 
 type MediaRow = {
-  id: number
+  id: number | string
   collection_name: string
   kind?: string
   kind_label?: string
   file_name: string
   mime_type?: string
   moderation_status: string
-  mock_preview_url?: string | null
 }
 
 const loading = ref(true)
@@ -274,6 +506,152 @@ const mediaList = ref<MediaRow[]>([])
 const busyApproval = ref(false)
 const openingId = ref<number | null>(null)
 const removingId = ref<number | null>(null)
+
+function mediaId(m: Pick<MediaRow, 'id'>): number | null {
+  return normMediaId(m.id)
+}
+
+const documentSlotRows = computed(() => {
+  const reg = detail.value?.registration
+  const list = mediaList.value
+  return DOCUMENT_SLOTS.map(({ regKey, label }) => {
+    const expectedId = normMediaId(reg?.[regKey])
+    const media = expectedId != null ? (list.find((m) => mediaId(m) === expectedId) ?? null) : null
+    let state: SlotState
+    if (expectedId == null) {
+      state = 'empty'
+    } else if (media) {
+      state = 'ok'
+    } else {
+      state = 'missing'
+    }
+    return { label, expectedId, media, state }
+  })
+})
+
+const docSlotMatchedIds = computed(() => {
+  const s = new Set<number>()
+  for (const r of documentSlotRows.value) {
+    if (r.media) {
+      const id = mediaId(r.media)
+      if (id != null) {
+        s.add(id)
+      }
+    }
+  }
+  return s
+})
+
+const orphanDocumentMedia = computed(() =>
+  mediaList.value.filter((m) => {
+    const id = mediaId(m)
+    return DOC_COLLECTION_SET.has(m.collection_name) && (id == null || !docSlotMatchedIds.value.has(id))
+  }),
+)
+
+const midiaSingleSlotRows = computed(() => {
+  const reg = detail.value?.registration
+  const list = mediaList.value
+  return MIDIA_SINGLE_SLOTS.map(({ regKey, label }) => {
+    const expectedId = normMediaId(reg?.[regKey])
+    const media = expectedId != null ? (list.find((m) => mediaId(m) === expectedId) ?? null) : null
+    let state: SlotState
+    if (expectedId == null) {
+      state = 'empty'
+    } else if (media) {
+      state = 'ok'
+    } else {
+      state = 'missing'
+    }
+    return { label, expectedId, media, state }
+  })
+})
+
+const midiaSingleMatchedIds = computed(() => {
+  const s = new Set<number>()
+  for (const r of midiaSingleSlotRows.value) {
+    if (r.media) {
+      const id = mediaId(r.media)
+      if (id != null) {
+        s.add(id)
+      }
+    }
+  }
+  return s
+})
+
+const gallerySlotRows = computed(() => {
+  const reg = detail.value?.registration
+  const list = mediaList.value.filter((m) => m.collection_name === 'gallery')
+  const byId = new Map<number, MediaRow>()
+  for (const m of list) {
+    const id = mediaId(m)
+    if (id != null) {
+      byId.set(id, m)
+    }
+  }
+  const rawIds = reg?.gallery_media_ids
+  const ids = Array.isArray(rawIds)
+    ? rawIds.map((x) => normMediaId(x)).filter((x): x is number => x != null)
+    : []
+
+  const rows: { label: string; media: MediaRow | null; expectedId: number | null; state: SlotState }[] = []
+
+  if (ids.length === 0 && list.length === 0) {
+    rows.push({ label: 'Galeria', media: null, expectedId: null, state: 'empty' })
+    return rows
+  }
+
+  ids.forEach((gid, i) => {
+    const media = byId.get(gid) ?? null
+    rows.push({
+      label: `Galeria — item ${i + 1}`,
+      media,
+      expectedId: gid,
+      state: media ? 'ok' : 'missing',
+    })
+  })
+
+  for (const m of list) {
+    const id = mediaId(m)
+    if (id != null && !ids.includes(id)) {
+      rows.push({
+        label: 'Galeria — arquivo na biblioteca (sem ordem no cadastro)',
+        media: m,
+        expectedId: id,
+        state: 'ok',
+      })
+    }
+  }
+  return rows
+})
+
+const galleryMatchedIds = computed(() => {
+  const s = new Set<number>()
+  for (const r of gallerySlotRows.value) {
+    if (r.media) {
+      const id = mediaId(r.media)
+      if (id != null) {
+        s.add(id)
+      }
+    }
+  }
+  return s
+})
+
+const orphanMidiaMedia = computed(() =>
+  mediaList.value.filter((m) => {
+    if (!MIDIA_COLLECTION_SET.has(m.collection_name)) {
+      return false
+    }
+    if (m.collection_name === 'gallery') {
+      const id = mediaId(m)
+      return id == null || !galleryMatchedIds.value.has(id)
+    }
+    const id = mediaId(m)
+    return id == null || !midiaSingleMatchedIds.value.has(id)
+  }),
+)
 
 const states = ref<ApiState[]>([])
 const cities = ref<ApiCity[]>([])
@@ -292,6 +670,7 @@ const edit = reactive({
   cpf: '',
   has_venue: true,
   terms_accepted: false,
+  privacy_policy_accepted: false,
   state_id: '',
   city_id: '',
   neighborhood: '',
@@ -345,6 +724,7 @@ function syncFormFromDetail() {
   edit.cpf = r?.cpf ?? ''
   edit.has_venue = r?.has_venue !== false
   edit.terms_accepted = !!r?.terms_accepted
+  edit.privacy_policy_accepted = !!r?.privacy_policy_accepted
 
   const a = r?.address_json
   if (a && typeof a === 'object') {
@@ -378,13 +758,6 @@ async function onStateChange() {
 async function load() {
   loading.value = true
   errorMsg.value = null
-  if (isMock.value) {
-    detail.value = getMockCadastroReviewDetail(id.value) as ProfileDetail
-    mediaList.value = getMockCadastroMediaList() as MediaRow[]
-    syncFormFromDetail()
-    loading.value = false
-    return
-  }
   try {
     if (states.value.length === 0) {
       states.value = await request<ApiState[]>('/v1/states')
@@ -396,7 +769,10 @@ async function load() {
       cities.value = await request<ApiCity[]>(`/v1/states/${edit.state_id}/cities`)
     }
     const mediaRes = await request<{ media: MediaRow[] }>(`/v1/admin/profiles/${id.value}/media`)
-    mediaList.value = mediaRes.media
+    mediaList.value = (mediaRes.media ?? []).map((m) => ({
+      ...m,
+      id: normMediaId(m.id) ?? m.id,
+    }))
   } catch {
     errorMsg.value = 'Não foi possível carregar o cadastro.'
     detail.value = null
@@ -426,11 +802,6 @@ function buildAddressPayload(): AddressJson | null {
 
 async function saveDetails() {
   saveMsg.value = ''
-  if (isMock.value) {
-    saveMsg.value = 'Modo demonstração: alterações não são salvas na API.'
-    saveOk.value = true
-    return
-  }
   saving.value = true
   try {
     const address_json = buildAddressPayload()
@@ -446,6 +817,7 @@ async function saveDetails() {
         cpf: edit.cpf.trim() || null,
         has_venue: edit.has_venue,
         terms_accepted: edit.terms_accepted,
+        privacy_policy_accepted: edit.privacy_policy_accepted,
         neighborhood: edit.neighborhood.trim() || null,
         state_id: edit.state_id ? Number(edit.state_id) : null,
         city_id: edit.city_id ? Number(edit.city_id) : null,
@@ -475,10 +847,6 @@ async function setApproval(approval_status: 'approved' | 'rejected') {
   }
   busyApproval.value = true
   try {
-    if (isMock.value) {
-      detail.value = { ...detail.value, approval_status }
-      return
-    }
     await request(`/v1/admin/profiles/${id.value}`, {
       method: 'PATCH',
       body: { approval_status },
@@ -490,17 +858,14 @@ async function setApproval(approval_status: 'approved' | 'rejected') {
 }
 
 async function openMedia(m: MediaRow) {
-  const mockUrl = m.mock_preview_url
-  if (isMock.value) {
-    if (mockUrl) {
-      window.open(mockUrl, '_blank', 'noopener,noreferrer')
-    }
+  const mid = mediaId(m)
+  if (mid == null) {
     return
   }
-  openingId.value = m.id
+  openingId.value = mid
   try {
     const res = await request<{ url: string }>(
-      `/v1/admin/profiles/${id.value}/media/${m.id}/temporary-url`,
+      `/v1/admin/profiles/${id.value}/media/${mid}/temporary-url`,
     )
     if (res.url) {
       window.open(res.url, '_blank', 'noopener,noreferrer')
@@ -511,6 +876,10 @@ async function openMedia(m: MediaRow) {
 }
 
 async function removeMedia(m: MediaRow) {
+  const mid = mediaId(m)
+  if (mid == null) {
+    return
+  }
   const ok = await swalConfirm({
     title: 'Remover arquivo do cadastro?',
     text: `Deseja remover «${m.file_name}» deste cadastro?`,
@@ -521,21 +890,23 @@ async function removeMedia(m: MediaRow) {
   if (!ok) {
     return
   }
-  if (isMock.value) {
-    mediaList.value = mediaList.value.filter((x) => x.id !== m.id)
-    return
-  }
-  removingId.value = m.id
+  removingId.value = mid
   try {
-    await request(`/v1/admin/profiles/${id.value}/media/${m.id}`, { method: 'DELETE' })
+    await request(`/v1/admin/profiles/${id.value}/media/${mid}`, { method: 'DELETE' })
     await load()
+  } catch (e: unknown) {
+    const err = e as { data?: { message?: string } }
+    await swalAlert({
+      icon: 'error',
+      title: 'Não foi possível remover',
+      text: err.data?.message ?? 'Tente novamente.',
+    })
   } finally {
     removingId.value = null
   }
 }
 
 onMounted(() => load())
-watch(isMock, () => load())
 watch(id, () => load())
 </script>
 

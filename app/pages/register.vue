@@ -70,6 +70,41 @@
         />
         <input v-model="form.email" type="email" placeholder="E-mail *" class="input" />
 
+        <div class="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+          <label class="flex cursor-pointer items-start gap-3 text-sm text-zinc-300">
+            <input v-model="draft.terms_accepted" type="checkbox" class="mt-0.5 rounded border-zinc-600" />
+            <span>
+              Li e aceito os
+              <NuxtLink
+                to="/termos-de-servico"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="font-medium text-brand underline underline-offset-2 hover:text-brand-muted"
+                @click.stop
+              >
+                termos de serviço
+              </NuxtLink>
+              . *
+            </span>
+          </label>
+          <label class="flex cursor-pointer items-start gap-3 text-sm text-zinc-300">
+            <input v-model="draft.privacy_policy_accepted" type="checkbox" class="mt-0.5 rounded border-zinc-600" />
+            <span>
+              Li e aceito a
+              <NuxtLink
+                to="/politica-de-privacidade"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="font-medium text-brand underline underline-offset-2 hover:text-brand-muted"
+                @click.stop
+              >
+                política de privacidade
+              </NuxtLink>
+              . *
+            </span>
+          </label>
+        </div>
+
         <div v-if="showPurgeSection" class="mt-6 border-t border-zinc-800 pt-5">
           <button
             type="button"
@@ -577,22 +612,6 @@
           </ul>
         </button>
       </div>
-      <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
-        <input v-model="draft.terms_accepted" type="checkbox" class="mt-1 rounded border-zinc-600" />
-        <span class="text-sm text-zinc-300">
-          Li e aceito os
-          <NuxtLink
-            to="/termos-de-servico"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="font-medium text-brand underline underline-offset-2 hover:text-brand-muted"
-            @click.stop
-          >
-            termos de uso
-          </NuxtLink>
-          *
-        </span>
-      </label>
     </section>
 
     <!-- Navegação inferior fixa -->
@@ -628,7 +647,7 @@
           v-else
           type="button"
           class="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-900/30 hover:bg-brand-muted disabled:opacity-50"
-          :disabled="!draft.terms_accepted || busy || basicSuccessModalOpen"
+          :disabled="!draft.terms_accepted || !draft.privacy_policy_accepted || busy || basicSuccessModalOpen"
           @click="submitFinal"
         >
           {{ busy ? 'Enviando…' : 'Enviar cadastro' }}
@@ -864,6 +883,7 @@ const draft = reactive({
   plan_type: '' as '' | 'basic' | 'premium',
   premium_tier: 1,
   terms_accepted: false,
+  privacy_policy_accepted: false,
   id_document_front_media_id: null as number | null,
   id_document_back_media_id: null as number | null,
   selfie_media_id: null as number | null,
@@ -1770,6 +1790,12 @@ function hydrateFromProfile(p: Record<string, unknown>) {
   if (p.has_venue !== undefined && p.has_venue !== null) {
     draft.has_venue = Boolean(p.has_venue)
   }
+  if (p.terms_accepted !== undefined && p.terms_accepted !== null) {
+    draft.terms_accepted = Boolean(p.terms_accepted)
+  }
+  if (p.privacy_policy_accepted !== undefined && p.privacy_policy_accepted !== null) {
+    draft.privacy_policy_accepted = Boolean(p.privacy_policy_accepted)
+  }
   if (p.state_id != null) {
     draft.state_id = Number(p.state_id)
   }
@@ -1879,6 +1905,8 @@ function bodyFromDraft() {
     cover_media_id: draft.cover_media_id,
     portal_avatar_media_id: draft.portal_avatar_media_id,
     gallery_media_ids: draft.gallery_media_ids.length ? draft.gallery_media_ids : null,
+    terms_accepted: draft.terms_accepted,
+    privacy_policy_accepted: draft.privacy_policy_accepted,
   }
 }
 
@@ -1908,10 +1936,16 @@ function buildStep1Error(): string | null {
   if (cpfDigits(form.cpf).length !== 11) {
     missing.push('CPF (11 dígitos)')
   }
-  if (missing.length === 0) {
-    return null
+  if (missing.length > 0) {
+    return `Preencha: ${missing.join(', ')}.`
   }
-  return `Preencha: ${missing.join(', ')}.`
+  if (!draft.terms_accepted) {
+    return 'Aceite os termos de serviço para continuar.'
+  }
+  if (!draft.privacy_policy_accepted) {
+    return 'Aceite a política de privacidade para continuar.'
+  }
+  return null
 }
 
 /** Data no formato YYYY-MM-DD (componente de nascimento). */
@@ -2234,7 +2268,7 @@ function registrationPixError(e: unknown): string {
 }
 
 async function submitFinal() {
-  if (!draft.terms_accepted || !hasToken.value) {
+  if (!draft.terms_accepted || !draft.privacy_policy_accepted || !hasToken.value) {
     return
   }
   formError.value = null
@@ -2250,6 +2284,7 @@ async function submitFinal() {
           ...bodyFromDraft(),
           current_step: totalSteps,
           terms_accepted: true,
+          privacy_policy_accepted: true,
           form_status: 'complete',
         },
       })
@@ -2270,6 +2305,7 @@ async function submitFinal() {
         ...bodyFromDraft(),
         current_step: totalSteps,
         terms_accepted: true,
+        privacy_policy_accepted: true,
         form_status: 'draft',
       },
     })
