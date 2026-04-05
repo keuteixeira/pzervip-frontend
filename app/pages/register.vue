@@ -171,6 +171,56 @@
           <li><span class="text-zinc-500">CPF:</span> {{ cpfDisplay }}</li>
         </ul>
       </div>
+
+      <div
+        v-if="needsEmailOtpPanel"
+        class="mt-6 space-y-4 rounded-2xl border border-brand/30 bg-brand/5 p-6"
+      >
+        <h3 class="text-lg font-semibold text-white">Confirme seu e-mail</h3>
+        <p class="text-sm text-zinc-400">
+          Enviamos um código de <strong class="text-zinc-300">6 dígitos</strong> para
+          <strong class="text-zinc-200">{{ user?.email }}</strong>. Informe abaixo para continuar o cadastro.
+        </p>
+        <p class="text-xs text-zinc-500">Você pode colar os 6 dígitos em qualquer lugar desta página.</p>
+        <div class="flex flex-nowrap items-center gap-1.5">
+          <input
+            v-for="slot in 6"
+            :key="'eo-' + slot"
+            :value="emailOtpDigits[slot - 1]"
+            type="text"
+            maxlength="1"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            class="otp-digit"
+            :aria-label="'Dígito ' + slot + ' do código de e-mail'"
+            @input="onEmailOtpInput(slot - 1, $event)"
+            @keydown="onOtpKeydown('email', slot - 1, $event)"
+            :ref="bindEmailOtpRef(slot - 1)"
+          />
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            class="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            :disabled="busy || emailOtpCode.length !== 6"
+            @click.stop.prevent="submitEmailOtp"
+          >
+            Confirmar e-mail
+          </button>
+          <button
+            type="button"
+            class="text-sm font-medium text-brand underline-offset-2 hover:underline disabled:opacity-40"
+            :disabled="busy || emailResendSecondsLeft > 0"
+            @click="sendRegistrationEmailCode(false)"
+          >
+            {{
+              emailResendSecondsLeft > 0
+                ? `Reenviar em ${emailResendSecondsLeft}s`
+                : 'Reenviar código'
+            }}
+          </button>
+        </div>
+      </div>
     </section>
 
     <!-- 2 — Senha da conta + dados pessoais + endereço -->
@@ -226,6 +276,7 @@
           />
         </div>
       </div>
+
       <h3 class="pt-4 text-lg font-medium text-white">Endereço</h3>
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
@@ -250,6 +301,57 @@
         <input v-model="draft.address.number" type="text" placeholder="Número *" class="input" />
         <input v-model="draft.address.complement" type="text" placeholder="Complemento" class="input" />
         <input v-model="draft.address.neighborhood" type="text" placeholder="Bairro *" class="input sm:col-span-2" />
+      </div>
+
+      <div
+        v-if="needsWhatsappOtpPanel"
+        id="whatsapp-otp-gate"
+        class="mt-8 space-y-4 rounded-2xl border border-emerald-800/40 bg-emerald-950/20 p-5"
+      >
+        <h3 class="text-base font-semibold text-white">Confirme seu WhatsApp</h3>
+        <p class="text-sm text-zinc-400">
+          Enviaremos o código para
+          <strong class="text-emerald-200/95">{{ formatPhoneBrMask(phoneDigits(draft.whatsapp)) }}</strong>. Depois
+          informe os 6 dígitos.
+        </p>
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            class="rounded-xl border border-emerald-700/60 bg-emerald-900/30 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-900/50 disabled:opacity-50"
+            :disabled="busy || phoneDigits(draft.whatsapp).length < 10 || whatsappResendSecondsLeft > 0"
+            @click="sendWhatsappOtp(false)"
+          >
+            {{ waOtpSentOnce ? 'Reenviar código' : 'Enviar código no WhatsApp' }}
+          </button>
+          <span v-if="whatsappResendSecondsLeft > 0" class="text-sm text-zinc-500">
+            Reenvio em {{ whatsappResendSecondsLeft }}s
+          </span>
+        </div>
+        <p class="text-xs text-zinc-500">Você pode colar os 6 dígitos em qualquer lugar desta página.</p>
+        <div class="flex flex-nowrap items-center gap-1.5">
+          <input
+            v-for="slot in 6"
+            :key="'wo-' + slot"
+            :value="whatsappOtpDigits[slot - 1]"
+            type="text"
+            maxlength="1"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            class="otp-digit"
+            :aria-label="'Dígito ' + slot + ' do código do WhatsApp'"
+            @input="onWhatsappOtpInput(slot - 1, $event)"
+            @keydown="onOtpKeydown('whatsapp', slot - 1, $event)"
+            :ref="bindWhatsappOtpRef(slot - 1)"
+          />
+        </div>
+        <button
+          type="button"
+          class="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+          :disabled="busy || whatsappOtpCode.length !== 6"
+          @click="submitWhatsappOtp"
+        >
+          Confirmar WhatsApp
+        </button>
       </div>
     </section>
 
@@ -789,6 +891,7 @@ import {
 } from '~/composables/useRegisterCadastroTabSession'
 import { REGISTER_COVER, REGISTER_GALLERY_DEFAULTS, REGISTER_PROFILE_AVATAR } from '~/config/registerPresentation'
 import { cpfDigits, formatCepMask, formatCpfMask, formatPhoneBrMask, phoneDigits } from '~/utils/brFormat'
+import type { AuthUser } from '~/composables/useAuth'
 import { extractLaravelErrorMessage } from '~/utils/laravelApiErrors'
 
 useRegisterCadastroRouteGuard()
@@ -822,6 +925,166 @@ const purge = reactive({
 
 const accountPassword = ref('')
 const accountPasswordConfirmation = ref('')
+
+function emptyOtpDigits(): string[] {
+  return ['', '', '', '', '', '']
+}
+
+const emailOtpDigits = ref<string[]>([...emptyOtpDigits()])
+const emailResendUntil = ref<number | null>(null)
+const whatsappOtpDigits = ref<string[]>([...emptyOtpDigits()])
+const whatsappResendUntil = ref<number | null>(null)
+const emailOtpInputEls = ref<(HTMLInputElement | null)[]>([])
+const whatsappOtpInputEls = ref<(HTMLInputElement | null)[]>([])
+
+const emailOtpCode = computed(() => emailOtpDigits.value.join(''))
+const whatsappOtpCode = computed(() => whatsappOtpDigits.value.join(''))
+const waOtpSentOnce = ref(false)
+/** Só mostra o cartão de OTP do WhatsApp depois de «Próximo» com a etapa 2 válida. */
+const whatsappOtpGateOpen = ref(false)
+/** Contadores de cooldown (atualizados só no intervalo — evita recomputar o componente inteiro a cada s). */
+const emailResendSecondsLeft = ref(0)
+const whatsappResendSecondsLeft = ref(0)
+/** Dígitos do WhatsApp já confirmados com o código (alinhado ao backend). */
+const lastVerifiedWhatsappDigits = ref<string | null>(null)
+
+let otpResendClockId: ReturnType<typeof setInterval> | null = null
+
+function syncOtpResendCountdowns() {
+  const now = Math.floor(Date.now() / 1000)
+  emailResendSecondsLeft.value =
+    emailResendUntil.value == null ? 0 : Math.max(0, emailResendUntil.value - now)
+  whatsappResendSecondsLeft.value =
+    whatsappResendUntil.value == null ? 0 : Math.max(0, whatsappResendUntil.value - now)
+}
+
+function bindEmailOtpRef(index: number) {
+  return (el: unknown) => {
+    const arr = [...emailOtpInputEls.value]
+    while (arr.length < 6) {
+      arr.push(null)
+    }
+    arr[index] = (el as HTMLInputElement) ?? null
+    emailOtpInputEls.value = arr
+  }
+}
+
+function bindWhatsappOtpRef(index: number) {
+  return (el: unknown) => {
+    const arr = [...whatsappOtpInputEls.value]
+    while (arr.length < 6) {
+      arr.push(null)
+    }
+    arr[index] = (el as HTMLInputElement) ?? null
+    whatsappOtpInputEls.value = arr
+  }
+}
+
+function fillOtpDigits(target: 'email' | 'whatsapp', digitsOnly: string) {
+  const d = digitsOnly.replace(/\D/g, '').slice(0, 6)
+  const chars = d.split('')
+  const row = emptyOtpDigits()
+  for (let i = 0; i < chars.length; i++) {
+    row[i] = chars[i] ?? ''
+  }
+  if (target === 'email') {
+    emailOtpDigits.value = row
+  } else {
+    whatsappOtpDigits.value = row
+  }
+}
+
+function onDocumentPasteCapture(e: ClipboardEvent) {
+  const text = e.clipboardData?.getData('text') ?? ''
+  const d = text.replace(/\D/g, '').slice(0, 6)
+  if (d.length !== 6) {
+    return
+  }
+  if (needsEmailOtpPanel.value && !registrationEmailVerified.value) {
+    e.preventDefault()
+    e.stopPropagation()
+    fillOtpDigits('email', d)
+    nextTick(() => {
+      emailOtpInputEls.value[5]?.focus()
+    })
+    return
+  }
+  if (needsWhatsappOtpPanel.value && !registrationWhatsappVerified.value) {
+    e.preventDefault()
+    e.stopPropagation()
+    fillOtpDigits('whatsapp', d)
+    nextTick(() => {
+      whatsappOtpInputEls.value[5]?.focus()
+    })
+  }
+}
+
+function onEmailOtpInput(index: number, e: Event) {
+  const el = e.target as HTMLInputElement
+  const ch = el.value.replace(/\D/g, '').slice(-1)
+  const row = [...emailOtpDigits.value]
+  row[index] = ch
+  emailOtpDigits.value = row
+  if (ch && index < 5) {
+    emailOtpInputEls.value[index + 1]?.focus()
+  }
+}
+
+function onWhatsappOtpInput(index: number, e: Event) {
+  const el = e.target as HTMLInputElement
+  const ch = el.value.replace(/\D/g, '').slice(-1)
+  const row = [...whatsappOtpDigits.value]
+  row[index] = ch
+  whatsappOtpDigits.value = row
+  if (ch && index < 5) {
+    whatsappOtpInputEls.value[index + 1]?.focus()
+  }
+}
+
+function onOtpKeydown(target: 'email' | 'whatsapp', index: number, e: KeyboardEvent) {
+  if (e.key !== 'Backspace') {
+    return
+  }
+  const refDig = target === 'email' ? emailOtpDigits : whatsappOtpDigits
+  const refEls = target === 'email' ? emailOtpInputEls : whatsappOtpInputEls
+  const row = [...refDig.value]
+  if (row[index]) {
+    return
+  }
+  if (index > 0) {
+    e.preventDefault()
+    refEls.value[index - 1]?.focus()
+    const next = [...row]
+    next[index - 1] = ''
+    refDig.value = next
+  }
+}
+
+onMounted(() => {
+  if (import.meta.client) {
+    document.addEventListener('paste', onDocumentPasteCapture, true)
+  }
+  syncOtpResendCountdowns()
+  otpResendClockId = setInterval(syncOtpResendCountdowns, 1000)
+})
+onUnmounted(() => {
+  if (import.meta.client) {
+    document.removeEventListener('paste', onDocumentPasteCapture, true)
+  }
+  if (otpResendClockId) {
+    clearInterval(otpResendClockId)
+    otpResendClockId = null
+  }
+})
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    if (otpResendClockId) {
+      clearInterval(otpResendClockId)
+      otpResendClockId = null
+    }
+  })
+}
 
 const { token, request } = useApi()
 const { register, resumeDraftRegistration, fetchMe, user, deleteDraftRegistration, setPassword } =
@@ -905,6 +1168,42 @@ const showPurgeSection = computed(
 
 /** Conta criada na etapa 1 ainda sem senha escolhida pelo usuário. */
 const needsAccountPassword = computed(() => !user.value?.password_set_at)
+
+const registrationEmailVerified = computed(() =>
+  Boolean(user.value?.advertiser_profile?.registration_email_verified_at),
+)
+const registrationWhatsappVerified = computed(() =>
+  Boolean(user.value?.advertiser_profile?.registration_whatsapp_verified_at),
+)
+
+const needsEmailOtpPanel = computed(() => {
+  if (!hasToken.value || !user.value || user.value.role !== 'advertiser') {
+    return false
+  }
+  if (user.value.account_status === 'active') {
+    return false
+  }
+  return !registrationEmailVerified.value
+})
+
+const needsWhatsappOtpPanel = computed(() => {
+  if (step.value !== 2) {
+    return false
+  }
+  if (!hasToken.value || !user.value || user.value.role !== 'advertiser') {
+    return false
+  }
+  if (user.value.account_status === 'active') {
+    return false
+  }
+  if (!registrationEmailVerified.value) {
+    return false
+  }
+  if (registrationWhatsappVerified.value) {
+    return false
+  }
+  return whatsappOtpGateOpen.value
+})
 
 const legalNameDisplay = computed(() => user.value?.name?.trim() || '—')
 const cpfDisplay = computed(() => {
@@ -1633,6 +1932,10 @@ function onCpfInput(e: Event) {
 function onWhatsappInput(e: Event) {
   const el = e.target as HTMLInputElement
   draft.whatsapp = formatPhoneBrMask(el.value)
+  const next = phoneDigits(draft.whatsapp)
+  if (lastVerifiedWhatsappDigits.value != null && next !== lastVerifiedWhatsappDigits.value) {
+    lastVerifiedWhatsappDigits.value = null
+  }
 }
 
 function onPurgeCpfInput(e: Event) {
@@ -1718,23 +2021,9 @@ onMounted(async () => {
   if (!import.meta.client) {
     return
   }
-  const tabActive = sessionStorage.getItem(CADASTRO_TAB_KEY) === '1'
+  const tabActive = localStorage.getItem(CADASTRO_TAB_KEY) === '1'
 
   await fetchMe()
-
-  /** Só derruba cookie de rascunho (form_status draft): não deslogar admin nem anunciante ativo / cadastro já enviado. */
-  if (!tabActive && token.value && user.value?.role === 'advertiser' && user.value.account_status !== 'active') {
-    try {
-      const p = await request<{ form_status?: string }>('/v1/me/profile')
-      if (p.form_status === 'draft') {
-        token.value = null
-        user.value = null
-      }
-    } catch {
-      token.value = null
-      user.value = null
-    }
-  }
 
   if (
     tabActive &&
@@ -1763,6 +2052,179 @@ watch(showPurgeSection, (v) => {
     purgeOpen.value = false
   }
 })
+
+async function sendRegistrationEmailCode(silent: boolean, opts?: { manageBusy?: boolean }) {
+  if (!hasToken.value || registrationEmailVerified.value) {
+    return
+  }
+  formError.value = null
+  const manageBusy = opts?.manageBusy !== false
+  if (manageBusy) {
+    busy.value = true
+  }
+  try {
+    const r = await request<{
+      sent?: boolean
+      already_verified?: boolean
+      can_resend_after?: number | null
+    }>('/v1/me/registration/send-email-code', { method: 'POST' })
+    if (r.already_verified) {
+      await fetchMe()
+      return
+    }
+    if (typeof r.can_resend_after === 'number') {
+      emailResendUntil.value = r.can_resend_after
+      syncOtpResendCountdowns()
+    }
+  } catch (e: unknown) {
+    if (!silent) {
+      formError.value =
+        extractLaravelErrorMessage(e, ['cooldown', 'email']) ??
+        'Não foi possível enviar o código por e-mail.'
+    }
+  } finally {
+    if (manageBusy) {
+      busy.value = false
+    }
+  }
+}
+
+async function submitEmailOtp() {
+  const code = emailOtpCode.value.replace(/\D/g, '')
+  if (code.length !== 6) {
+    return
+  }
+  /** Com conta já criada o painel da etapa 1 some — CPF/nome vêm do `user` (API), não do `form`. */
+  const email = (user.value?.email ?? form.email).trim()
+  const cpf = cpfDigits(user.value?.advertiser_profile?.cpf ?? form.cpf)
+  const name = (user.value?.name ?? form.name).trim()
+  if (!email || cpf.length !== 11 || !name) {
+    formError.value = 'Confirme e-mail e CPF da etapa 1 antes de validar o código.'
+    return
+  }
+  formError.value = null
+  busy.value = true
+  let emailVerifiedOk = false
+  try {
+    /** Não usar nextTick() aqui: com o scheduler do Vue instável a promessa pode nunca resolver e o $fetch nunca dispara. */
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+    const r = await request<{
+      verified?: boolean
+      token?: string
+      user?: AuthUser
+    }>('/v1/register/verify-email-code', {
+      method: 'POST',
+      body: {
+        name,
+        email,
+        cpf,
+        code,
+      },
+      skipAuth: true,
+    })
+    /**
+     * O backend revoga todos os tokens ao verificar; o Bearer antigo deixa de valer.
+     * É obrigatório gravar `r.token` antes de qualquer chamada autenticada — senão /me dá 401,
+     * fetchMe apaga cookie e a UI volta ao formulário «Criar conta» (loop).
+     */
+    if (!r.token || !r.user) {
+      formError.value = 'Resposta incompleta do servidor. Atualize a página e tente de novo.'
+      return
+    }
+    token.value = r.token
+    user.value = r.user
+    const pCpf = r.user.advertiser_profile?.cpf
+    if (r.user.name) {
+      form.name = r.user.name
+    }
+    if (r.user.email) {
+      form.email = r.user.email
+    }
+    if (pCpf && /^\d{11}$/.test(String(pCpf))) {
+      form.cpf = formatCpfMask(String(pCpf))
+    }
+    emailOtpDigits.value = [...emptyOtpDigits()]
+    markCadastroTabActive()
+    step.value = 2
+    emailVerifiedOk = true
+  } catch (e: unknown) {
+    formError.value = extractLaravelErrorMessage(e, ['code']) ?? 'Código inválido ou expirado.'
+  } finally {
+    busy.value = false
+  }
+  /** PUT /profile em background: Próximo volta a persistir se falhar. */
+  if (emailVerifiedOk && hasToken.value) {
+    void persistStep({ manageBusy: false }).catch(() => {})
+  }
+}
+
+async function sendWhatsappOtp(silent: boolean) {
+  if (!hasToken.value || registrationWhatsappVerified.value) {
+    return
+  }
+  const wa = phoneDigits(draft.whatsapp)
+  if (wa.length < 10) {
+    if (!silent) {
+      formError.value = 'Informe o WhatsApp com DDD antes de enviar o código.'
+    }
+    return
+  }
+  formError.value = null
+  busy.value = true
+  try {
+    const r = await request<{
+      sent?: boolean
+      already_verified?: boolean
+      can_resend_after?: number | null
+    }>('/v1/me/registration/send-whatsapp-code', {
+      method: 'POST',
+      body: { whatsapp: wa },
+    })
+    if (r.already_verified) {
+      await fetchMe()
+      lastVerifiedWhatsappDigits.value = wa
+      waOtpSentOnce.value = true
+      return
+    }
+    waOtpSentOnce.value = true
+    if (typeof r.can_resend_after === 'number') {
+      whatsappResendUntil.value = r.can_resend_after
+      syncOtpResendCountdowns()
+    }
+    draft.whatsapp = formatPhoneBrMask(wa)
+  } catch (e: unknown) {
+    if (!silent) {
+      formError.value =
+        extractLaravelErrorMessage(e, ['cooldown', 'whatsapp']) ??
+        'Não foi possível enviar o código no WhatsApp.'
+    }
+  } finally {
+    busy.value = false
+  }
+}
+
+async function submitWhatsappOtp() {
+  const code = whatsappOtpCode.value.replace(/\D/g, '')
+  if (code.length !== 6) {
+    return
+  }
+  formError.value = null
+  busy.value = true
+  try {
+    await request('/v1/me/registration/verify-whatsapp-code', {
+      method: 'POST',
+      body: { code },
+    })
+    whatsappOtpDigits.value = [...emptyOtpDigits()]
+    const wa = phoneDigits(draft.whatsapp)
+    lastVerifiedWhatsappDigits.value = wa
+    await fetchMe()
+  } catch (e: unknown) {
+    formError.value = extractLaravelErrorMessage(e, ['code']) ?? 'Código inválido ou expirado.'
+  } finally {
+    busy.value = false
+  }
+}
 
 function hydrateFromProfile(p: Record<string, unknown>) {
   const keys = [
@@ -1841,6 +2303,11 @@ function hydrateFromProfile(p: Record<string, unknown>) {
     draft.gallery_media_ids = ids
     galleryItems.value = ids.map((id, i) => ({ id, name: `Mídia ${i + 1}` }))
   }
+  if (p.registration_whatsapp_verified_at && p.whatsapp != null && String(p.whatsapp).length > 0) {
+    lastVerifiedWhatsappDigits.value = String(p.whatsapp).replace(/\D/g, '')
+  } else if (!p.registration_whatsapp_verified_at) {
+    lastVerifiedWhatsappDigits.value = null
+  }
 }
 
 /** Com token válido: carrega perfil salvo e posiciona o passo (incl. etapa 2 se falta senha). */
@@ -1852,19 +2319,23 @@ async function loadProfileIntoWizard(): Promise<boolean> {
   try {
     const p = await request<Record<string, unknown>>('/v1/me/profile')
     hydrateFromProfile(p)
+    if (!p.registration_email_verified_at) {
+      step.value = 1
+      emailOtpDigits.value = [...emptyOtpDigits()]
+      await sendRegistrationEmailCode(true)
+      return true
+    }
     let s = Math.min(Math.max(Number(p.current_step) || 1, 1), totalSteps)
     if (needsAccountPassword.value && s < 2) {
       s = 2
     }
-    // Com token nesta aba, a etapa 1 mostra resumo — não ficar preso na etapa 1.
     if (s < 2) {
       s = 2
     }
     step.value = s
     return true
   } catch {
-    // Mesmo sem hidratar o perfil, com token o cadastro continua a partir da etapa 2.
-    step.value = 2
+    step.value = 1
     return false
   }
 }
@@ -1910,18 +2381,23 @@ function bodyFromDraft() {
   }
 }
 
-async function persistStep() {
+async function persistStep(opts?: { manageBusy?: boolean }) {
   if (!hasToken.value) {
     return
   }
-  busy.value = true
+  const manageBusy = opts?.manageBusy !== false
+  if (manageBusy) {
+    busy.value = true
+  }
   try {
     await request('/v1/me/profile', {
       method: 'PUT',
       body: { ...bodyFromDraft(), form_status: 'draft' },
     })
   } finally {
-    busy.value = false
+    if (manageBusy) {
+      busy.value = false
+    }
   }
 }
 
@@ -1970,36 +2446,48 @@ function isAtLeast18YearsOld(isoDate: string): boolean {
   return age >= 18
 }
 
+/** Etapa 2: valida rascunho (sem exigir OTP de WhatsApp — isso abre após «Próximo»). */
+function validateStep2DraftOnly(): string | null {
+  if (!draft.birth_date) {
+    return 'Informe a data de nascimento.'
+  }
+  if (!isAtLeast18YearsOld(draft.birth_date)) {
+    return 'É necessário ter pelo menos 18 anos para continuar o cadastro.'
+  }
+  if (!draft.mother_name.trim()) {
+    return 'Informe o nome completo da mãe.'
+  }
+  if (!draft.contact_email.trim()) {
+    return 'Informe o e-mail de contato.'
+  }
+  const w = phoneDigits(draft.whatsapp)
+  if (w.length < 10 || w.length > 13) {
+    return 'Informe um WhatsApp válido (DDD + número; ao salvar usamos só números).'
+  }
+  const cep = draft.address.zipcode.replace(/\D/g, '')
+  if (cep.length !== 8) {
+    return 'Informe o CEP com 8 dígitos.'
+  }
+  if (!draft.address.street.trim()) {
+    return 'Informe o logradouro (rua).'
+  }
+  if (!draft.address.number.trim()) {
+    return 'Informe o número.'
+  }
+  if (!draft.address.neighborhood.trim()) {
+    return 'Informe o bairro.'
+  }
+  return null
+}
+
 function validateStepForNext(s: number): string | null {
   if (s === 2) {
-    if (!draft.birth_date) {
-      return 'Informe a data de nascimento.'
+    const draftErr = validateStep2DraftOnly()
+    if (draftErr) {
+      return draftErr
     }
-    if (!isAtLeast18YearsOld(draft.birth_date)) {
-      return 'É necessário ter pelo menos 18 anos para continuar o cadastro.'
-    }
-    if (!draft.mother_name.trim()) {
-      return 'Informe o nome completo da mãe.'
-    }
-    if (!draft.contact_email.trim()) {
-      return 'Informe o e-mail de contato.'
-    }
-    const w = phoneDigits(draft.whatsapp)
-    if (w.length < 10 || w.length > 13) {
-      return 'Informe um WhatsApp válido (DDD + número; ao salvar usamos só números).'
-    }
-    const cep = draft.address.zipcode.replace(/\D/g, '')
-    if (cep.length !== 8) {
-      return 'Informe o CEP com 8 dígitos.'
-    }
-    if (!draft.address.street.trim()) {
-      return 'Informe o logradouro (rua).'
-    }
-    if (!draft.address.number.trim()) {
-      return 'Informe o número.'
-    }
-    if (!draft.address.neighborhood.trim()) {
-      return 'Informe o bairro.'
+    if (!registrationWhatsappVerified.value) {
+      return 'Envie e confirme o código de verificação do WhatsApp para este número.'
     }
     return null
   }
@@ -2073,6 +2561,8 @@ async function next() {
       return
     }
     const d = cpfDigits(form.cpf)
+    busy.value = true
+    await nextTick()
     try {
       const lookup = await request<{
         registration_state: string
@@ -2103,7 +2593,7 @@ async function next() {
           const profileLoaded = await loadProfileIntoWizard()
           if (profileLoaded) {
             try {
-              await persistStep()
+              await persistStep({ manageBusy: false })
             } catch {
               /* token e etapa já válidos; sync do passo é opcional */
             }
@@ -2132,19 +2622,39 @@ async function next() {
       await fetchMe()
       markCadastroTabActive()
       draft.contact_email = form.email.trim()
-      step.value = 2
-      await persistStep()
+      step.value = 1
+      emailOtpDigits.value = [...emptyOtpDigits()]
+      emailResendUntil.value = null
+      syncOtpResendCountdowns()
+      try {
+        await persistStep({ manageBusy: false })
+      } catch {
+        /* etapa 1 já válida; sync opcional */
+      }
+      await sendRegistrationEmailCode(false, { manageBusy: false })
     } catch (e: unknown) {
       const err = e as { data?: { errors?: Record<string, string[]> } }
       const msg = err.data?.errors?.cpf?.[0] ?? err.data?.errors?.email?.[0]
       formError.value =
         msg ?? 'Não foi possível criar a conta. E-mail ou CPF podem já estar em uso.'
+    } finally {
+      busy.value = false
     }
     return
   }
   if (step.value === 1 && hasToken.value && !showStep1CreateForm.value) {
-    markCadastroTabActive()
-    step.value = 2
+    if (!registrationEmailVerified.value) {
+      formError.value = 'Confirme o código enviado ao seu e-mail antes de continuar.'
+      return
+    }
+    busy.value = true
+    await nextTick()
+    try {
+      markCadastroTabActive()
+      step.value = 2
+    } finally {
+      busy.value = false
+    }
     return
   }
   if (step.value === 2 && needsAccountPassword.value) {
@@ -2153,6 +2663,7 @@ async function next() {
       return
     }
     busy.value = true
+    await nextTick()
     try {
       await setPassword(accountPassword.value, accountPasswordConfirmation.value)
       accountPassword.value = ''
@@ -2165,19 +2676,59 @@ async function next() {
       busy.value = false
     }
   }
+  if (step.value === 2) {
+    const draftErr = validateStep2DraftOnly()
+    if (draftErr) {
+      formError.value = draftErr
+      return
+    }
+    if (!registrationWhatsappVerified.value) {
+      if (!whatsappOtpGateOpen.value) {
+        busy.value = true
+        await nextTick()
+        try {
+          await persistStep({ manageBusy: false })
+        } finally {
+          busy.value = false
+        }
+        whatsappOtpGateOpen.value = true
+        formError.value = null
+        await nextTick()
+        document.getElementById('whatsapp-otp-gate')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        return
+      }
+      formError.value =
+        'Envie e confirme o código enviado ao seu WhatsApp (cartão acima). Depois use Próximo novamente.'
+      return
+    }
+    whatsappOtpGateOpen.value = false
+  }
   const stepErr = validateStepForNext(step.value)
   if (stepErr) {
     formError.value = stepErr
     return
   }
-  await persistStep()
-  step.value += 1
+  busy.value = true
+  await nextTick()
+  try {
+    await persistStep({ manageBusy: false })
+    step.value += 1
+  } catch (e: unknown) {
+    formError.value =
+      extractLaravelErrorMessage(e, ['current_step', 'form_status']) ??
+      'Não foi possível salvar o progresso. Tente novamente.'
+  } finally {
+    busy.value = false
+  }
 }
 
 async function prev() {
   formError.value = null
   if (step.value <= 1) {
     return
+  }
+  if (step.value === 2) {
+    whatsappOtpGateOpen.value = false
   }
   step.value -= 1
 }
@@ -2276,6 +2827,7 @@ async function submitFinal() {
     clampPremiumTier()
   }
   busy.value = true
+  await nextTick()
   try {
     if (draft.plan_type === 'basic') {
       await request('/v1/me/profile', {
@@ -2347,6 +2899,10 @@ onBeforeUnmount(() => {
 <style scoped>
 .input {
   @apply w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand;
+}
+
+.otp-digit {
+  @apply box-border h-10 w-8 shrink-0 rounded-lg border border-zinc-600 bg-zinc-950 px-0 text-center text-base font-semibold tabular-nums tracking-normal text-white focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand sm:w-9;
 }
 
 .select-field {

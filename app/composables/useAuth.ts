@@ -1,48 +1,8 @@
 import type { Ref } from 'vue'
 
-type LaravelErrorPayload = { errors?: Record<string, string[]>; message?: string }
+import { laravelErrorMessage } from '~/utils/laravelApiErrors'
 
-function getLaravelErrorPayload(e: unknown): LaravelErrorPayload | null {
-  const err = e as {
-    data?: LaravelErrorPayload
-    response?: { _data?: LaravelErrorPayload }
-    cause?: { data?: LaravelErrorPayload }
-  }
-  return err.data ?? err.response?._data ?? err.cause?.data ?? null
-}
-
-/** Primeira mensagem 422: tenta `fields` em ordem, depois qualquer campo, depois `message`. */
-function laravelErrorMessage(e: unknown, fields?: string[]): string | null {
-  const d = getLaravelErrorPayload(e)
-  if (!d) {
-    return null
-  }
-  if (d.errors) {
-    if (fields && fields.length > 0) {
-      for (const f of fields) {
-        const arr = d.errors[f]
-        if (arr?.[0]) {
-          return arr[0]
-        }
-      }
-    }
-    for (const k of Object.keys(d.errors)) {
-      const arr = d.errors[k]
-      if (Array.isArray(arr) && typeof arr[0] === 'string' && arr[0].length > 0) {
-        return arr[0]
-      }
-    }
-  }
-  if (typeof d.message === 'string' && d.message.length > 0) {
-    return d.message
-  }
-  return null
-}
-
-/** Para telas que tratam erro fora do `useAuth` (ex.: cadastro). */
-export function extractLaravelErrorMessage(e: unknown, fields?: string[]): string | null {
-  return laravelErrorMessage(e, fields)
-}
+export { extractLaravelErrorMessage } from '~/utils/laravelApiErrors'
 
 export interface AuthUser {
   id: number
@@ -55,6 +15,9 @@ export interface AuthUser {
   advertiser_profile?: {
     cpf?: string | null
     public_slug?: string | null
+    whatsapp?: string | null
+    registration_email_verified_at?: string | null
+    registration_whatsapp_verified_at?: string | null
   }
   /** null = senha ainda não definida pelo usuário (cadastro com senha interna aleatória). */
   password_set_at?: string | null
@@ -81,6 +44,7 @@ export function useAuth() {
       const res = await request<{ token: string; user: AuthUser }>('/v1/login', {
         method: 'POST',
         body: { email: email.trim(), password },
+        skipAuth: true,
       })
       token.value = res.token
       user.value = res.user
@@ -101,6 +65,7 @@ export function useAuth() {
       const res = await request<{ token: string; user: AuthUser }>('/v1/register', {
         method: 'POST',
         body: payload,
+        skipAuth: true,
       })
       token.value = res.token
       user.value = res.user
@@ -121,6 +86,7 @@ export function useAuth() {
       const res = await request<{ token: string; user: AuthUser }>('/v1/register/resume', {
         method: 'POST',
         body: payload,
+        skipAuth: true,
       })
       token.value = res.token
       user.value = res.user
@@ -206,6 +172,7 @@ export function useAuth() {
           cpf: payload.cpf,
           confirm: payload.confirm,
         },
+        skipAuth: true,
       })
       token.value = null
       user.value = null
@@ -221,6 +188,7 @@ export function useAuth() {
       return await request<{ message: string }>('/v1/forgot-password', {
         method: 'POST',
         body: { email: email.trim() },
+        skipAuth: true,
       })
     } catch (e: unknown) {
       error.value =
@@ -248,6 +216,7 @@ export function useAuth() {
           password: payload.password,
           password_confirmation: payload.password_confirmation,
         },
+        skipAuth: true,
       })
     } catch (e: unknown) {
       error.value = laravelErrorMessage(e, ['email', 'password']) ?? 'Não foi possível redefinir a senha.'

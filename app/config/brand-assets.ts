@@ -1,16 +1,12 @@
 /**
- * Logos e ícone oficiais (mesmos ficheiros do WordPress em produção).
- * Para self-host: copiar para /public/brand/ e trocar para caminhos relativos.
+ * Assets em /public/ (Nuxt). Versões *-2 = claras (UI escura); *-1 = escuras (fundos claros, ex. e-mails).
+ * A URL absoluta da logo em e-mail é montada no backend: FRONTEND_URL + /prazervip-logo-horizontal-1.png
  */
 export const brandAssets = {
-  logoHorizontal:
-    'https://prazer.vip/wp-content/uploads/2025/10/prazervip-logo-horizontal-2.png',
-  /** Largura extra para rodapé (WordPress 1024w) */
-  logoHorizontalWide:
-    'https://prazer.vip/wp-content/uploads/2025/10/prazervip-logo-horizontal-2-1024x188.png',
-  logoVertical:
-    'https://prazer.vip/wp-content/uploads/2025/10/prazervip-logo-vertical-2.png',
-  /** Favicon / app icon */
-  iconSquare:
-    'https://prazer.vip/wp-content/uploads/2025/09/sexocomlocal-logo-square-300x300.png',
+  logoHorizontal: '/images/prazervip-logo-horizontal-2.png',
+  logoHorizontalWide: '/images/prazervip-logo-horizontal-2.png',
+  logoVertical: '/images/prazervip-logo-vertical-2.png',
+  logoHorizontalOnLight: '/images/prazervip-logo-horizontal-1.png',
+  logoVerticalOnLight: '/images/prazervip-logo-vertical-1.png',
+  iconSquare: '/web-app-manifest-192x192.png',
 } as const

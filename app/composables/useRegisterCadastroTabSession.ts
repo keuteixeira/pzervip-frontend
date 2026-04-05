@@ -1,18 +1,18 @@
 /**
- * Marca só nesta aba (sessionStorage): F5 em /cadastro mantém o passo; sair da rota apaga a marca.
- * Não usar import de 'vue-router' — só o auto-import do Nuxt.
+ * Marca no localStorage (partilhado entre abas): evita perder o token ao abrir /cadastro noutra aba.
+ * Sair da rota /cadastro apaga a marca.
  */
 export const CADASTRO_TAB_KEY = 'prazervip_cadastro_aba'
 
 export function markCadastroTabActive() {
   if (import.meta.client) {
-    sessionStorage.setItem(CADASTRO_TAB_KEY, '1')
+    localStorage.setItem(CADASTRO_TAB_KEY, '1')
   }
 }
 
 export function clearCadastroTabMarker() {
   if (import.meta.client) {
-    sessionStorage.removeItem(CADASTRO_TAB_KEY)
+    localStorage.removeItem(CADASTRO_TAB_KEY)
   }
 }
 
