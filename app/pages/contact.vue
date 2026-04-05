@@ -75,14 +75,16 @@
           id="message"
           v-model="form.message"
           required
+          minlength="10"
           rows="6"
           class="input min-h-[140px] resize-y"
-          placeholder="Escreva aqui a sua mensagem…"
+          placeholder="Escreva aqui a sua mensagem (mínimo 10 caracteres)…"
         />
       </div>
 
       <p v-if="sent" class="rounded-xl border border-emerald-900/50 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-200">
-        Mensagem recebida. Obrigado — em breve ligaremos este formulário ao backend para resposta automática.
+        Mensagem recebida. Obrigado — a nossa equipa analisará o seu pedido e responderá por e-mail quando for
+        necessário.
       </p>
       <p v-if="errorMsg" class="text-sm text-red-400">{{ errorMsg }}</p>
 
@@ -98,6 +100,8 @@
 </template>
 
 <script setup lang="ts">
+import { extractLaravelErrorMessage } from '~/utils/laravelApiErrors'
+
 definePageMeta({
   layout: 'default',
   path: '/contato',
@@ -106,6 +110,8 @@ definePageMeta({
 useHead({
   title: 'Contato',
 })
+
+const { request } = useApi()
 
 const subjectOptions = [
   { value: 'denuncia_perfil', label: 'Denúncia de perfil ou conteúdo' },
@@ -130,17 +136,34 @@ const errorMsg = ref<string | null>(null)
 
 async function onSubmit() {
   errorMsg.value = null
+  sent.value = false
+  if (!form.subjectType) {
+    errorMsg.value = 'Selecione um assunto.'
+    return
+  }
   sending.value = true
   try {
-    await new Promise((r) => setTimeout(r, 600))
+    await request<{ message?: string }>('/v1/contact', {
+      method: 'POST',
+      skipAuth: true,
+      body: {
+        subject_type: form.subjectType,
+        profile_ref: form.profileRef.trim() || undefined,
+        name: form.name.trim(),
+        email: form.email.trim(),
+        message: form.message.trim(),
+      },
+    })
     sent.value = true
     form.subjectType = ''
     form.profileRef = ''
     form.name = ''
     form.email = ''
     form.message = ''
-  } catch {
-    errorMsg.value = 'Não foi possível enviar. Tente novamente mais tarde.'
+  } catch (e: unknown) {
+    errorMsg.value =
+      extractLaravelErrorMessage(e, ['subject_type', 'profile_ref', 'name', 'email', 'message']) ??
+      'Não foi possível enviar. Tente novamente mais tarde.'
   } finally {
     sending.value = false
   }
