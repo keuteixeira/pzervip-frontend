@@ -88,6 +88,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAdvertiserApproval } from '~/composables/useAdvertiserApproval'
 import { supportPriorities, supportPriorityLabel, supportStatusLabel, supportSubjectLabel, supportSubjects } from '~/utils/support-ticket-labels'
 
 definePageMeta({
@@ -98,6 +99,7 @@ definePageMeta({
 useHead({ title: 'Suporte' })
 
 const { request } = useApi()
+const { guardAccountToolsOrRedirect } = useAdvertiserApproval()
 const loading = ref(true)
 const saving = ref(false)
 const showNew = ref(false)
@@ -168,5 +170,10 @@ async function createTicket() {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  if (await guardAccountToolsOrRedirect()) {
+    return
+  }
+  await load()
+})
 </script>

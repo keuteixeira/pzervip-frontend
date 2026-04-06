@@ -63,6 +63,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAdvertiserApproval } from '~/composables/useAdvertiserApproval'
 import { supportPriorityLabel, supportStatusLabel, supportSubjectLabel } from '~/utils/support-ticket-labels'
 
 definePageMeta({
@@ -72,6 +73,7 @@ definePageMeta({
 
 const route = useRoute()
 const { request } = useApi()
+const { guardAccountToolsOrRedirect } = useAdvertiserApproval()
 const ticket = ref<any>(null)
 const messages = ref<any[]>([])
 const loading = ref(true)
@@ -140,9 +142,12 @@ async function openAttachment(messageId: number, mediaId: number) {
 }
 
 onMounted(async () => {
+  if (await guardAccountToolsOrRedirect()) {
+    return
+  }
   await load()
   timer = setInterval(() => {
-    load()
+    void load()
   }, 15000)
 })
 

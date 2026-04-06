@@ -1,4 +1,5 @@
 import { buildPublicProfilePath } from '~/utils/public-profile-url'
+import { useAdvertiserApproval } from '~/composables/useAdvertiserApproval'
 
 /**
  * Botão «Área do Anunciante»: destino conforme sessão.
@@ -6,14 +7,16 @@ import { buildPublicProfilePath } from '~/utils/public-profile-url'
  * — Admin: /admin/cadastros (igual ao pós-login)
  * — Anunciante: /conta
  *
- * Menu «Cadastro de Anunciante» / «Meu Perfil»: anunciante logado → página pública (`/acompanhante|massagista/slug`)
- * ou `/conta/perfil` se ainda não houver slug; visitante ou admin → `/cadastro`.
+ * Menu «Cadastro de Anunciante» / «Meu Perfil»: só mostra «Meu Perfil» com cadastro aprovado; antes disso
+ * o link segue para `/cadastro` (pré-cadastro / código / etapas).
+ * Anunciante aprovado → página pública ou `/conta/perfil` se ainda não houver slug; visitante ou admin → `/cadastro`.
  *
- * Com cookie mas `user` ainda null (primeira pintura), assume /conta até `hydrateUserIfNeeded()` correr.
+ * Com cookie mas `user` ainda null (primeira pintura), trata como visitante até `hydrateUserIfNeeded()` correr.
  */
 export function useAdvertiserAreaLink() {
   const { token } = useApi()
   const { user, fetchMe } = useAuth()
+  const { isApprovedAdvertiser } = useAdvertiserApproval()
 
   const advertiserAreaTo = computed(() => {
     if (!token.value) {
@@ -26,16 +29,16 @@ export function useAdvertiserAreaLink() {
   })
 
   const registerOrMyProfileLabel = computed(() => {
-    if (user.value?.role === 'advertiser') {
+    if (isApprovedAdvertiser.value) {
       return 'Meu Perfil'
     }
     return 'Cadastro de Anunciante'
   })
 
   const registerOrMyProfileTo = computed(() => {
-    if (user.value?.role === 'advertiser') {
-      const slug = user.value.advertiser_profile?.public_slug?.trim()
-      const st = user.value.advertiser_profile?.service_type
+    if (isApprovedAdvertiser.value) {
+      const slug = user.value?.advertiser_profile?.public_slug?.trim()
+      const st = user.value?.advertiser_profile?.service_type
       if (slug) {
         return buildPublicProfilePath(slug, st)
       }
@@ -50,5 +53,11 @@ export function useAdvertiserAreaLink() {
     }
   }
 
-  return { advertiserAreaTo, registerOrMyProfileLabel, registerOrMyProfileTo, hydrateUserIfNeeded }
+  return {
+    advertiserAreaTo,
+    registerOrMyProfileLabel,
+    registerOrMyProfileTo,
+    hydrateUserIfNeeded,
+    isApprovedAdvertiser,
+  }
 }

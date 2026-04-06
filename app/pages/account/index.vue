@@ -24,23 +24,32 @@
         </p>
         <div class="mt-4 flex flex-wrap gap-4">
           <NuxtLink
-            v-if="profileOk"
+            v-if="profileOk && isApprovedAdvertiser"
             to="/conta/perfil"
             class="rounded-lg border border-brand/50 bg-brand/10 px-4 py-2 text-sm font-medium text-brand transition hover:bg-brand/20"
           >
             Editar perfil
           </NuxtLink>
           <NuxtLink
+            v-if="showAccountSecurityAndSupport"
             to="/conta/seguranca"
             class="rounded-lg border border-violet-700/50 bg-violet-950/30 px-4 py-2 text-sm font-medium text-violet-200/95 transition hover:bg-violet-950/50"
           >
             Segurança
           </NuxtLink>
           <NuxtLink
+            v-if="showAccountSecurityAndSupport"
             to="/conta/suporte"
             class="rounded-lg border border-sky-700/60 bg-sky-900/20 px-4 py-2 text-sm font-medium text-sky-200 transition hover:bg-sky-900/35"
           >
             Suporte
+          </NuxtLink>
+          <NuxtLink
+            v-if="profileOk && user?.role === 'advertiser' && !isApprovedAdvertiser"
+            to="/cadastro"
+            class="rounded-lg border border-zinc-600 bg-zinc-900/50 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-brand/40 hover:text-white"
+          >
+            {{ backToPrecadastroLabel }}
           </NuxtLink>
           <button
             type="button"
@@ -51,7 +60,7 @@
           </button>
         </div>
         <div
-          v-if="profileOk && profileDetail?.approval_status === 'approved'"
+          v-if="profileOk && isApprovedAdvertiser"
           class="mt-4 flex flex-wrap gap-2 border-t border-zinc-800/80 pt-4"
         >
           <span class="w-full text-xs font-medium uppercase tracking-wide text-zinc-600">Atalhos</span>
@@ -228,6 +237,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAdvertiserApproval } from '~/composables/useAdvertiserApproval'
 import { useSwal } from '~/composables/useSwal'
 import { accountStatusLabel } from '~/utils/admin-labels'
 
@@ -241,6 +251,7 @@ useHead({
 })
 
 const { user, fetchMe, logout } = useAuth()
+const { isApprovedAdvertiser } = useAdvertiserApproval()
 const { request } = useApi()
 const { swalConfirm } = useSwal()
 
@@ -251,6 +262,7 @@ type ApiCity = { id: number; name: string }
 
 type ProfileDetail = {
   professional_name?: string | null
+  form_status?: string | null
   approval_status?: string
   uuid?: string
   state_id?: number | null
@@ -284,6 +296,15 @@ const profileSectionLinks = [
   { secao: 'redes', label: 'Redes' },
   { secao: 'midias', label: 'Mídias' },
 ] as const
+
+/** Admin ou anunciante já aprovado — anunciante em pré-cadastro/análise não vê estes atalhos. */
+const showAccountSecurityAndSupport = computed(
+  () => user.value?.role !== 'advertiser' || isApprovedAdvertiser.value,
+)
+
+const backToPrecadastroLabel = computed(() =>
+  profileDetail.value?.form_status === 'draft' ? 'Voltar ao pré-cadastro' : 'Retomar cadastro',
+)
 const listingLoading = ref(false)
 const listingMsg = ref<string | null>(null)
 const listingErr = ref(false)
@@ -330,7 +351,7 @@ async function hydrateProfileLocationSummary() {
   if (!p.state_id) {
     profileLocationSummary.value = nh
       ? nh
-      : 'Estado e cidade ainda não informados. Defina em Editar perfil → Local.'
+      : 'Estado e cidade ainda não informados.'
     return
   }
 

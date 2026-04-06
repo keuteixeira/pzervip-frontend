@@ -20,6 +20,10 @@ export interface AuthUser {
     whatsapp?: string | null
     registration_email_verified_at?: string | null
     registration_whatsapp_verified_at?: string | null
+    /** pending | approved | rejected — «Meu Perfil» só com approved */
+    approval_status?: string | null
+    /** draft = pré-cadastro em andamento */
+    form_status?: string | null
   }
   /** null = senha ainda não definida pelo usuário (cadastro com senha interna aleatória). */
   password_set_at?: string | null

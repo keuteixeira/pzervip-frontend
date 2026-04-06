@@ -151,6 +151,7 @@
 
 <script setup lang="ts">
 import type { AccountDeletionStatus } from '~/composables/useAuth'
+import { useAdvertiserApproval } from '~/composables/useAdvertiserApproval'
 import { useSwal } from '~/composables/useSwal'
 import { laravelErrorMessage } from '~/utils/laravelApiErrors'
 
@@ -172,6 +173,7 @@ const {
   cancelAccountDeletion,
   setPassword,
 } = useAuth()
+const { guardAccountToolsOrRedirect } = useAdvertiserApproval()
 const { swalConfirm } = useSwal()
 
 const loading = ref(true)
@@ -203,6 +205,9 @@ async function load() {
   loading.value = true
   actionMsg.value = null
   try {
+    if (await guardAccountToolsOrRedirect()) {
+      return
+    }
     deletionStatus.value = await fetchDeletionStatus()
     await fetchMe()
   } finally {
