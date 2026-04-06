@@ -380,7 +380,7 @@
           v-if="doc.key === 'video'"
           class="mt-4 rounded-lg border border-amber-900/50 bg-amber-950/25 p-4 text-left text-sm text-amber-100/95"
         >
-          <p class="font-medium text-amber-200">Grave um vídeo falando:</p>
+          <p class="font-medium text-amber-200">Grave um vídeo mostrando corpo e rosto, segurando seu documento e falando:</p>
           <p class="mt-2 italic leading-relaxed text-white">
             “Meu nome é [nome profissional], e quero anunciar no site Prazer.Vip em {{ hoje }}”
           </p>
