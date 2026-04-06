@@ -124,10 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import type { MockCadastroRow } from '~/data/admin-mocks'
-import { filterMockCadastros } from '~/data/admin-mocks'
 import { adminApprovalStatusLabel, adminFormStatusLabel } from '~/utils/admin-labels'
-import { useAdminMock } from '~/composables/useAdminMock'
 
 definePageMeta({
   layout: 'admin' as any,
@@ -137,13 +134,25 @@ definePageMeta({
 useHead({ title: 'Cadastros' })
 
 const { request } = useApi()
-const { isMock, withMock } = useAdminMock()
+
+type CadastroListRow = {
+  id: number
+  professional_name: string | null
+  approval_status: string
+  form_status: string
+  user?: { name: string }
+  public_slug?: string | null
+  priority_destaque_paid?: boolean
+  analysis_deadline_at?: string | null
+  analysis_is_overdue?: boolean
+  analysis_business_days_allowed?: number | null
+}
 
 const statusFilter = ref('pending')
 const queueFilter = ref<'all' | 'gratuito' | 'destaque'>('all')
 const page = ref(1)
 const listError = ref<string | null>(null)
-const items = ref<MockCadastroRow[]>([])
+const items = ref<CadastroListRow[]>([])
 const meta = ref<{ current_page: number; last_page: number; total: number } | null>(null)
 
 const statusFilters = [
@@ -175,19 +184,12 @@ function formatDeadline(iso: string) {
 
 async function load() {
   listError.value = null
-  if (isMock.value) {
-    const q = statusFilter.value === 'all' ? 'all' : statusFilter.value
-    const list = filterMockCadastros(q, queueFilter.value)
-    items.value = list
-    meta.value = { current_page: 1, last_page: 1, total: list.length }
-    return
-  }
   try {
     const q = statusFilter.value === 'all' ? 'all' : statusFilter.value
     const queue = queueFilter.value
     const queueParam = queue === 'all' ? '' : `&queue=${encodeURIComponent(queue)}`
     const res = await request<{
-      data: MockCadastroRow[]
+      data: CadastroListRow[]
       current_page: number
       last_page: number
       total: number
@@ -206,11 +208,8 @@ async function load() {
 }
 
 function openCadastro(id: number) {
-  const path = withMock(`/admin/cadastros/${id}`)
-  return navigateTo(path)
+  return navigateTo(`/admin/cadastros/${id}`)
 }
 
 onMounted(() => load())
-
-watch(isMock, () => load())
 </script>

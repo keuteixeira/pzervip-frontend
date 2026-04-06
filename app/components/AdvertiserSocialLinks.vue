@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ProfileSocialLinks, SocialNetworkKey } from '~/data/mock-catalog'
+import type { ProfileSocialLinks, SocialNetworkKey } from '~/types/explore-catalog'
 
 const props = defineProps<{
   links?: ProfileSocialLinks | null

@@ -34,7 +34,7 @@
             to="/conta/suporte"
             class="rounded-lg border border-sky-700/60 bg-sky-900/20 px-4 py-2 text-sm font-medium text-sky-200 transition hover:bg-sky-900/35"
           >
-            Abrir chamado
+            Suporte
           </NuxtLink>
           <button
             type="button"
@@ -187,8 +187,7 @@
       >
         <h2 class="text-lg font-semibold text-white">Disponível agora</h2>
         <p class="mt-2 text-sm leading-relaxed text-zinc-400">
-          Ao ativar, o seu cartão na listagem da cidade mostra o badge verde «Disponível agora» no mesmo sítio do aviso
-          de chegada. O badge fica visível por
+          Ao ativar, o seu perfil na listagem da cidade mostra a mensagem verde «Disponível agora». O aviso fica visível por
           <span class="text-zinc-200">{{ profileDetail.available_now_duration_minutes ?? 60 }} minutos</span>. Pode
           ativar no máximo
           <span class="text-zinc-200">1 vez a cada {{ profileDetail.available_now_cooldown_hours ?? 24 }} horas</span>.

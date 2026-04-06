@@ -5,8 +5,8 @@
         <NuxtLink to="/admin/cadastros" class="text-sm text-zinc-500 hover:text-brand">← Cadastros</NuxtLink>
         <h1 class="mt-2 text-2xl font-bold text-white">{{ detail?.professional_name || 'Revisão de cadastro' }}</h1>
         <p class="text-sm text-zinc-500">
-          ID {{ id }} · {{ adminApprovalStatusLabel(detail?.approval_status) }} ·
-          {{ adminFormStatusLabel(detail?.form_status) }} · {{ detail?.public_slug || '—' }}
+          ID {{ id }} · Cadastro: {{ adminApprovalStatusLabel(detail?.approval_status) }} · Formulário:
+          {{ adminFormStatusLabel(detail?.form_status) }} · Slug: {{ adminPublicSlugDisplay(detail?.public_slug) }}
         </p>
       </div>
       <div v-if="detail && detail.approval_status === 'pending'" class="flex flex-wrap gap-2">
@@ -29,12 +29,21 @@
       </div>
     </div>
 
+    <p
+      v-if="approvalMsg"
+      class="text-sm"
+      :class="approvalOk ? 'text-emerald-400' : 'text-red-400'"
+      role="status"
+    >
+      {{ approvalMsg }}
+    </p>
+
     <p v-if="loading" class="text-zinc-400">Carregando…</p>
     <p v-else-if="errorMsg" class="text-red-400">{{ errorMsg }}</p>
 
     <template v-else-if="detail">
       <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
-        <h2 class="text-lg font-semibold text-white">Briefing — corrigir dados do pré-cadastro</h2>
+        <h2 class="text-lg font-semibold text-white">Dados cadastrais</h2>
         <p class="mt-1 text-sm text-zinc-500">
           Ajuste o que for preciso e salve antes de aprovar ou recusar. Alterações vão direto ao perfil do anunciante.
         </p>
@@ -53,7 +62,7 @@
             <input v-model="edit.whatsapp" type="text" class="admin-input" />
           </label>
           <label class="block text-sm text-zinc-300">
-            <span class="mb-1 block text-zinc-500">E-mail de contato (formulário)</span>
+            <span class="mb-1 block text-zinc-500">E-mail de contato</span>
             <input v-model="edit.contact_email" type="email" class="admin-input" />
           </label>
           <label class="block text-sm text-zinc-300">
@@ -73,24 +82,16 @@
               <input v-model="edit.has_venue" type="checkbox" class="rounded border-zinc-600" />
               Possui local próprio para atendimento
             </label>
-            <label class="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
-              <input v-model="edit.terms_accepted" type="checkbox" class="rounded border-zinc-600" />
-              Termos aceitos
-            </label>
-            <label class="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
-              <input v-model="edit.privacy_policy_accepted" type="checkbox" class="rounded border-zinc-600" />
-              Política de privacidade aceita
-            </label>
           </div>
           <label class="block text-sm text-zinc-300">
-            <span class="mb-1 block text-zinc-500">Estado (vitrine)</span>
+            <span class="mb-1 block text-zinc-500">Estado do anúncio</span>
             <select v-model="edit.state_id" class="admin-input" @change="onStateChange">
               <option value="">—</option>
               <option v-for="st in states" :key="st.id" :value="String(st.id)">{{ st.name }} ({{ st.uf }})</option>
             </select>
           </label>
           <label class="block text-sm text-zinc-300">
-            <span class="mb-1 block text-zinc-500">Cidade (vitrine)</span>
+            <span class="mb-1 block text-zinc-500">Cidade do anúncio</span>
             <select v-model="edit.city_id" class="admin-input" :disabled="!edit.state_id">
               <option value="">—</option>
               <option v-for="c in cities" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
@@ -155,20 +156,24 @@
       </section>
 
       <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
-        <h2 class="text-lg font-semibold text-white">Conta</h2>
-        <p class="mt-2 text-sm text-zinc-400">Nome legal e e-mail de login só com alteração no cadastro do usuário (fora deste formulário).</p>
-        <ul class="mt-3 space-y-1 text-sm text-zinc-400">
-          <li v-if="detail.user?.name"><span class="text-zinc-500">Nome legal:</span> {{ detail.user.name }}</li>
-          <li v-if="detail.user?.email"><span class="text-zinc-500">E-mail da conta:</span> {{ detail.user.email }}</li>
-        </ul>
-      </section>
-
-      <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
         <h2 class="text-lg font-semibold text-white">Arquivos</h2>
         <p class="mt-1 text-sm text-zinc-500">
           <strong class="font-medium text-zinc-400">Documentos pessoais</strong> — apenas visualização.
           <strong class="ml-1 font-medium text-zinc-400">Mídias</strong> — capa, perfil, galeria, áudio e vídeos da galeria podem ser removidos se necessário.
         </p>
+        <p class="mt-2 text-xs text-zinc-500">
+          Imagens, vídeos e áudio abrem no visualizador (setas ou botões Anterior/Próximo). Outros tipos abrem numa nova aba.
+        </p>
+        <div v-if="lightboxableMedia.length > 1" class="mt-2">
+          <button
+            type="button"
+            class="rounded-lg border border-zinc-600 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-40"
+            :disabled="mediaPreviewBusy"
+            @click="openReviewLightbox(0)"
+          >
+            {{ mediaPreviewBusy ? 'A carregar…' : 'Ver todas em sequência' }}
+          </button>
+        </div>
 
         <div class="mt-4 flex flex-wrap gap-2 border-b border-zinc-800 pb-3" role="tablist" aria-label="Tipo de arquivo">
           <button
@@ -231,10 +236,10 @@
                 <button
                   type="button"
                   class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
-                  :disabled="openingId === row.media.id"
+                  :disabled="mediaPreviewBusy"
                   @click="openMedia(row.media)"
                 >
-                  {{ openingId === row.media.id ? 'Abrindo…' : 'Ver arquivo' }}
+                  {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
                 </button>
               </div>
             </li>
@@ -256,10 +261,10 @@
               <button
                 type="button"
                 class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
-                :disabled="openingId === m.id"
+                :disabled="mediaPreviewBusy"
                 @click="openMedia(m)"
               >
-                {{ openingId === m.id ? 'Abrindo…' : 'Ver arquivo' }}
+                {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
               </button>
             </li>
           </ul>
@@ -295,10 +300,10 @@
                 <button
                   type="button"
                   class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
-                  :disabled="openingId === row.media.id"
+                  :disabled="mediaPreviewBusy"
                   @click="openMedia(row.media)"
                 >
-                  {{ openingId === row.media.id ? 'Abrindo…' : 'Ver arquivo' }}
+                  {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
                 </button>
                 <button
                   type="button"
@@ -342,10 +347,10 @@
                   <button
                     type="button"
                     class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
-                    :disabled="openingId === row.media.id"
+                    :disabled="mediaPreviewBusy"
                     @click="openMedia(row.media)"
                   >
-                    {{ openingId === row.media.id ? 'Abrindo…' : 'Ver arquivo' }}
+                    {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
                   </button>
                   <button
                     type="button"
@@ -378,10 +383,10 @@
                 <button
                   type="button"
                   class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
-                  :disabled="openingId === m.id"
+                  :disabled="mediaPreviewBusy"
                   @click="openMedia(m)"
                 >
-                  {{ openingId === m.id ? 'Abrindo…' : 'Ver arquivo' }}
+                  {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
                 </button>
                 <button
                   type="button"
@@ -397,6 +402,13 @@
         </div>
       </section>
     </template>
+
+    <ProfileMediaLightbox
+      v-model="reviewLightboxOpen"
+      :items="reviewLightboxItems"
+      :start-index="reviewLightboxStart"
+      alt-text="Ficheiro do cadastro"
+    />
   </div>
 </template>
 
@@ -406,7 +418,9 @@ import {
   adminApprovalStatusLabel,
   adminFormStatusLabel,
   adminMediaModerationStatusLabel,
+  adminPublicSlugDisplay,
 } from '~/utils/admin-labels'
+import { apiErrorMessage } from '~/utils/api-error-message'
 
 const DOCUMENT_SLOTS = [
   { regKey: 'id_document_front_media_id' as const, label: 'Documento — frente' },
@@ -499,17 +513,62 @@ type MediaRow = {
   moderation_status: string
 }
 
+type ReviewLightboxItem = { kind: 'audio' | 'video' | 'image'; url: string; caption?: string }
+
 const loading = ref(true)
 const errorMsg = ref<string | null>(null)
 const detail = ref<ProfileDetail | null>(null)
 const mediaList = ref<MediaRow[]>([])
 const busyApproval = ref(false)
-const openingId = ref<number | null>(null)
+const mediaPreviewBusy = ref(false)
 const removingId = ref<number | null>(null)
+
+const reviewLightboxOpen = ref(false)
+const reviewLightboxItems = ref<ReviewLightboxItem[]>([])
+const reviewLightboxStart = ref(0)
 
 function mediaId(m: Pick<MediaRow, 'id'>): number | null {
   return normMediaId(m.id)
 }
+
+function isLightboxableMedia(m: MediaRow): boolean {
+  const k = (m.kind || '').toLowerCase()
+  if (
+    k === 'audio' ||
+    k === 'verification_video' ||
+    k === 'gallery_video' ||
+    k === 'gallery_image' ||
+    k === 'id_front' ||
+    k === 'id_back' ||
+    k === 'selfie' ||
+    k === 'banner' ||
+    k === 'profile_photo'
+  ) {
+    return true
+  }
+  const mime = (m.mime_type || '').toLowerCase()
+  return mime.startsWith('image/') || mime.startsWith('video/') || mime.startsWith('audio/')
+}
+
+function lightboxKindFromRow(m: MediaRow): 'image' | 'video' | 'audio' {
+  const k = (m.kind || '').toLowerCase()
+  if (k === 'audio') {
+    return 'audio'
+  }
+  if (k === 'verification_video' || k === 'gallery_video') {
+    return 'video'
+  }
+  const mime = (m.mime_type || '').toLowerCase()
+  if (mime.startsWith('video/')) {
+    return 'video'
+  }
+  if (mime.startsWith('audio/')) {
+    return 'audio'
+  }
+  return 'image'
+}
+
+const lightboxableMedia = computed(() => mediaList.value.filter(isLightboxableMedia))
 
 const documentSlotRows = computed(() => {
   const reg = detail.value?.registration
@@ -659,6 +718,9 @@ const cities = ref<ApiCity[]>([])
 const saving = ref(false)
 const saveMsg = ref('')
 const saveOk = ref(true)
+
+const approvalMsg = ref('')
+const approvalOk = ref(true)
 
 const edit = reactive({
   professional_name: '',
@@ -829,12 +891,7 @@ async function saveDetails() {
     saveMsg.value = 'Dados salvos.'
     saveOk.value = true
   } catch (e: unknown) {
-    const err = e as { data?: { message?: string; errors?: Record<string, string[]> } }
-    const first =
-      err.data?.errors && Object.keys(err.data.errors).length > 0
-        ? Object.values(err.data.errors)[0]?.[0]
-        : null
-    saveMsg.value = first || err.data?.message || 'Não foi possível salvar.'
+    saveMsg.value = apiErrorMessage(e, 'Não foi possível salvar.')
     saveOk.value = false
   } finally {
     saving.value = false
@@ -845,15 +902,66 @@ async function setApproval(approval_status: 'approved' | 'rejected') {
   if (!detail.value) {
     return
   }
+  approvalMsg.value = ''
   busyApproval.value = true
   try {
     await request(`/v1/admin/profiles/${id.value}`, {
       method: 'PATCH',
       body: { approval_status },
     })
-    await load()
+    try {
+      await load()
+    } catch {
+      approvalMsg.value =
+        approval_status === 'approved'
+          ? 'Cadastro aprovado. Não foi possível recarregar a ficha — atualize a página.'
+          : 'Cadastro recusado. Não foi possível recarregar a ficha — atualize a página.'
+      approvalOk.value = true
+      return
+    }
+    approvalMsg.value =
+      approval_status === 'approved' ? 'Cadastro aprovado com sucesso.' : 'Cadastro recusado.'
+    approvalOk.value = true
+  } catch (e: unknown) {
+    approvalMsg.value = apiErrorMessage(e, 'Não foi possível atualizar o status do cadastro.')
+    approvalOk.value = false
   } finally {
     busyApproval.value = false
+  }
+}
+
+async function fetchAdminTemporaryUrl(mediaNumericId: number): Promise<string> {
+  const res = await request<{ url: string }>(
+    `/v1/admin/profiles/${id.value}/media/${mediaNumericId}/temporary-url`,
+  )
+  return res.url
+}
+
+/** Mesmo fluxo que a área do anunciante: `ProfileMediaLightbox` com Anterior/Próximo e setas. */
+async function openReviewLightbox(startIdx: number) {
+  const list = lightboxableMedia.value
+  if (list.length === 0 || mediaPreviewBusy.value) {
+    return
+  }
+  const idx = Math.max(0, Math.min(startIdx, list.length - 1))
+  mediaPreviewBusy.value = true
+  try {
+    const urls = await Promise.all(list.map((m) => fetchAdminTemporaryUrl(mediaId(m)!)))
+    reviewLightboxItems.value = list.map((m, i) => ({
+      kind: lightboxKindFromRow(m),
+      url: urls[i]!,
+      caption: `${m.kind_label || m.collection_name} · ${m.file_name}`,
+    }))
+    reviewLightboxStart.value = idx
+    reviewLightboxOpen.value = true
+  } catch {
+    await swalAlert({
+      icon: 'error',
+      title: 'Pré-visualização',
+      text: 'Não foi possível obter os endereços dos ficheiros. Tente de novo.',
+    })
+  } finally {
+    mediaPreviewBusy.value = false
   }
 }
 
@@ -862,17 +970,31 @@ async function openMedia(m: MediaRow) {
   if (mid == null) {
     return
   }
-  openingId.value = mid
-  try {
-    const res = await request<{ url: string }>(
-      `/v1/admin/profiles/${id.value}/media/${mid}/temporary-url`,
-    )
-    if (res.url) {
-      window.open(res.url, '_blank', 'noopener,noreferrer')
+
+  if (!isLightboxableMedia(m)) {
+    mediaPreviewBusy.value = true
+    try {
+      const url = await fetchAdminTemporaryUrl(mid)
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer')
+      }
+    } catch {
+      await swalAlert({
+        icon: 'error',
+        title: 'Abrir ficheiro',
+        text: 'Não foi possível obter o link temporário.',
+      })
+    } finally {
+      mediaPreviewBusy.value = false
     }
-  } finally {
-    openingId.value = null
+    return
   }
+
+  const idx = lightboxableMedia.value.findIndex((x) => mediaId(x) === mid)
+  if (idx < 0) {
+    return
+  }
+  await openReviewLightbox(idx)
 }
 
 async function removeMedia(m: MediaRow) {

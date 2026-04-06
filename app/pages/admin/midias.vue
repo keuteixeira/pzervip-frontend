@@ -2,8 +2,20 @@
   <div class="space-y-6">
     <div>
       <h1 class="text-2xl font-bold text-white">Mídias pendentes</h1>
-      <p class="mt-1 text-sm text-zinc-500">Arquivos com moderação “pendente” (galeria, capa, avatar, áudio).</p>
+      <p class="mt-1 text-sm text-zinc-500">
+        Arquivos com moderação “pendente” (galeria, capa, avatar, áudio). Ao recusar, pode informar um motivo — se
+        preencher, o anunciante recebe por e-mail com a referência do ficheiro.
+      </p>
     </div>
+
+    <p
+      v-if="actionMsg"
+      class="text-sm"
+      :class="actionOk ? 'text-emerald-400' : 'text-red-400'"
+      role="status"
+    >
+      {{ actionMsg }}
+    </p>
 
     <p v-if="loading" class="text-zinc-400">Carregando…</p>
 
@@ -29,7 +41,7 @@
               · cadastro {{ adminApprovalStatusLabel(row.advertiser_profile.approval_status) }}
             </span>
             <NuxtLink
-              :to="withMock(`/admin/anunciantes/${row.advertiser_profile.id}`)"
+              :to="`/admin/anunciantes/${row.advertiser_profile.id}`"
               class="ml-2 text-brand hover:underline"
             >
               Visualizar
@@ -48,18 +60,22 @@
           <button
             type="button"
             class="rounded bg-emerald-600 px-2 py-1 text-xs text-white disabled:opacity-40"
-            :disabled="!row.advertiser_profile || busyId === row.id"
+            :disabled="!row.advertiser_profile || row.id in moderatingByMediaId"
             @click="moderate(row, 'approved')"
           >
-            Aprovar
+            {{
+              moderatingByMediaId[row.id] === 'approved' ? 'Aprovando…' : 'Aprovar'
+            }}
           </button>
           <button
             type="button"
             class="rounded bg-zinc-700 px-2 py-1 text-xs text-white disabled:opacity-40"
-            :disabled="!row.advertiser_profile || busyId === row.id"
+            :disabled="!row.advertiser_profile || row.id in moderatingByMediaId"
             @click="moderate(row, 'rejected')"
           >
-            Recusar
+            {{
+              moderatingByMediaId[row.id] === 'rejected' ? 'Recusando…' : 'Recusar'
+            }}
           </button>
         </div>
       </li>
@@ -90,18 +106,19 @@
 </template>
 
 <script setup lang="ts">
-import { ADMIN_MOCK_MEDIA_PENDING } from '~/data/admin-mocks'
+import { useSwal } from '~/composables/useSwal'
 import { adminApprovalStatusLabel } from '~/utils/admin-labels'
+import { apiErrorMessage } from '~/utils/api-error-message'
 
 definePageMeta({
-  layout: 'admin',
-  middleware: ['admin'],
+  layout: 'admin' as any,
+  middleware: ['admin' as any],
 })
 
 useHead({ title: 'Mídias' })
 
 const { request } = useApi()
-const { isMock, withMock } = useAdminMock()
+const { swalRejectWithReason } = useSwal()
 
 type Row = {
   id: number
@@ -110,7 +127,6 @@ type Row = {
   kind_label?: string
   file_name: string
   mime_type: string
-  mock_preview_url?: string | null
   advertiser_profile: {
     id: number
     professional_name: string | null
@@ -123,17 +139,15 @@ const loading = ref(true)
 const page = ref(1)
 const items = ref<Row[]>([])
 const meta = ref<{ current_page: number; last_page: number } | null>(null)
-const busyId = ref<number | null>(null)
+/** Por `media.id`: cada linha mantém «Aprovando…» / «Recusando…» até a sua requisição terminar. */
+const moderatingByMediaId = ref<Record<number, 'approved' | 'rejected'>>({})
 const openingId = ref<number | null>(null)
+const actionMsg = ref('')
+const actionOk = ref(true)
 
 async function load() {
   loading.value = true
   try {
-    if (isMock.value) {
-      items.value = ADMIN_MOCK_MEDIA_PENDING.map((r) => ({ ...r }))
-      meta.value = { current_page: 1, last_page: 1 }
-      return
-    }
     const res = await request<{ data: Row[]; current_page: number; last_page: number }>(
       `/v1/admin/media/pending?page=${page.value}`,
     )
@@ -147,13 +161,6 @@ async function load() {
 async function openMedia(row: Row) {
   const pid = row.advertiser_profile?.id
   if (!pid) {
-    return
-  }
-  if (isMock.value) {
-    const u = row.mock_preview_url
-    if (u) {
-      window.open(u, '_blank', 'noopener,noreferrer')
-    }
     return
   }
   openingId.value = row.id
@@ -172,23 +179,49 @@ async function moderate(row: Row, moderation_status: 'approved' | 'rejected') {
   if (!pid) {
     return
   }
-  if (isMock.value) {
-    items.value = items.value.filter((x) => x.id !== row.id)
-    return
+  let moderation_reject_reason: string | undefined
+  if (moderation_status === 'rejected') {
+    const { confirmed, reason } = await swalRejectWithReason({
+      title: 'Recusar esta mídia?',
+      text: `${row.kind_label || row.collection_name} · ${row.file_name}`,
+    })
+    if (!confirmed) {
+      return
+    }
+    moderation_reject_reason = reason !== '' ? reason : undefined
   }
-  busyId.value = row.id
+  actionMsg.value = ''
+  moderatingByMediaId.value = { ...moderatingByMediaId.value, [row.id]: moderation_status }
   try {
     await request(`/v1/admin/profiles/${pid}/media/${row.id}`, {
       method: 'PATCH',
-      body: { moderation_status },
+      body:
+        moderation_status === 'rejected'
+          ? { moderation_status, moderation_reject_reason }
+          : { moderation_status },
     })
-    await load()
+    try {
+      await load()
+    } catch {
+      actionMsg.value =
+        moderation_status === 'approved'
+          ? 'Mídia aprovada. Não foi possível atualizar a lista — atualize a página.'
+          : 'Mídia recusada. Não foi possível atualizar a lista — atualize a página.'
+      actionOk.value = true
+      return
+    }
+    actionMsg.value =
+      moderation_status === 'approved' ? 'Mídia aprovada com sucesso.' : 'Mídia recusada.'
+    actionOk.value = true
+  } catch (e: unknown) {
+    actionMsg.value = apiErrorMessage(e, 'Não foi possível moderar esta mídia.')
+    actionOk.value = false
   } finally {
-    busyId.value = null
+    const next = { ...moderatingByMediaId.value }
+    delete next[row.id]
+    moderatingByMediaId.value = next
   }
 }
 
 onMounted(() => load())
-
-watch(isMock, () => load())
 </script>

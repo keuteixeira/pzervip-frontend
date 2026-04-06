@@ -155,14 +155,32 @@
                   class="w-full px-2 pb-2"
                   @click.stop
                 />
-                <video
+                <div
                   v-else-if="it.kind === 'video'"
-                  :src="it.url"
-                  muted
-                  playsinline
-                  preload="metadata"
-                  class="aspect-video w-full bg-black object-cover"
-                />
+                  class="relative aspect-video w-full overflow-hidden rounded-lg bg-zinc-950"
+                >
+                  <video
+                    :src="it.url"
+                    muted
+                    playsinline
+                    preload="metadata"
+                    class="pointer-events-none h-full w-full object-cover"
+                    tabindex="-1"
+                    aria-hidden="true"
+                  />
+                  <div
+                    class="pointer-events-none absolute inset-0 flex items-center justify-center bg-gradient-to-t from-black/50 via-black/20 to-black/35"
+                    aria-hidden="true"
+                  >
+                    <span
+                      class="flex h-16 w-16 items-center justify-center rounded-full bg-white/92 text-zinc-900 shadow-lg ring-2 ring-white/25"
+                    >
+                      <svg class="ml-1 h-8 w-8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M8 5v14l11-7L8 5z" />
+                      </svg>
+                    </span>
+                  </div>
+                </div>
                 <img
                   v-else
                   :src="it.url"
@@ -349,9 +367,6 @@
 </template>
 
 <script setup lang="ts">
-import type { ProfileDetail } from '~/data/mock-catalog'
-import type { GenderSlug } from '~/data/mock-catalog'
-import { getProfileDetailMock } from '~/data/mock-catalog'
 import { formatPhoneBrDigits } from '~/utils/format-phone-br'
 import { publicProfilePathSegment } from '~/utils/public-profile-url'
 import { buildWhatsAppSendUrl } from '~/utils/whatsapp'
@@ -439,8 +454,6 @@ const { request, token } = useApi()
 
 const slug = computed(() => String(route.params.slug ?? ''))
 
-const genders: GenderSlug[] = ['homens', 'mulheres', 'trans']
-
 const { data: apiJson, pending } = await useAsyncData(
   () => `public-advertiser-${props.urlServicoSegment}-${slug.value}`,
   async () => {
@@ -462,33 +475,6 @@ watch(
       return
     }
     const expected = publicProfilePathSegment(a.service_type)
-    if (expected !== props.urlServicoSegment) {
-      navigateTo(`/${expected}/${slug.value}`, { replace: true })
-    }
-  },
-  { immediate: true },
-)
-
-const mockRowForSlug = computed(() => {
-  if (!slug.value) {
-    return null
-  }
-  for (const g of genders) {
-    const m = getProfileDetailMock(g, slug.value)
-    if (m) {
-      return m
-    }
-  }
-  return null
-})
-
-watch(
-  [() => apiJson.value, mockRowForSlug, () => props.urlServicoSegment, slug],
-  () => {
-    if (apiJson.value || !mockRowForSlug.value) {
-      return
-    }
-    const expected = publicProfilePathSegment(mockRowForSlug.value.tipoAtendimento)
     if (expected !== props.urlServicoSegment) {
       navigateTo(`/${expected}/${slug.value}`, { replace: true })
     }
@@ -521,24 +507,6 @@ function normalizeApiComments(raw: ApiPublicAdvertiser['comments']): PublicComme
     is_advertiser: Boolean(c.is_advertiser),
     replies: (c.replies ?? []).map((r) => ({
       id: r.id,
-      author: r.author,
-      text: r.text,
-      when: r.when,
-      is_advertiser: Boolean(r.is_advertiser),
-      replies: [],
-    })),
-  }))
-}
-
-function normalizeMockComments(m: ProfileDetail): PublicComment[] {
-  return m.comments.map((c, i) => ({
-    id: c.id ?? i + 1,
-    author: c.author,
-    text: c.text,
-    when: c.when,
-    is_advertiser: Boolean(c.is_advertiser),
-    replies: (c.replies ?? []).map((r, j) => ({
-      id: r.id ?? (i + 1) * 100 + j + 1,
       author: r.author,
       text: r.text,
       when: r.when,
@@ -585,50 +553,12 @@ function vmFromApi(a: ApiPublicAdvertiser): ProfileView {
   }
 }
 
-function vmFromMock(m: ProfileDetail, exploreGender: GenderSlug): ProfileView {
-  const galleryVideos = m.galleryMedia.filter((x) => x.type === 'video')
-  const galleryPhotos = m.galleryMedia.filter((x) => x.type === 'image')
-  const st = m.tipoAtendimento
-  const serviceLabel = st === 'massagista' ? 'Massagista' : 'Acompanhante'
-  const digits = m.whatsappPhone?.replace(/\D/g, '') ?? ''
-  return {
-    displayName: m.displayName,
-    exploreGenderSlug: exploreGender,
-    about: m.about,
-    serviceLabel,
-    neighborhood: m.neighborhood,
-    cityName: m.cityName,
-    stateUf: m.stateUf,
-    mapsUrl: m.mapsSearchUrl,
-    memberSince: m.memberSince,
-    docsVerified: true,
-    phoneDigits: digits || undefined,
-    phoneDisplay: formatPhoneBrDigits(digits || undefined),
-    bannerUrl: m.coverUrl ?? m.galleryMedia.find((g) => g.type === 'image')?.url,
-    avatarUrl: m.avatarUrl,
-    audioUrl: m.audioUrl,
-    galleryVideos,
-    galleryPhotos,
-    socialLinks: m.socialLinks,
-    premium: m.premium,
-    premiumBenefits: m.premiumBenefits,
-    comments: normalizeMockComments(m),
-    highlightStars: m.premium ? 10 : undefined,
-  }
-}
-
 const vm = computed((): ProfileView | null => {
   if (!slug.value) {
     return null
   }
   if (apiJson.value) {
     return vmFromApi(apiJson.value)
-  }
-  for (const g of genders) {
-    const mock = getProfileDetailMock(g, slug.value)
-    if (mock) {
-      return vmFromMock(mock, g)
-    }
   }
   return null
 })
@@ -709,8 +639,7 @@ async function submitVisitorComment() {
     commentAuthor.value = ''
     replyToId.value = null
   } catch {
-    commentFeedback.value =
-      'Não foi possível enviar agora. Se estiver vendo o modo demonstração (sem API), o envio só funciona com o backend ativo.'
+    commentFeedback.value = 'Não foi possível enviar agora. Tente novamente em instantes.'
     commentOk.value = false
   } finally {
     commentSending.value = false

@@ -101,7 +101,8 @@ const { request } = useApi()
 const loading = ref(true)
 const saving = ref(false)
 const showNew = ref(false)
-const statusFilter = ref('all')
+/** Alinhado à API: `open` = em andamento; `closed` = resolvido ou fechado. */
+const statusFilter = ref<'open' | 'closed'>('open')
 const tickets = ref<any[]>([])
 const files = ref<File[]>([])
 const msg = ref('')
@@ -115,12 +116,8 @@ const form = reactive({
 })
 
 const filters = [
-  { value: 'all', label: 'Todos' },
-  { value: 'open', label: 'Abertos' },
-  { value: 'waiting_admin', label: 'Aguardando suporte' },
-  { value: 'waiting_user', label: 'Aguardando você' },
-  { value: 'resolved', label: 'Resolvidos' },
-  { value: 'closed', label: 'Fechados' },
+  { value: 'open' as const, label: 'Em aberto' },
+  { value: 'closed' as const, label: 'Fechados' },
 ]
 
 function formatDate(iso?: string | null) {
@@ -136,8 +133,10 @@ function onFilesChange(e: Event) {
 async function load() {
   loading.value = true
   try {
-    const res = await request<{ data: any[] }>(`/v1/me/support/tickets?status=${encodeURIComponent(statusFilter.value)}`)
-    tickets.value = res.data
+    const res = await request<{ data: any[] }>(
+      `/v1/me/support/tickets?status=${encodeURIComponent(statusFilter.value)}`,
+    )
+    tickets.value = res.data ?? []
   } finally {
     loading.value = false
   }

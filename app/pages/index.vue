@@ -1,17 +1,8 @@
 <template>
   <div
-    class="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-zinc-950 via-zinc-900 to-black px-4 py-16 text-center"
+    class="flex min-h-[min(100dvh,720px)] flex-col items-center justify-center rounded-2xl border border-zinc-800/80 bg-gradient-to-b from-zinc-950 via-zinc-900 to-black px-4 py-12 text-center sm:py-16"
   >
-    <img
-      :src="brand.logoHorizontal"
-      alt="Prazer.Vip"
-      class="mx-auto h-10 w-auto max-w-[min(100%,280px)] sm:h-12"
-      width="280"
-      height="48"
-      loading="eager"
-      decoding="async"
-    />
-    <h1 class="mt-6 max-w-lg text-3xl font-bold leading-tight text-white md:text-4xl">
+    <h1 class="max-w-lg text-3xl font-bold leading-tight text-white md:text-4xl">
       Conteúdo exclusivo para maiores de 18 anos
     </h1>
     <p class="mt-4 max-w-md text-sm leading-relaxed text-zinc-400">
@@ -32,17 +23,13 @@
 </template>
 
 <script setup lang="ts">
-import { brandAssets } from '~/config/brand-assets'
-
 definePageMeta({
-  layout: false,
+  layout: 'default',
 })
 
 useHead({
   title: 'Verificação de idade',
 })
-
-const brand = brandAssets
 
 const { confirmAge } = useAgeGate()
 const router = useRouter()

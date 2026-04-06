@@ -103,12 +103,23 @@
         </dl>
       </section>
 
+      <section
+        v-if="detail.portal_text_pending?.has_pending"
+        class="rounded-xl border border-sky-900/40 bg-sky-950/15 px-4 py-3 text-sm text-sky-100/95"
+      >
+        <NuxtLink to="/admin/texto-perfil" class="font-medium text-brand hover:underline">Nome e bio (fila)</NuxtLink>
+        <span class="text-sky-100/80">
+          — este perfil tem alterações de nome profissional e/ou biografia aguardando análise. Aprove ou recuse em
+          «Nome e bio» no menu.
+        </span>
+      </section>
+
       <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
         <h2 class="text-lg font-semibold text-white">Visibilidade na plataforma</h2>
         <ul class="mt-3 space-y-2 text-sm text-zinc-300">
           <li>
-            <span class="text-zinc-500">Anúncio pausado (vitrine):</span>
-            {{ detail.user_paused_listing ? 'Sim — não aparece na listagem' : 'Não — ativo na vitrine' }}
+            <span class="text-zinc-500">Anúncio pausado (site):</span>
+            {{ detail.user_paused_listing ? 'Sim — não aparece na listagem' : 'Não — ativo no site' }}
           </li>
           <li>
             <span class="text-zinc-500">Com anúncio pausado, link público:</span>
@@ -156,7 +167,7 @@
           </label>
           <label class="flex cursor-pointer items-center gap-2 text-sm">
             <input v-model="form.user_paused_listing" type="checkbox" class="rounded border-zinc-600" />
-            <span>Anúncio pausado (sumir da vitrine)</span>
+            <span>Anúncio pausado (sumir do site)</span>
           </label>
         </div>
         <p v-if="saveMsg" class="mt-3 text-sm" :class="saveOk ? 'text-emerald-400' : 'text-red-400'">{{ saveMsg }}</p>
@@ -271,7 +282,19 @@
 
       <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
         <h2 class="text-lg font-semibold text-white">Mídias deste perfil</h2>
-        <p class="mt-1 text-sm text-zinc-500">Verificação de identidade e mídias de vitrine, com moderação.</p>
+        <p class="mt-1 text-sm text-zinc-500">Verificação de identidade e mídias do site, com moderação.</p>
+        <p
+          v-if="mediaModerationMsg"
+          class="mt-3 text-sm"
+          :class="mediaModerationOk ? 'text-emerald-400' : 'text-red-400'"
+          role="status"
+        >
+          {{ mediaModerationMsg }}
+        </p>
+
+        <p class="mt-3 text-xs text-zinc-500">
+          Imagens, vídeos e áudio abrem no visualizador com setas (como na revisão de cadastro). Documentos KYC aprovados só podem ser visualizados.
+        </p>
 
         <div v-if="mediaKyc.length" class="mt-6">
           <h3 class="text-sm font-semibold uppercase tracking-wide text-amber-200/90">Verificação / KYC</h3>
@@ -281,87 +304,187 @@
               :key="m.id"
               class="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div>
+              <div class="min-w-0">
                 <p class="text-sm font-medium text-brand">{{ m.kind_label || m.collection_name }}</p>
-                <p class="text-sm text-white">{{ m.file_name }}</p>
+                <p class="truncate text-sm text-white">{{ m.file_name }}</p>
                 <p class="text-xs text-zinc-500">ID {{ m.id }} · {{ m.mime_type || '—' }} · moderação: {{ adminMediaModerationStatusLabel(m.moderation_status) }}</p>
               </div>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-shrink-0 flex-wrap gap-2">
                 <button
                   type="button"
                   class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
-                  :disabled="openingMediaId === m.id"
+                  :disabled="mediaPreviewBusy || moderatingMediaId === m.id || removingMediaId === m.id"
                   @click="openMedia(m)"
                 >
-                  {{ openingMediaId === m.id ? 'Abrindo…' : 'Ver' }}
+                  {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
                 </button>
-                <button
-                  type="button"
-                  class="rounded bg-emerald-700 px-2 py-1 text-xs text-white"
-                  @click="setMediaModeration(m.id, 'approved')"
-                >
-                  Aprovar
-                </button>
-                <button
-                  type="button"
-                  class="rounded bg-zinc-700 px-2 py-1 text-xs text-white"
-                  @click="setMediaModeration(m.id, 'rejected')"
-                >
-                  Recusar
-                </button>
+                <template v-if="mediaNeedsModerationActions(m)">
+                  <button
+                    type="button"
+                    class="rounded bg-emerald-700 px-2 py-1 text-xs text-white disabled:opacity-40"
+                    :disabled="moderatingMediaId === m.id"
+                    @click="setMediaModeration(m.id, 'approved')"
+                  >
+                    Aprovar
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded bg-zinc-700 px-2 py-1 text-xs text-white disabled:opacity-40"
+                    :disabled="moderatingMediaId === m.id"
+                    @click="setMediaModeration(m.id, 'rejected')"
+                  >
+                    Recusar
+                  </button>
+                </template>
               </div>
             </li>
           </ul>
         </div>
 
-        <div v-if="mediaVitrine.length" class="mt-8">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-sky-200/90">Perfil público (vitrine)</h3>
-          <ul class="mt-3 space-y-3">
-            <li
-              v-for="m in mediaVitrine"
-              :key="m.id"
-              class="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p class="text-sm font-medium text-brand">{{ m.kind_label || m.collection_name }}</p>
-                <p class="text-sm text-white">{{ m.file_name }}</p>
-                <p class="text-xs text-zinc-500">ID {{ m.id }} · {{ m.mime_type || '—' }} · moderação: {{ adminMediaModerationStatusLabel(m.moderation_status) }}</p>
-              </div>
-              <div class="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
-                  :disabled="openingMediaId === m.id"
-                  @click="openMedia(m)"
-                >
-                  {{ openingMediaId === m.id ? 'Abrindo…' : 'Ver' }}
-                </button>
-                <button
-                  type="button"
-                  class="rounded bg-emerald-700 px-2 py-1 text-xs text-white"
-                  @click="setMediaModeration(m.id, 'approved')"
-                >
-                  Aprovar
-                </button>
-                <button
-                  type="button"
-                  class="rounded bg-zinc-700 px-2 py-1 text-xs text-white"
-                  @click="setMediaModeration(m.id, 'rejected')"
-                >
-                  Recusar
-                </button>
-              </div>
-            </li>
-          </ul>
+        <div v-if="mediaVitrine.length" class="mt-8 space-y-8">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-sky-200/90">Perfil público</h3>
+
+          <div v-if="mediaVitrineGallery.length">
+            <h4 class="text-sm font-medium text-zinc-300">Galeria (fotos e vídeos)</h4>
+            <p class="mt-1 text-xs text-zinc-500">
+              Visualizar abre o lightbox; com mais de um ficheiro pode usar «Ver galeria em sequência».
+            </p>
+            <div v-if="adminLightboxableGallery.length > 1" class="mt-2">
+              <button
+                type="button"
+                class="rounded-lg border border-zinc-600 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-40"
+                :disabled="mediaPreviewBusy"
+                @click="openAdminLightboxFromList(adminLightboxableGallery, 0)"
+              >
+                {{ mediaPreviewBusy ? 'A carregar…' : 'Ver galeria em sequência' }}
+              </button>
+            </div>
+            <ul class="mt-3 space-y-3">
+              <li
+                v-for="m in mediaVitrineGallery"
+                :key="m.id"
+                class="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-brand">{{ m.kind_label || m.collection_name }}</p>
+                  <p class="mt-1 truncate text-sm text-white">{{ m.file_name }}</p>
+                  <p class="text-xs text-zinc-500">
+                    ID {{ m.id }} · {{ m.mime_type || '—' }} · moderação:
+                    {{ adminMediaModerationStatusLabel(m.moderation_status) }}
+                  </p>
+                </div>
+                <div class="flex flex-shrink-0 flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
+                    :disabled="mediaPreviewBusy || moderatingMediaId === m.id || removingMediaId === m.id"
+                    @click="openMedia(m)"
+                  >
+                    {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
+                  </button>
+                  <template v-if="mediaNeedsModerationActions(m)">
+                    <button
+                      type="button"
+                      class="rounded bg-emerald-700 px-2 py-1 text-xs text-white disabled:opacity-40"
+                      :disabled="moderatingMediaId === m.id"
+                      @click="setMediaModeration(m.id, 'approved')"
+                    >
+                      Aprovar
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded bg-zinc-700 px-2 py-1 text-xs text-white disabled:opacity-40"
+                      :disabled="moderatingMediaId === m.id"
+                      @click="setMediaModeration(m.id, 'rejected')"
+                    >
+                      Recusar
+                    </button>
+                  </template>
+                  <button
+                    v-else-if="mediaShowsRemoveOnly(m)"
+                    type="button"
+                    class="rounded bg-red-900/50 px-2 py-1 text-xs text-red-200 hover:bg-red-900/70 disabled:opacity-40"
+                    :disabled="removingMediaId === m.id"
+                    @click="removeMedia(m)"
+                  >
+                    {{ removingMediaId === m.id ? 'Removendo…' : 'Remover' }}
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <div v-if="mediaVitrineOther.length">
+            <h4 class="text-xs font-semibold uppercase tracking-wide text-zinc-400">Capa, avatar, áudio e outras</h4>
+            <ul class="mt-3 space-y-3">
+              <li
+                v-for="m in mediaVitrineOther"
+                :key="m.id"
+                class="flex flex-col gap-2 rounded-lg border border-zinc-800 p-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-brand">{{ m.kind_label || m.collection_name }}</p>
+                  <p class="truncate text-sm text-white">{{ m.file_name }}</p>
+                  <p class="text-xs text-zinc-500">ID {{ m.id }} · {{ m.mime_type || '—' }} · moderação: {{ adminMediaModerationStatusLabel(m.moderation_status) }}</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="rounded border border-zinc-600 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 disabled:opacity-40"
+                    :disabled="mediaPreviewBusy || moderatingMediaId === m.id || removingMediaId === m.id"
+                    @click="openMedia(m)"
+                  >
+                    {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
+                  </button>
+                  <template v-if="mediaNeedsModerationActions(m)">
+                    <button
+                      type="button"
+                      class="rounded bg-emerald-700 px-2 py-1 text-xs text-white disabled:opacity-40"
+                      :disabled="moderatingMediaId === m.id"
+                      @click="setMediaModeration(m.id, 'approved')"
+                    >
+                      Aprovar
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded bg-zinc-700 px-2 py-1 text-xs text-white disabled:opacity-40"
+                      :disabled="moderatingMediaId === m.id"
+                      @click="setMediaModeration(m.id, 'rejected')"
+                    >
+                      Recusar
+                    </button>
+                  </template>
+                  <button
+                    v-else-if="mediaShowsRemoveOnly(m)"
+                    type="button"
+                    class="rounded bg-red-900/50 px-2 py-1 text-xs text-red-200 hover:bg-red-900/70 disabled:opacity-40"
+                    :disabled="removingMediaId === m.id"
+                    @click="removeMedia(m)"
+                  >
+                    {{ removingMediaId === m.id ? 'Removendo…' : 'Remover' }}
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </div>
         </div>
 
         <p v-if="!mediaList.length" class="mt-4 text-sm text-zinc-500">Nenhuma mídia listada.</p>
       </section>
+
+      <ProfileMediaLightbox
+        v-model="adminLightboxOpen"
+        :items="adminLightboxItems"
+        :start-index="adminLightboxStart"
+        alt-text="Mídia do anunciante"
+      />
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import { useSwal } from '~/composables/useSwal'
+import { apiErrorMessage } from '~/utils/api-error-message'
 import { buildPublicProfilePath } from '~/utils/public-profile-url'
 import {
   adminAccountStatusLabel,
@@ -372,13 +495,14 @@ import {
   adminServiceTypeLabel,
 } from '~/utils/admin-labels'
 definePageMeta({
-  layout: 'admin',
-  middleware: ['admin'],
+  layout: 'admin' as any,
+  middleware: ['admin' as any],
 })
 
 const route = useRoute()
 const id = computed(() => Number(route.params.id))
 const { request } = useApi()
+const { swalConfirm, swalAlert, swalRejectWithReason } = useSwal()
 
 useHead(() => ({ title: `Anunciante #${route.params.id}` }))
 
@@ -392,6 +516,7 @@ type ProfileDetail = {
   approval_status: string
   form_status?: string | null
   bio: string | null
+  portal_text_pending?: { has_pending: boolean } | null
   whatsapp: string | null
   profile_type?: string | null
   service_type?: string | null
@@ -465,7 +590,16 @@ const mediaList = ref<
     moderation_status: string
   }[]
 >([])
-const openingMediaId = ref<number | null>(null)
+const moderatingMediaId = ref<number | null>(null)
+const removingMediaId = ref<number | null>(null)
+const mediaModerationMsg = ref('')
+const mediaModerationOk = ref(true)
+const mediaPreviewBusy = ref(false)
+
+type AdminLightboxItem = { kind: 'audio' | 'video' | 'image'; url: string; caption?: string }
+const adminLightboxOpen = ref(false)
+const adminLightboxItems = ref<AdminLightboxItem[]>([])
+const adminLightboxStart = ref(0)
 
 const publicProfilePath = computed(() => {
   const d = detail.value
@@ -486,6 +620,81 @@ const mediaVitrine = computed(() =>
     .filter((m) => !KYC_COLLECTIONS.has(m.collection_name))
     .sort((a, b) => a.id - b.id),
 )
+
+const mediaVitrineGallery = computed(() => mediaVitrine.value.filter((m) => m.collection_name === 'gallery'))
+
+const mediaVitrineOther = computed(() => mediaVitrine.value.filter((m) => m.collection_name !== 'gallery'))
+
+function isLightboxableMedia(m: (typeof mediaList.value)[number]): boolean {
+  const k = (m.kind || '').toLowerCase()
+  if (
+    k === 'audio' ||
+    k === 'verification_video' ||
+    k === 'gallery_video' ||
+    k === 'gallery_image' ||
+    k === 'id_front' ||
+    k === 'id_back' ||
+    k === 'selfie' ||
+    k === 'banner' ||
+    k === 'profile_photo'
+  ) {
+    return true
+  }
+  const mime = (m.mime_type || '').toLowerCase()
+  return mime.startsWith('image/') || mime.startsWith('video/') || mime.startsWith('audio/')
+}
+
+function lightboxKindFromRow(m: (typeof mediaList.value)[number]): 'image' | 'video' | 'audio' {
+  const k = (m.kind || '').toLowerCase()
+  if (k === 'audio') {
+    return 'audio'
+  }
+  if (k === 'verification_video' || k === 'gallery_video') {
+    return 'video'
+  }
+  const mime = (m.mime_type || '').toLowerCase()
+  if (mime.startsWith('video/')) {
+    return 'video'
+  }
+  if (mime.startsWith('audio/')) {
+    return 'audio'
+  }
+  return 'image'
+}
+
+const adminLightboxableAll = computed(() => [...mediaList.value].filter(isLightboxableMedia).sort((a, b) => a.id - b.id))
+
+const adminLightboxableGallery = computed(() =>
+  adminLightboxableAll.value.filter((m) => m.collection_name === 'gallery'),
+)
+
+function mediaEffectivelyApproved(m: (typeof mediaList.value)[number]): boolean {
+  if (m.moderation_status === 'approved') {
+    return true
+  }
+  if (m.moderation_status === 'registration' && detail.value?.approval_status === 'approved') {
+    return true
+  }
+  return false
+}
+
+function canAdminDeleteMedia(m: (typeof mediaList.value)[number]): boolean {
+  return !KYC_COLLECTIONS.has(m.collection_name)
+}
+
+function mediaNeedsModerationActions(m: (typeof mediaList.value)[number]): boolean {
+  if (m.moderation_status === 'rejected' || m.moderation_status === 'pending') {
+    return true
+  }
+  if (m.moderation_status === 'registration') {
+    return detail.value?.approval_status !== 'approved'
+  }
+  return false
+}
+
+function mediaShowsRemoveOnly(m: (typeof mediaList.value)[number]): boolean {
+  return mediaEffectivelyApproved(m) && canAdminDeleteMedia(m)
+}
 
 const socialLinksEntries = computed((): [string, string][] => {
   const sl = detail.value?.social_links
@@ -534,13 +743,40 @@ async function load() {
     const p = await request<ProfileDetail>(`/v1/admin/profiles/${id.value}`)
     detail.value = p
     applyDetailToForm(p)
-    const mediaRes = await request<{ media: typeof mediaList.value }>(`/v1/admin/profiles/${id.value}/media`)
-    mediaList.value = mediaRes.media
+    const mediaOk = await fetchAdminMediaList()
+    if (!mediaOk) {
+      mediaModerationMsg.value =
+        'A lista de mídias não foi carregada corretamente. Atualize a página (F5) ou verifique a API.'
+      mediaModerationOk.value = false
+    }
   } catch {
     errorMsg.value = 'Não foi possível carregar o perfil.'
     detail.value = null
   } finally {
     loading.value = false
+  }
+}
+
+/** Recarrega só a lista de mídias. Retorna false se o JSON não trouxer `media` como array (nunca chama `load()` para evitar recursão). */
+async function fetchAdminMediaList(): Promise<boolean> {
+  try {
+    const mediaRes = await request<{ media?: unknown }>(`/v1/admin/profiles/${id.value}/media`)
+    if (Array.isArray(mediaRes.media)) {
+      mediaList.value = mediaRes.media as typeof mediaList.value
+      return true
+    }
+  } catch {
+    /* vazio */
+  }
+  return false
+}
+
+async function reloadAdminMediaList() {
+  const ok = await fetchAdminMediaList()
+  if (!ok) {
+    mediaModerationMsg.value =
+      'Não foi possível recarregar a lista de mídias. Atualize a página (F5) para ver o estado actual no servidor.'
+    mediaModerationOk.value = false
   }
 }
 
@@ -589,27 +825,138 @@ async function grantDestaque() {
   }
 }
 
-async function openMedia(m: (typeof mediaList.value)[number]) {
-  openingMediaId.value = m.id
+async function fetchAdminTemporaryUrl(mediaNumericId: number): Promise<string> {
+  const res = await request<{ url: string }>(
+    `/v1/admin/profiles/${id.value}/media/${mediaNumericId}/temporary-url`,
+  )
+  return res.url
+}
+
+async function openAdminLightboxFromList(
+  list: (typeof mediaList.value)[number][],
+  startIdx: number,
+) {
+  if (list.length === 0 || mediaPreviewBusy.value) {
+    return
+  }
+  const idx = Math.max(0, Math.min(startIdx, list.length - 1))
+  mediaPreviewBusy.value = true
   try {
-    const res = await request<{ url: string }>(
-      `/v1/admin/profiles/${id.value}/media/${m.id}/temporary-url`,
-    )
-    if (res.url) {
-      window.open(res.url, '_blank', 'noopener,noreferrer')
-    }
+    const urls = await Promise.all(list.map((m) => fetchAdminTemporaryUrl(m.id)))
+    adminLightboxItems.value = list.map((m, i) => ({
+      kind: lightboxKindFromRow(m),
+      url: urls[i]!,
+      caption: `${m.kind_label || m.collection_name} · ${m.file_name}`,
+    }))
+    adminLightboxStart.value = idx
+    adminLightboxOpen.value = true
+  } catch {
+    await swalAlert({
+      icon: 'error',
+      title: 'Pré-visualização',
+      text: 'Não foi possível obter os endereços dos ficheiros. Tente de novo.',
+    })
   } finally {
-    openingMediaId.value = null
+    mediaPreviewBusy.value = false
+  }
+}
+
+async function openMedia(m: (typeof mediaList.value)[number]) {
+  if (!isLightboxableMedia(m)) {
+    mediaPreviewBusy.value = true
+    try {
+      const url = await fetchAdminTemporaryUrl(m.id)
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer')
+      }
+    } catch {
+      await swalAlert({
+        icon: 'error',
+        title: 'Abrir ficheiro',
+        text: 'Não foi possível obter o link temporário.',
+      })
+    } finally {
+      mediaPreviewBusy.value = false
+    }
+    return
+  }
+
+  if (m.collection_name === 'gallery') {
+    const gIdx = adminLightboxableGallery.value.findIndex((x) => x.id === m.id)
+    if (gIdx >= 0) {
+      await openAdminLightboxFromList(adminLightboxableGallery.value, gIdx)
+      return
+    }
+  }
+  const idx = adminLightboxableAll.value.findIndex((x) => x.id === m.id)
+  if (idx < 0) {
+    return
+  }
+  await openAdminLightboxFromList(adminLightboxableAll.value, idx)
+}
+
+async function removeMedia(m: (typeof mediaList.value)[number]) {
+  if (!canAdminDeleteMedia(m)) {
+    return
+  }
+  const ok = await swalConfirm({
+    title: 'Remover mídia?',
+    text: `Deseja remover «${m.file_name}» deste perfil?`,
+    icon: 'warning',
+    confirmButtonText: 'Sim, remover',
+    cancelButtonText: 'Cancelar',
+  })
+  if (!ok) {
+    return
+  }
+  removingMediaId.value = m.id
+  mediaModerationMsg.value = ''
+  try {
+    await request(`/v1/admin/profiles/${id.value}/media/${m.id}`, { method: 'DELETE' })
+    await reloadAdminMediaList()
+    mediaModerationMsg.value = 'Mídia removida.'
+    mediaModerationOk.value = true
+  } catch (e: unknown) {
+    mediaModerationMsg.value = apiErrorMessage(e, 'Não foi possível remover a mídia.')
+    mediaModerationOk.value = false
+  } finally {
+    removingMediaId.value = null
   }
 }
 
 async function setMediaModeration(mediaId: number, moderation_status: 'approved' | 'rejected') {
-  await request(`/v1/admin/profiles/${id.value}/media/${mediaId}`, {
-    method: 'PATCH',
-    body: { moderation_status },
-  })
-  const mediaRes = await request<{ media: typeof mediaList.value }>(`/v1/admin/profiles/${id.value}/media`)
-  mediaList.value = mediaRes.media
+  let moderation_reject_reason: string | undefined
+  if (moderation_status === 'rejected') {
+    const m = mediaList.value.find((x) => x.id === mediaId)
+    const { confirmed, reason } = await swalRejectWithReason({
+      title: 'Recusar esta mídia?',
+      text: m ? `${m.kind_label || m.collection_name} · ${m.file_name}` : undefined,
+    })
+    if (!confirmed) {
+      return
+    }
+    moderation_reject_reason = reason !== '' ? reason : undefined
+  }
+  mediaModerationMsg.value = ''
+  moderatingMediaId.value = mediaId
+  try {
+    await request(`/v1/admin/profiles/${id.value}/media/${mediaId}`, {
+      method: 'PATCH',
+      body:
+        moderation_status === 'rejected'
+          ? { moderation_status, moderation_reject_reason }
+          : { moderation_status },
+    })
+    await reloadAdminMediaList()
+    mediaModerationMsg.value =
+      moderation_status === 'approved' ? 'Mídia aprovada.' : 'Mídia recusada.'
+    mediaModerationOk.value = true
+  } catch (e: unknown) {
+    mediaModerationMsg.value = apiErrorMessage(e, 'Não foi possível atualizar a moderação da mídia.')
+    mediaModerationOk.value = false
+  } finally {
+    moderatingMediaId.value = null
+  }
 }
 
 onMounted(() => load())

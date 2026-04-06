@@ -119,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ProfileMediaItem, ProfileSummary } from '~/data/mock-catalog'
+import type { ProfileMediaItem, ProfileSummary } from '~/types/explore-catalog'
 import { formatArrivalBadge } from '~/utils/arrival-badge'
 import { buildPublicProfilePath } from '~/utils/public-profile-url'
 

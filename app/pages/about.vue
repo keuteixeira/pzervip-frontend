@@ -70,7 +70,7 @@
           <div class="flex flex-wrap gap-x-2">
             <dt class="text-zinc-500">Telefone</dt>
             <dd>
-              <a href="tel:+5511985423160" class="text-brand hover:underline">(11) 98542-3160</a>
+              <a href="tel:+5511985423160" class="text-brand hover:underline">(71) 99944-0882</a>
             </dd>
           </div>
           <div class="flex flex-wrap gap-x-2">

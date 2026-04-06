@@ -20,6 +20,15 @@
       </button>
     </div>
 
+    <p
+      v-if="actionMsg"
+      class="text-sm"
+      :class="actionOk ? 'text-emerald-400' : 'text-red-400'"
+      role="status"
+    >
+      {{ actionMsg }}
+    </p>
+
     <p v-if="loading" class="text-zinc-400">Carregando…</p>
 
     <ul v-else class="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
@@ -32,7 +41,7 @@
         <p v-if="c.advertiser_profile" class="text-xs text-zinc-500">
           Perfil:
           <NuxtLink
-            :to="withMock(`/admin/anunciantes/${c.advertiser_profile.id}`)"
+            :to="`/admin/anunciantes/${c.advertiser_profile.id}`"
             class="text-brand hover:underline"
           >
             {{ c.advertiser_profile.professional_name }} ({{ c.advertiser_profile.public_slug }})
@@ -41,14 +50,16 @@
         <div v-if="c.status === 'pending'" class="flex gap-2">
           <button
             type="button"
-            class="rounded bg-emerald-600 px-2 py-1 text-xs text-white"
+            class="rounded bg-emerald-600 px-2 py-1 text-xs text-white disabled:opacity-40"
+            :disabled="busyCommentId === c.id"
             @click="setStatus(c.id, 'approved')"
           >
             Aprovar
           </button>
           <button
             type="button"
-            class="rounded bg-zinc-700 px-2 py-1 text-xs text-white"
+            class="rounded bg-zinc-700 px-2 py-1 text-xs text-white disabled:opacity-40"
+            :disabled="busyCommentId === c.id"
             @click="setStatus(c.id, 'rejected')"
           >
             Recusar
@@ -82,18 +93,17 @@
 </template>
 
 <script setup lang="ts">
-import { filterMockComments } from '~/data/admin-mocks'
 import { adminCommentStatusLabel } from '~/utils/admin-labels'
+import { apiErrorMessage } from '~/utils/api-error-message'
 
 definePageMeta({
-  layout: 'admin',
-  middleware: ['admin'],
+  layout: 'admin' as any,
+  middleware: ['admin' as any],
 })
 
 useHead({ title: 'Comentários' })
 
 const { request } = useApi()
-const { isMock, withMock } = useAdminMock()
 
 const statusFilter = ref('pending')
 const page = ref(1)
@@ -110,6 +120,9 @@ const items = ref<
 >([])
 
 const meta = ref<{ current_page: number; last_page: number } | null>(null)
+const actionMsg = ref('')
+const actionOk = ref(true)
+const busyCommentId = ref<number | null>(null)
 
 const filters = [
   { value: 'pending', label: 'Pendentes' },
@@ -121,12 +134,6 @@ const filters = [
 async function load() {
   loading.value = true
   try {
-    if (isMock.value) {
-      const list = filterMockComments(statusFilter.value)
-      items.value = list as typeof items.value
-      meta.value = { current_page: 1, last_page: 1 }
-      return
-    }
     const res = await request<{
       data: typeof items.value
       current_page: number
@@ -140,21 +147,33 @@ async function load() {
 }
 
 async function setStatus(id: number, status: 'approved' | 'rejected') {
-  if (isMock.value) {
-    const row = items.value.find((x) => x.id === id)
-    if (row) {
-      row.status = status
+  actionMsg.value = ''
+  busyCommentId.value = id
+  try {
+    await request(`/v1/admin/comments/${id}`, {
+      method: 'PATCH',
+      body: { status },
+    })
+    try {
+      await load()
+    } catch {
+      actionMsg.value =
+        status === 'approved'
+          ? 'Comentário aprovado. Não foi possível atualizar a lista — atualize a página.'
+          : 'Comentário recusado. Não foi possível atualizar a lista — atualize a página.'
+      actionOk.value = true
+      return
     }
-    return
+    actionMsg.value =
+      status === 'approved' ? 'Comentário aprovado com sucesso.' : 'Comentário recusado.'
+    actionOk.value = true
+  } catch (e: unknown) {
+    actionMsg.value = apiErrorMessage(e, 'Não foi possível atualizar o comentário.')
+    actionOk.value = false
+  } finally {
+    busyCommentId.value = null
   }
-  await request(`/v1/admin/comments/${id}`, {
-    method: 'PATCH',
-    body: { status },
-  })
-  await load()
 }
 
 onMounted(() => load())
-
-watch(isMock, () => load())
 </script>

@@ -2,28 +2,24 @@
   <div>
     <header class="relative z-[90] border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
       <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
-        <NuxtLink to="/" class="flex shrink-0 items-center gap-2" aria-label="Prazer.Vip — início">
+        <NuxtLink
+          to="/"
+          class="flex min-w-0 shrink items-center gap-2"
+          aria-label="Prazer.Vip — início"
+        >
           <img
             :src="brand.logoHorizontal"
             alt="Prazer.Vip"
-            class="hidden h-8 w-auto sm:block md:h-9"
+            class="h-8 w-auto max-w-[min(200px,calc(100vw-7.5rem))] object-contain object-left md:h-9"
             width="180"
             height="36"
-            loading="eager"
-            decoding="async"
-          />
-          <img
-            :src="brand.logoVertical"
-            alt="Prazer.Vip"
-            class="h-10 w-auto sm:hidden"
-            width="120"
-            height="40"
             loading="eager"
             decoding="async"
           />
         </NuxtLink>
         <nav class="hidden items-center gap-3 text-sm md:flex">
           <div
+            ref="desktopCityRoot"
             class="relative"
             @mouseenter="desktopCityMenuOpen = true"
             @mouseleave="desktopCityMenuOpen = false"
@@ -33,15 +29,33 @@
               class="rounded-md px-3 py-2 text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
               :aria-expanded="desktopCityMenuOpen ? 'true' : 'false'"
               @focus="desktopCityMenuOpen = true"
+              @click.stop="desktopCityMenuOpen = !desktopCityMenuOpen"
             >
               Escolha a cidade
             </button>
             <div
-              class="absolute right-0 top-full z-[120] w-[min(92vw,820px)] pt-2 transition"
-              :class="desktopCityMenuOpen ? 'visible opacity-100' : 'invisible opacity-0'"
+              class="absolute right-0 top-full z-[120] w-[min(92vw,820px)] -mt-1 pt-3 transition"
+              :class="desktopCityMenuOpen ? 'visible opacity-100' : 'invisible pointer-events-none opacity-0'"
             >
               <div class="rounded-2xl border border-zinc-800 bg-zinc-950/95 p-4 shadow-2xl">
-                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <p v-if="navPending" class="py-6 text-center text-sm text-zinc-400">Carregando regiões…</p>
+                <div v-else-if="navError" class="space-y-3 py-4 text-center text-sm text-zinc-400">
+                  <p>Não foi possível carregar o menu de cidades.</p>
+                  <button
+                    type="button"
+                    class="rounded-md border border-zinc-600 px-3 py-1.5 text-xs text-white transition hover:bg-zinc-800"
+                    @click="void refreshNav()"
+                  >
+                    Tentar de novo
+                  </button>
+                </div>
+                <p
+                  v-else-if="cityMenuRegions.length === 0"
+                  class="py-6 text-center text-sm text-zinc-500"
+                >
+                  Nenhuma região disponível.
+                </p>
+                <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <div v-for="r in cityMenuRegions" :key="r.slug" class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
                     <NuxtLink
                       :to="regionMenuTarget(r.slug)"
@@ -74,13 +88,13 @@
             Explorar
           </NuxtLink>
           <NuxtLink
-            to="/cadastro"
+            :to="registerOrMyProfileTo"
             class="rounded-md px-3 py-2 text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
           >
-            Cadastro de Anunciante
+            {{ registerOrMyProfileLabel }}
           </NuxtLink>
           <NuxtLink
-            to="/login"
+            :to="advertiserAreaTo"
             class="rounded-md bg-brand px-3 py-2 font-medium text-white transition hover:bg-brand-muted"
           >
             Área do Anunciante
@@ -121,10 +135,18 @@
           <NuxtLink to="/explorar" class="block rounded-lg border border-zinc-800 px-3 py-2 text-sm text-zinc-200" @click="mobileMenuOpen = false">
             Explorar
           </NuxtLink>
-          <NuxtLink to="/cadastro" class="block rounded-lg border border-zinc-800 px-3 py-2 text-sm text-zinc-200" @click="mobileMenuOpen = false">
-            Cadastro de Anunciante
+          <NuxtLink
+            :to="registerOrMyProfileTo"
+            class="block rounded-lg border border-zinc-800 px-3 py-2 text-sm text-zinc-200"
+            @click="mobileMenuOpen = false"
+          >
+            {{ registerOrMyProfileLabel }}
           </NuxtLink>
-          <NuxtLink to="/login" class="block rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white" @click="mobileMenuOpen = false">
+          <NuxtLink
+            :to="advertiserAreaTo"
+            class="block rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white"
+            @click="mobileMenuOpen = false"
+          >
             Área do Anunciante
           </NuxtLink>
 
@@ -138,27 +160,43 @@
               Escolha a cidade
             </button>
             <div v-if="mobileCityMenuOpen" class="mt-3 space-y-3">
-              <div v-for="r in cityMenuRegions" :key="`m-${r.slug}`" class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
-                <NuxtLink
-                  :to="regionMenuTarget(r.slug)"
-                  class="block text-sm font-semibold text-brand"
-                  @click="mobileMenuOpen = false"
+              <p v-if="navPending" class="text-center text-xs text-zinc-500">Carregando regiões…</p>
+              <div v-else-if="navError" class="space-y-2 text-center text-xs text-zinc-500">
+                <p>Não foi possível carregar o menu.</p>
+                <button
+                  type="button"
+                  class="rounded-md border border-zinc-600 px-2 py-1 text-zinc-300"
+                  @click="void refreshNav()"
                 >
-                  {{ r.name }}
-                </NuxtLink>
-                <ul class="mt-2 space-y-1">
-                  <li v-for="s in r.states" :key="`m-${r.slug}-${s.uf}`">
-                    <NuxtLink
-                      :to="stateMenuTarget(s.uf)"
-                      class="flex items-center justify-between rounded px-2 py-1 text-xs text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
-                      @click="mobileMenuOpen = false"
-                    >
-                      <span>{{ s.name }} ({{ s.uf }})</span>
-                      <span class="tabular-nums text-zinc-500">{{ s.totalProfiles }}</span>
-                    </NuxtLink>
-                  </li>
-                </ul>
+                  Tentar de novo
+                </button>
               </div>
+              <p v-else-if="cityMenuRegions.length === 0" class="text-center text-xs text-zinc-500">
+                Nenhuma região disponível.
+              </p>
+              <template v-else>
+                <div v-for="r in cityMenuRegions" :key="`m-${r.slug}`" class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
+                  <NuxtLink
+                    :to="regionMenuTarget(r.slug)"
+                    class="block text-sm font-semibold text-brand"
+                    @click="mobileMenuOpen = false"
+                  >
+                    {{ r.name }}
+                  </NuxtLink>
+                  <ul class="mt-2 space-y-1">
+                    <li v-for="s in r.states" :key="`m-${r.slug}-${s.uf}`">
+                      <NuxtLink
+                        :to="stateMenuTarget(s.uf)"
+                        class="flex items-center justify-between rounded px-2 py-1 text-xs text-zinc-300 transition hover:bg-zinc-800 hover:text-white"
+                        @click="mobileMenuOpen = false"
+                      >
+                        <span>{{ s.name }} ({{ s.uf }})</span>
+                        <span class="tabular-nums text-zinc-500">{{ s.totalProfiles }}</span>
+                      </NuxtLink>
+                    </li>
+                  </ul>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -175,23 +213,22 @@
 
 <script setup lang="ts">
 import { brandAssets } from '~/config/brand-assets'
-import type { GenderSlug, RegionSlug } from '~/data/mock-catalog'
-import { getStatesByRegion } from '~/data/mock-catalog'
+import { usePublicExploreApi } from '~/composables/usePublicExploreApi'
+import type { ExploreNavResponse, GenderSlug, RegionSlug } from '~/types/explore-catalog'
 
 const brand = brandAssets
 const route = useRoute()
+const { advertiserAreaTo, registerOrMyProfileLabel, registerOrMyProfileTo, hydrateUserIfNeeded } =
+  useAdvertiserAreaLink()
+const { fetchNav, fetchNavAllGenders } = usePublicExploreApi()
 const mobileMenuOpen = ref(false)
 const mobileCityMenuOpen = ref(false)
 const desktopCityMenuOpen = ref(false)
 
-const regionOrder: RegionSlug[] = ['sudeste', 'nordeste', 'centro-oeste', 'sul', 'norte']
-const regionTitle: Record<RegionSlug, string> = {
-  sudeste: 'Sudeste',
-  nordeste: 'Nordeste',
-  'centro-oeste': 'Centro-Oeste',
-  sul: 'Sul',
-  norte: 'Norte',
-}
+const genderChosen = computed(() => {
+  const p = String(route.params.gender ?? '')
+  return p === 'homens' || p === 'mulheres' || p === 'trans'
+})
 
 const menuGender = computed<GenderSlug>(() => {
   const p = String(route.params.gender ?? '')
@@ -201,10 +238,13 @@ const menuGender = computed<GenderSlug>(() => {
   return 'mulheres'
 })
 
-const genderChosen = computed(() => {
-  const p = String(route.params.gender ?? '')
-  return p === 'homens' || p === 'mulheres' || p === 'trans'
-})
+const desktopCityRoot = ref<HTMLElement | null>(null)
+
+const { data: navPayload, pending: navPending, error: navError, refresh: refreshNav } = await useAsyncData(
+  () => (genderChosen.value ? `layout-explore-nav-${menuGender.value}` : 'layout-explore-nav-all'),
+  () => (genderChosen.value ? fetchNav(menuGender.value) : fetchNavAllGenders()),
+  { watch: [genderChosen, menuGender] },
+)
 
 function stateMenuTarget(uf: string) {
   const lowerUf = uf.toLowerCase()
@@ -227,13 +267,14 @@ function regionMenuTarget(regionSlug: RegionSlug) {
   }
 }
 
-const cityMenuRegions = computed(() =>
-  regionOrder.map((slug) => ({
-    slug,
-    name: regionTitle[slug],
-    states: getStatesByRegion(menuGender.value, slug),
-  })),
-)
+const cityMenuRegions = computed(() => {
+  const regions = navPayload.value?.regions ?? []
+  return regions.map((r: ExploreNavResponse['regions'][number]) => ({
+    slug: r.slug as RegionSlug,
+    name: r.name,
+    states: r.states,
+  }))
+})
 
 watch(
   () => route.fullPath,
@@ -243,4 +284,24 @@ watch(
     mobileCityMenuOpen.value = false
   },
 )
+
+function onDocumentClickCloseCity(e: MouseEvent) {
+  const el = desktopCityRoot.value
+  if (!el || !desktopCityMenuOpen.value) {
+    return
+  }
+  const t = e.target
+  if (t instanceof Node && !el.contains(t)) {
+    desktopCityMenuOpen.value = false
+  }
+}
+
+onMounted(() => {
+  void hydrateUserIfNeeded()
+  document.addEventListener('click', onDocumentClickCloseCity)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', onDocumentClickCloseCity)
+})
 </script>

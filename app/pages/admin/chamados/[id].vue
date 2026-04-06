@@ -87,8 +87,8 @@
 import { supportPriorities, supportStatusLabel, supportSubjectLabel } from '~/utils/support-ticket-labels'
 
 definePageMeta({
-  layout: 'admin',
-  middleware: ['admin'],
+  layout: 'admin' as any,
+  middleware: ['admin' as any],
 })
 
 const route = useRoute()

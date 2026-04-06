@@ -15,6 +15,8 @@ export interface AuthUser {
   advertiser_profile?: {
     cpf?: string | null
     public_slug?: string | null
+    /** companion | masseuse (API) — usado na URL pública */
+    service_type?: string | null
     whatsapp?: string | null
     registration_email_verified_at?: string | null
     registration_whatsapp_verified_at?: string | null

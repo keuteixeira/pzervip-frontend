@@ -89,19 +89,29 @@
         <!-- Nome e link -->
         <section v-show="activeSection === 'perfil'" class="profile-panel space-y-4">
           <div>
-            <h2 class="text-lg font-semibold text-white">Nome profissional e link público</h2>
+            <h2 class="text-lg font-semibold text-white">Nome profissional, biografia e link público</h2>
             <p class="mt-2 text-sm leading-relaxed text-zinc-400">
-              O endereço do perfil é gerado automaticamente a partir do nome profissional ao salvar. Se já existir outro
-              igual, será adicionado um sufixo (ex.: <span class="text-zinc-300">joao-marques-2</span>). Só muda quando
-              você altera o nome e clica em salvar.
+              O link do perfil é gerado a partir do nome profissional após a nossa aprovação. Enquanto isso, o site
+              continua com o nome e o endereço atuais. A biografia também só entra no ar depois de validada.
             </p>
           </div>
+          <p
+            v-if="profile.has_portal_text_pending"
+            class="rounded-xl border border-sky-900/50 bg-sky-950/30 px-4 py-3 text-sm text-sky-100/95"
+          >
+            Há alterações de nome e/ou biografia em análise.
+            <span v-if="profile.portal_text_pending_submitted_at" class="block mt-1 text-sky-200/80">
+              Enviado em {{ formatDate(profile.portal_text_pending_submitted_at) }}.
+            </span>
+          </p>
           <p
             v-if="profile.professional_slug_cooldown_active && profile.professional_slug_locked_until"
             class="rounded-xl border border-amber-900/40 bg-amber-950/25 px-4 py-3 text-sm text-amber-100/90"
           >
-            Próxima alteração de nome disponível após
+            Após a última alteração de nome aprovada, o link público só é
+            republicado conforme a regra de carência até
             {{ formatDate(profile.professional_slug_locked_until) }} ({{ profile.portal_field_cooldown_hours ?? 24 }}h).
+            Você ainda pode enviar uma nova proposta; ela entra na fila de análise.
           </p>
           <div class="space-y-4">
             <div>
@@ -111,13 +121,24 @@
                 v-model="formProfessionalName"
                 type="text"
                 class="form-input"
-                :disabled="profile.professional_slug_cooldown_active"
                 maxlength="191"
                 autocomplete="off"
               />
             </div>
             <div>
-              <label class="form-label" for="public-url">Seu link público (URL completa)</label>
+              <label class="form-label" for="public-bio">Biografia (público)</label>
+              <textarea
+                id="public-bio"
+                v-model="formBio"
+                rows="6"
+                class="form-input min-h-[140px] resize-y"
+                maxlength="20000"
+                placeholder="Texto que aparece no seu perfil público após aprovação."
+              />
+              <p class="mt-1 text-xs text-zinc-500">Máx. 20&nbsp;000 caracteres. Envio gera revisão pela equipe.</p>
+            </div>
+            <div>
+              <label class="form-label" for="public-url">Seu link público atual (URL completa)</label>
               <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                 <input
                   id="public-url"
@@ -136,13 +157,20 @@
                 </button>
               </div>
             </div>
+            <div
+              v-if="profile.public_slug_preview_from_pending_name"
+              class="rounded-xl border border-zinc-700/60 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-300"
+            >
+              <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Prévia do link (se o nome pendente for aprovado)</p>
+              <p class="mt-1 break-all font-mono text-xs text-brand">{{ pendingPublicProfileFullUrl }}</p>
+            </div>
             <button
               type="button"
               class="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand/20 transition hover:opacity-90 disabled:opacity-45"
-              :disabled="savingName || profile.professional_slug_cooldown_active"
-              @click="saveProfessionalName"
+              :disabled="savingPortalText"
+              @click="savePortalTextPresentation"
             >
-              {{ savingName ? 'Salvando…' : 'Salvar nome profissional' }}
+              {{ savingPortalText ? 'Enviando…' : 'Enviar nome e biografia para análise' }}
             </button>
           </div>
         </section>
@@ -368,6 +396,126 @@
         <section v-show="activeSection === 'midias'" class="space-y-6">
           <div class="profile-panel space-y-6">
             <div>
+              <h2 class="text-lg font-semibold text-white">Banner (capa)</h2>
+              <p class="mt-1 text-sm text-zinc-400">
+                Uma imagem larga no topo do seu perfil público. Só existe um banner: ao enviar outro, o anterior deixa de
+                ser a capa ativa. Novos envios ficam em análise até a equipe aprovar.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+              <input
+                ref="coverFileInput"
+                type="file"
+                accept="image/*"
+                class="hidden"
+                @change="(e) => onSingleMediaPick(e, 'cover')"
+              />
+              <button
+                type="button"
+                class="rounded-xl border border-zinc-600 bg-zinc-900/50 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800"
+                :disabled="uploadingCover || uploadingAvatar || uploadingAudio || uploading || mediaAccessBusy !== null"
+                @click="coverFileInput?.click()"
+              >
+                {{
+                  uploadingCover
+                    ? 'Enviando…'
+                    : publishedCoverMediaId
+                      ? 'Enviar novo banner'
+                      : 'Enviar banner'
+                }}
+              </button>
+            </div>
+
+            <div
+              v-if="publishedCoverMediaId"
+              class="rounded-xl border border-zinc-800/90 bg-zinc-950/50 p-4"
+            >
+              <p class="text-xs font-medium uppercase tracking-wide text-emerald-400/90">No perfil público</p>
+              <div class="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  class="rounded-xl border border-brand/40 bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition hover:bg-brand/20"
+                  :disabled="uploadingCover || uploadingAvatar || uploadingAudio || uploading || (mediaAccessBusy !== null && !imagePreviewUrls[publishedCoverMediaId])"
+                  @click="toggleImagePreview(publishedCoverMediaId!)"
+                >
+                  {{
+                    imagePreviewUrls[publishedCoverMediaId!]
+                      ? 'Ocultar imagem'
+                      : mediaAccessBusy === publishedCoverMediaId
+                        ? 'Abrindo…'
+                        : 'Ver banner'
+                  }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-xl border border-red-900/50 px-4 py-2.5 text-sm text-red-300 transition hover:bg-red-950/40"
+                  :disabled="uploadingCover || uploadingAvatar || uploadingAudio || uploading || mediaAccessBusy !== null"
+                  @click="removeSingleMedia('cover', publishedCoverMediaId!)"
+                >
+                  Remover banner
+                </button>
+              </div>
+              <div
+                v-if="imagePreviewUrls[publishedCoverMediaId!]"
+                class="mt-4 overflow-hidden rounded-xl border border-zinc-800 bg-black/40 p-2"
+              >
+                <img
+                  :src="imagePreviewUrls[publishedCoverMediaId!]"
+                  alt="Banner no perfil público"
+                  class="mx-auto max-h-48 w-full max-w-full rounded-lg object-cover"
+                />
+              </div>
+            </div>
+
+            <div
+              v-if="pendingCoverMediaId && pendingCoverMediaId !== publishedCoverMediaId"
+              class="rounded-xl border border-amber-900/40 bg-amber-950/20 p-4"
+            >
+              <p class="text-xs font-medium uppercase tracking-wide text-amber-200/90">Aguardando aprovação</p>
+              <p class="mt-1 text-sm text-amber-100/80">
+                Só entra no perfil público depois da aprovação. Se já existir outra capa aprovada, ela permanece até este
+                envio ser aceito.
+              </p>
+              <div class="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  class="rounded-xl border border-brand/40 bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition hover:bg-brand/20"
+                  :disabled="uploadingCover || uploadingAvatar || uploadingAudio || uploading || (mediaAccessBusy !== null && !imagePreviewUrls[pendingCoverMediaId!])"
+                  @click="toggleImagePreview(pendingCoverMediaId!)"
+                >
+                  {{
+                    imagePreviewUrls[pendingCoverMediaId!]
+                      ? 'Ocultar imagem'
+                      : mediaAccessBusy === pendingCoverMediaId
+                        ? 'Abrindo…'
+                        : 'Ver envio'
+                  }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-xl border border-red-900/50 px-4 py-2.5 text-sm text-red-300 transition hover:bg-red-950/40"
+                  :disabled="uploadingCover || mediaAccessBusy !== null"
+                  @click="removeSingleMedia('cover', pendingCoverMediaId!)"
+                >
+                  Remover envio
+                </button>
+              </div>
+              <div
+                v-if="imagePreviewUrls[pendingCoverMediaId!]"
+                class="mt-4 overflow-hidden rounded-xl border border-zinc-800 bg-black/40 p-2"
+              >
+                <img
+                  :src="imagePreviewUrls[pendingCoverMediaId!]"
+                  alt="Banner aguardando aprovação"
+                  class="mx-auto max-h-48 w-full max-w-full rounded-lg object-cover"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-panel space-y-6">
+            <div>
               <h2 class="text-lg font-semibold text-white">Foto de perfil</h2>
               <p class="mt-1 text-sm text-zinc-400">
                 A foto aprovada continua no site até uma nova troca ser aprovada. Envios novos ficam em análise; você pode
@@ -386,7 +534,7 @@
               <button
                 type="button"
                 class="rounded-xl border border-zinc-600 bg-zinc-900/50 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800"
-                :disabled="uploadingAvatar || mediaAccessBusy !== null"
+                :disabled="uploadingAvatar || uploadingCover || mediaAccessBusy !== null"
                 @click="avatarFileInput?.click()"
               >
                 {{ uploadingAvatar ? 'Enviando…' : publishedAvatarMediaId ? 'Enviar nova foto' : 'Enviar foto de perfil' }}
@@ -402,7 +550,7 @@
                 <button
                   type="button"
                   class="rounded-xl border border-brand/40 bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition hover:bg-brand/20"
-                  :disabled="uploadingAvatar || (mediaAccessBusy !== null && !imagePreviewUrls[publishedAvatarMediaId])"
+                  :disabled="uploadingAvatar || uploadingCover || (mediaAccessBusy !== null && !imagePreviewUrls[publishedAvatarMediaId])"
                   @click="toggleImagePreview(publishedAvatarMediaId!)"
                 >
                   {{
@@ -416,7 +564,7 @@
                 <button
                   type="button"
                   class="rounded-xl border border-red-900/50 px-4 py-2.5 text-sm text-red-300 transition hover:bg-red-950/40"
-                  :disabled="uploadingAvatar || mediaAccessBusy !== null"
+                  :disabled="uploadingAvatar || uploadingCover || mediaAccessBusy !== null"
                   @click="removeSingleMedia('portal_avatar', publishedAvatarMediaId!)"
                 >
                   Remover
@@ -446,7 +594,7 @@
                 <button
                   type="button"
                   class="rounded-xl border border-brand/40 bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition hover:bg-brand/20"
-                  :disabled="uploadingAvatar || (mediaAccessBusy !== null && !imagePreviewUrls[pendingAvatarMediaId!])"
+                  :disabled="uploadingAvatar || uploadingCover || (mediaAccessBusy !== null && !imagePreviewUrls[pendingAvatarMediaId!])"
                   @click="toggleImagePreview(pendingAvatarMediaId!)"
                 >
                   {{
@@ -460,7 +608,7 @@
                 <button
                   type="button"
                   class="rounded-xl border border-red-900/50 px-4 py-2.5 text-sm text-red-300 transition hover:bg-red-950/40"
-                  :disabled="uploadingAvatar || mediaAccessBusy !== null"
+                  :disabled="uploadingAvatar || uploadingCover || mediaAccessBusy !== null"
                   @click="removeSingleMedia('portal_avatar', pendingAvatarMediaId!)"
                 >
                   Remover envio
@@ -499,7 +647,7 @@
               <button
                 type="button"
                 class="rounded-xl border border-zinc-600 bg-zinc-900/50 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800"
-                :disabled="uploadingAudio || mediaAccessBusy !== null"
+                :disabled="uploadingAudio || uploadingCover || mediaAccessBusy !== null"
                 @click="audioFileInput?.click()"
               >
                 {{ uploadingAudio ? 'Enviando…' : publishedAudioMediaId ? 'Enviar novo áudio' : 'Enviar áudio' }}
@@ -515,7 +663,7 @@
                 <button
                   type="button"
                   class="rounded-xl border border-brand/40 bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition hover:bg-brand/20"
-                  :disabled="uploadingAudio || (mediaAccessBusy !== null && !(audioPlayerForId === publishedAudioMediaId && audioPlayerUrl))"
+                  :disabled="uploadingAudio || uploadingCover || (mediaAccessBusy !== null && !(audioPlayerForId === publishedAudioMediaId && audioPlayerUrl))"
                   @click="toggleAudioPlayer(publishedAudioMediaId!)"
                 >
                   {{
@@ -529,7 +677,7 @@
                 <button
                   type="button"
                   class="rounded-xl border border-red-900/50 px-4 py-2.5 text-sm text-red-300 transition hover:bg-red-950/40"
-                  :disabled="uploadingAudio || mediaAccessBusy !== null"
+                  :disabled="uploadingAudio || uploadingCover || mediaAccessBusy !== null"
                   @click="removeSingleMedia('audio', publishedAudioMediaId!)"
                 >
                   Remover
@@ -552,7 +700,7 @@
                 <button
                   type="button"
                   class="rounded-xl border border-brand/40 bg-brand/10 px-4 py-2.5 text-sm font-medium text-brand transition hover:bg-brand/20"
-                  :disabled="uploadingAudio || (mediaAccessBusy !== null && !(audioPlayerForId === pendingAudioMediaId && audioPlayerUrl))"
+                  :disabled="uploadingAudio || uploadingCover || (mediaAccessBusy !== null && !(audioPlayerForId === pendingAudioMediaId && audioPlayerUrl))"
                   @click="toggleAudioPlayer(pendingAudioMediaId!)"
                 >
                   {{
@@ -566,7 +714,7 @@
                 <button
                   type="button"
                   class="rounded-xl border border-red-900/50 px-4 py-2.5 text-sm text-red-300 transition hover:bg-red-950/40"
-                  :disabled="uploadingAudio || mediaAccessBusy !== null"
+                  :disabled="uploadingAudio || uploadingCover || mediaAccessBusy !== null"
                   @click="removeSingleMedia('audio', pendingAudioMediaId!)"
                 >
                   Remover envio
@@ -587,6 +735,21 @@
               <p class="mt-2 text-sm leading-relaxed text-zinc-400">
                 Novos arquivos ficam pendentes até moderação. Na página pública, os vídeos aparecem antes das fotos,
                 na ordem que você definir abaixo.
+                <span v-if="galleryDestaqueActive" class="mt-2 block text-zinc-300">
+                  Com destaque ativo você pode ter até {{ galleryOrderedMax }} itens; todos podem aparecer no site.
+                </span>
+                <span v-else class="mt-2 block text-zinc-300">
+                  Sem destaque ativo: o site mostra no máximo {{ galleryPublicBasicCap }} itens (vídeos primeiro, depois
+                  fotos, na ordem abaixo). Novos envios só são permitidos com menos de {{ galleryUploadCap }} itens na
+                  lista — se você tinha mais após o destaque acabar, nada some: apague ou reative o destaque para
+                  ampliar de novo.
+                </span>
+              </p>
+              <p
+                v-if="galleryPublicSliceNotice"
+                class="mt-3 rounded-xl border border-amber-900/45 bg-amber-950/25 px-4 py-3 text-sm text-amber-100/90"
+              >
+                {{ galleryPublicSliceNotice }}
               </p>
             </div>
             <div>
@@ -600,11 +763,15 @@
               <button
                 type="button"
                 class="rounded-xl border border-zinc-600 bg-zinc-900/50 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-800"
-                :disabled="uploading"
+                :disabled="uploading || uploadingCover || !galleryCanAddMore"
                 @click="openGalleryPicker"
               >
                 {{ uploading ? 'Enviando…' : 'Adicionar foto ou vídeo' }}
               </button>
+              <p v-if="!galleryCanAddMore && galleryOrder.length > 0" class="mt-2 text-xs text-zinc-500">
+                Limite de {{ galleryUploadCap }} arquivo(s) neste modo. Remova um item ou reative o destaque para enviar
+                mais.
+              </p>
             </div>
             <ul class="space-y-3">
               <li
@@ -724,10 +891,17 @@ type SocialLinksPayload = {
 type Profile = {
   account_legal_name?: string | null
   professional_name?: string | null
+  professional_name_pending?: string | null
+  bio?: string | null
+  bio_pending?: string | null
+  has_portal_text_pending?: boolean
+  public_slug_preview_from_pending_name?: string | null
+  portal_text_pending_submitted_at?: string | null
   public_slug?: string | null
   service_type?: 'companion' | 'masseuse' | string | null
   profile_type?: 'men' | 'women' | 'trans' | null
   cover_media_id?: number | null
+  public_cover_media_id?: number | null
   portal_avatar_media_id?: number | null
   portal_avatar_pending_media_id?: number | null
   audio_media_id?: number | null
@@ -743,6 +917,12 @@ type Profile = {
   neighborhood?: string | null
   has_venue?: boolean | null
   gallery_media_ids?: number[] | null
+  public_gallery_media_ids?: number[] | null
+  public_gallery_display_order?: number[] | null
+  gallery_upload_cap?: number
+  gallery_ordered_max?: number
+  gallery_public_basic_cap?: number
+  gallery_destaque_time_active?: boolean
   media_moderation?: MediaMod[]
   professional_slug_cooldown_active?: boolean
   professional_slug_locked_until?: string | null
@@ -768,6 +948,7 @@ const activeSection = ref<SectionId>('perfil')
 const copyPublicLinkDone = ref(false)
 
 const formProfessionalName = ref('')
+const formBio = ref('')
 const formStateId = ref('')
 const formCityId = ref('')
 const formNeighborhood = ref('')
@@ -776,14 +957,16 @@ const formHasVenue = ref(true)
 
 const galleryOrder = ref<number[]>([])
 const uploading = ref(false)
-const savingName = ref(false)
+const savingPortalText = ref(false)
 const savingLoc = ref(false)
 const savingOrder = ref(false)
 const msg = ref('')
 const err = ref(false)
 const galleryFileInput = ref<HTMLInputElement | null>(null)
+const coverFileInput = ref<HTMLInputElement | null>(null)
 const avatarFileInput = ref<HTMLInputElement | null>(null)
 const audioFileInput = ref<HTMLInputElement | null>(null)
+const uploadingCover = ref(false)
 const uploadingAvatar = ref(false)
 const uploadingAudio = ref(false)
 
@@ -811,6 +994,19 @@ const galleryLightboxOpen = ref(false)
 const galleryLightboxItems = ref<ProfileLightboxItem[]>([])
 const galleryLightboxStart = ref(0)
 const galleryLightboxLoading = ref(false)
+
+const publishedCoverMediaId = computed(() => profile.value?.public_cover_media_id ?? null)
+
+const pendingCoverMediaId = computed(() => {
+  const p = profile.value
+  if (!p?.cover_media_id) {
+    return null
+  }
+  if (p.public_cover_media_id === p.cover_media_id) {
+    return null
+  }
+  return p.cover_media_id
+})
 
 const publishedAvatarMediaId = computed(() => profile.value?.public_portal_avatar_media_id ?? null)
 
@@ -928,6 +1124,37 @@ const publicProfileFullUrl = computed(() => {
   }
   const origin = import.meta.client ? window.location.origin : requestUrl.origin
   return `${origin}${publicProfilePath.value}`
+})
+
+const pendingPublicProfileFullUrl = computed(() => {
+  const slug = profile.value?.public_slug_preview_from_pending_name
+  if (!slug) {
+    return '—'
+  }
+  const path = buildPublicProfilePath(slug, profile.value?.service_type)
+  const origin = import.meta.client ? window.location.origin : requestUrl.origin
+  return `${origin}${path}`
+})
+
+const galleryUploadCap = computed(() => Math.max(1, Number(profile.value?.gallery_upload_cap ?? 10)))
+const galleryOrderedMax = computed(() => Math.max(1, Number(profile.value?.gallery_ordered_max ?? 100)))
+const galleryPublicBasicCap = computed(() => Math.max(1, Number(profile.value?.gallery_public_basic_cap ?? 10)))
+const galleryDestaqueActive = computed(() => profile.value?.gallery_destaque_time_active === true)
+const galleryCanAddMore = computed(() => galleryOrder.value.length < galleryUploadCap.value)
+const galleryPublicSliceNotice = computed((): string => {
+  const p = profile.value
+  if (!p || galleryDestaqueActive.value) {
+    return ''
+  }
+  const total = galleryOrder.value.length
+  if (total <= galleryPublicBasicCap.value) {
+    return ''
+  }
+  const order = p.public_gallery_display_order
+  const shown =
+    Array.isArray(order) && order.length > 0 ? order.length : Math.min(total, galleryPublicBasicCap.value)
+
+  return `No perfil público, visitantes veem ${shown} de ${total} itens (vídeos primeiro, depois fotos). Use as setas para escolher o que fica entre os primeiros.`
 })
 
 async function copyPublicProfileLink() {
@@ -1199,7 +1426,9 @@ async function refreshProfile() {
   audioPlayerUrl.value = ''
   audioPlayerForId.value = null
   profile.value = p
-  formProfessionalName.value = (p.professional_name ?? '').trim()
+  const pendingName = (p.professional_name_pending ?? '').trim()
+  formProfessionalName.value = pendingName !== '' ? pendingName : (p.professional_name ?? '').trim()
+  formBio.value = p.bio_pending != null ? String(p.bio_pending) : (p.bio ?? '')
   formStateId.value = p.state_id ? String(p.state_id) : ''
   formHasVenue.value = p.has_venue !== false
   formNeighborhood.value = p.has_venue === false ? '' : (p.neighborhood ?? '')
@@ -1243,22 +1472,26 @@ async function onStateChange() {
   cities.value = await request<ApiCity[]>(`/v1/states/${formStateId.value}/cities`)
 }
 
-async function saveProfessionalName() {
-  savingName.value = true
+async function savePortalTextPresentation() {
+  savingPortalText.value = true
   err.value = false
   msg.value = ''
   try {
     await request('/v1/me/profile/portal', {
       method: 'PATCH',
-      body: { professional_name: formProfessionalName.value.trim() },
+      body: {
+        professional_name: formProfessionalName.value.trim(),
+        bio: formBio.value,
+      },
     })
-    msg.value = 'Nome atualizado. O link público foi ajustado pela plataforma.'
+    msg.value =
+      'Pedido enviado. Quando a equipe aprovar, nome, biografia e link público passam a valer no site.'
     await refreshProfile()
   } catch (e) {
     err.value = true
     msg.value = apiErr(e)
   } finally {
-    savingName.value = false
+    savingPortalText.value = false
   }
 }
 
@@ -1356,14 +1589,15 @@ async function applyGalleryOrder() {
   }
 }
 
-async function onSingleMediaPick(e: Event, purpose: 'portal_avatar' | 'audio') {
+async function onSingleMediaPick(e: Event, purpose: 'portal_avatar' | 'audio' | 'cover') {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   input.value = ''
   if (!file) {
     return
   }
-  const uploadingRef = purpose === 'portal_avatar' ? uploadingAvatar : uploadingAudio
+  const uploadingRef =
+    purpose === 'portal_avatar' ? uploadingAvatar : purpose === 'audio' ? uploadingAudio : uploadingCover
   uploadingRef.value = true
   err.value = false
   msg.value = ''
@@ -1382,7 +1616,7 @@ async function onSingleMediaPick(e: Event, purpose: 'portal_avatar' | 'audio') {
   }
 }
 
-async function removeSingleMedia(_purpose: 'portal_avatar' | 'audio', mediaId: number) {
+async function removeSingleMedia(_purpose: 'portal_avatar' | 'audio' | 'cover', mediaId: number) {
   const ok = await swalConfirm({
     title: 'Remover este arquivo?',
     text: 'O arquivo será apagado do seu perfil.',
@@ -1450,11 +1684,6 @@ async function removeGallery(id: number) {
   msg.value = ''
   try {
     await request(`/v1/me/media/${id}`, { method: 'DELETE' })
-    galleryOrder.value = galleryOrder.value.filter((x) => x !== id)
-    await request('/v1/me/profile/portal', {
-      method: 'PATCH',
-      body: { gallery_media_ids: galleryOrder.value },
-    })
     msg.value = 'Item removido.'
     await refreshProfile()
   } catch (e) {

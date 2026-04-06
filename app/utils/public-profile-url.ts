@@ -1,6 +1,6 @@
 /**
  * Segmento de URL pública: /acompanhante/:slug ou /massagista/:slug
- * Aceita valores da API (companion, masseuse) ou do mock (acompanhante, massagista).
+ * Aceita valores da API (companion, masseuse) ou segmentos de URL (acompanhante, massagista).
  */
 export function publicProfilePathSegment(
   serviceType: string | null | undefined,
