@@ -12,8 +12,10 @@ definePageMeta({
   path: '/anunciar',
 })
 
-useHead({
-  title: 'Cadastro de anunciante',
+usePublicPageSeo({
+  title: 'Anunciar',
+  description: 'Redirecionamento para o cadastro de anunciante no Prazer.Vip.',
+  robots: 'noindex, follow',
 })
 
 await navigateTo('/cadastro', { replace: true })

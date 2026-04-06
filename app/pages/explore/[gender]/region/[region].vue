@@ -95,4 +95,18 @@ const regionTitle = computed(() => regionPayload.value?.region.name ?? '')
 const states = computed(() => regionPayload.value?.states ?? [])
 
 const totalProfiles = computed(() => states.value.reduce((acc, s) => acc + s.totalProfiles, 0))
+
+usePublicPageSeo({
+  title: computed(() =>
+    genderOk.value && regionOk.value && regionTitle.value
+      ? `${genderTitle.value} — ${regionTitle.value}`
+      : 'Explorar',
+  ),
+  description: computed(() => {
+    if (!genderOk.value || !regionOk.value) {
+      return 'Região no Prazer.Vip.'
+    }
+    return `Estados da região ${regionTitle.value}: explore perfis ${genderTitle.value.toLowerCase()} por UF.`
+  }),
+})
 </script>

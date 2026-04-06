@@ -115,8 +115,10 @@ definePageMeta({
   path: '/politica-de-privacidade',
 })
 
-useHead({
+usePublicPageSeo({
   title: 'Política de privacidade',
+  description:
+    'Como o Prazer.Vip trata dados pessoais, cookies e pedidos dos utilizadores. Política de privacidade atualizada.',
 })
 
 const updated = '31 de março de 2026'

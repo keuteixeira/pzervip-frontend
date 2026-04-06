@@ -901,8 +901,10 @@ definePageMeta({
   path: '/cadastro',
 })
 
-useHead({
+usePublicPageSeo({
   title: 'Cadastro de anunciante',
+  description:
+    'Finalize o cadastro como anunciante no Prazer.Vip: dados, mídias, plano e pagamento via PIX quando aplicável.',
 })
 
 const totalSteps = 7
@@ -1100,6 +1102,7 @@ if (import.meta.hot) {
 }
 
 const { token, request } = useApi()
+const { registrationPixGenerated, registrationPixPaid } = usePrazervipAnalytics()
 const { register, resumeDraftRegistration, fetchMe, user, deleteDraftRegistration, setPassword } =
   useAuth()
 const hasToken = computed(() => !!token.value)
@@ -1609,7 +1612,18 @@ const pixBrCode = ref('')
 const pixAmount = ref(0)
 const qrDataUrl = ref('')
 const pixCopyMsg = ref<string | null>(null)
+const pixOrderUuidRef = ref<string | null>(null)
+let pixPaidAnalyticsSent = false
 let paymentPollTimer: ReturnType<typeof setInterval> | null = null
+
+function notifyRegistrationPixPaid() {
+  const id = pixOrderUuidRef.value
+  if (!id || pixPaidAnalyticsSent) {
+    return
+  }
+  pixPaidAnalyticsSent = true
+  registrationPixPaid({ transaction_id: id, value: pixAmount.value })
+}
 
 watch(
   () => step.value,
@@ -2762,6 +2776,7 @@ function startPaymentPolling() {
         stopPaymentPolling()
         pixPaid.value = true
         pixCopyMsg.value = null
+        notifyRegistrationPixPaid()
         await fetchMe()
       }
     } catch {
@@ -2797,6 +2812,7 @@ async function mockConfirmPix() {
     if (st.status === 'paid') {
       stopPaymentPolling()
       pixPaid.value = true
+      notifyRegistrationPixPaid()
       await fetchMe()
     }
   } catch (e: unknown) {
@@ -2886,6 +2902,13 @@ async function submitFinal() {
     pixMock.value = Boolean(pix.mock)
     pixBrCode.value = pix.br_code
     pixAmount.value = Number(pix.amount_brl)
+    pixOrderUuidRef.value = pix.order_uuid
+    pixPaidAnalyticsSent = false
+    registrationPixGenerated({
+      transaction_id: pix.order_uuid,
+      value: Number(pix.amount_brl),
+      mock: Boolean(pix.mock),
+    })
     qrDataUrl.value = ''
     pixCopyMsg.value = null
     pixModalOpen.value = true

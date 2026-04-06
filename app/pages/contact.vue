@@ -107,8 +107,10 @@ definePageMeta({
   path: '/contato',
 })
 
-useHead({
+usePublicPageSeo({
   title: 'Contato',
+  description:
+    'Fale com o Prazer.Vip: denúncias, dúvidas, sugestões e suporte técnico. Formulário oficial de contacto.',
 })
 
 const { request } = useApi()

@@ -214,9 +214,14 @@ const regions = computed((): RegionItem[] => {
 
 const totalProfiles = computed(() => summaryData.value?.totalProfiles ?? 0)
 
-useHead({
+usePublicPageSeo({
   title: computed(() =>
     genderOk.value ? `${genderTitle.value} — Escolha sua cidade` : 'Explorar',
+  ),
+  description: computed(() =>
+    genderOk.value
+      ? `Explore anúncios de ${genderPhrase.value} por cidade e região no Prazer.Vip. Perfis por localização.`
+      : 'Explorar categorias no Prazer.Vip.',
   ),
 })
 </script>

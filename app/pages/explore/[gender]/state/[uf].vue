@@ -125,4 +125,25 @@ const state = computed((): StateItem | null => {
     })),
   }
 })
+
+usePublicPageSeo({
+  title: computed(() => {
+    if (!genderOk.value) {
+      return 'Explorar'
+    }
+    const s = state.value
+    if (!s) {
+      return `${genderTitle.value} — Estado`
+    }
+    return `${genderTitle.value} em ${s.name} (${s.uf}) — cidades`
+  }),
+  description: computed(() => {
+    const s = state.value
+    const g = genderTitle.value
+    if (!s) {
+      return `Cidades e perfis ${g} no Prazer.Vip.`
+    }
+    return `Lista de cidades em ${s.name} (${s.uf}) com perfis ${g.toLowerCase()} no Prazer.Vip.`
+  }),
+})
 </script>

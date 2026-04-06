@@ -91,7 +91,9 @@ definePageMeta({
   path: '/sobre-nos',
 })
 
-useHead({
+usePublicPageSeo({
   title: 'Sobre nós',
+  description:
+    'Prazer.Vip é um diretório de classificados para adultos no Brasil: listagens por cidade, regras de publicação e perfis verificados quando aplicável.',
 })
 </script>

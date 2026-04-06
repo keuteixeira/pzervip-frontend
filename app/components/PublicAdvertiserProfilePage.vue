@@ -597,6 +597,37 @@ function labelForKind(k: LightboxItem['kind']) {
 
 const backLink = computed(() => `/explorar/${vm.value?.exploreGenderSlug ?? 'mulheres'}`)
 
+function truncateForMeta(s: string, max: number): string {
+  const t = s.replace(/\s+/g, ' ').trim()
+  if (t.length <= max) {
+    return t
+  }
+  return `${t.slice(0, max - 1).trim()}…`
+}
+
+usePublicPageSeo({
+  title: computed(() => {
+    const v = vm.value
+    if (!v) {
+      return 'Perfil'
+    }
+    return `${v.displayName} · ${v.serviceLabel}`
+  }),
+  description: computed(() => {
+    const v = vm.value
+    if (!v) {
+      return 'Perfil público no Prazer.Vip.'
+    }
+    const loc = [v.neighborhood, v.cityName, v.stateUf].filter(Boolean).join(' · ')
+    const tail = loc ? ` Local: ${loc}.` : ''
+    if (v.about) {
+      return truncateForMeta(`${v.displayName} — ${v.serviceLabel}. ${v.about}${tail}`, 160)
+    }
+    return truncateForMeta(`${v.displayName} — ${v.serviceLabel} no Prazer.Vip.${tail}`, 160)
+  }),
+  image: computed(() => vm.value?.bannerUrl || vm.value?.avatarUrl),
+})
+
 const whatsappUrl = computed(() => {
   const p = vm.value
   if (!p?.phoneDigits) {
@@ -667,7 +698,4 @@ async function submitAdvertiserReply(parentId: number) {
   }
 }
 
-useHead({
-  title: computed(() => vm.value?.displayName ?? 'Perfil'),
-})
 </script>

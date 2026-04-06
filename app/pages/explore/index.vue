@@ -42,8 +42,10 @@ definePageMeta({
   path: '/explorar',
 })
 
-useHead({
+usePublicPageSeo({
   title: 'Explorar',
+  description:
+    'Encontre perfis por cidade: homens, mulheres e trans. Diretório para maiores de 18 anos no Brasil.',
 })
 
 const categories = [

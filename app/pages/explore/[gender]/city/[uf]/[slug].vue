@@ -224,12 +224,19 @@ const restList = computed(() =>
 )
 const totalFiltered = computed(() => filteredProfiles.value.length)
 
-useHead({
+usePublicPageSeo({
   title: computed(() => {
     if (!ctx.value) {
       return 'Cidade'
     }
     return `${genderTitle.value} em ${ctx.value.city.name}`
+  }),
+  description: computed(() => {
+    if (!ctx.value) {
+      return 'Perfis por cidade no Prazer.Vip.'
+    }
+    const n = totalFiltered.value
+    return `${n} ${n === 1 ? 'perfil' : 'perfis'} de ${genderTitle.value.toLowerCase()} em ${ctx.value.city.name}. Filtros por tipo de atendimento.`
   }),
 })
 </script>

@@ -14,6 +14,12 @@ const route = useRoute()
 const config = useRuntimeConfig()
 const slug = computed(() => String(route.params.slug ?? ''))
 
+usePublicPageSeo({
+  title: 'Redirecionamento',
+  description: 'URL legada de perfil; a redirecionar para o anúncio público.',
+  robots: 'noindex, follow',
+})
+
 const { data: apiJson, pending } = await useAsyncData(
   () => `legacy-perfil-redirect-${slug.value}`,
   async () => {

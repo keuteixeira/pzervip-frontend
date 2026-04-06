@@ -27,8 +27,10 @@ definePageMeta({
   layout: 'default',
 })
 
-useHead({
+usePublicPageSeo({
   title: 'Verificação de idade',
+  description:
+    'Confirme que tem idade legal para aceder ao Prazer.Vip — diretório de classificados para adultos no Brasil.',
 })
 
 const { confirmAge } = useAgeGate()
