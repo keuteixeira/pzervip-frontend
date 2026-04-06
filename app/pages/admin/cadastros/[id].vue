@@ -119,10 +119,6 @@
               <input v-model="editAddr.zipcode" type="text" class="admin-input" />
             </label>
             <label class="block text-sm text-zinc-300">
-              <span class="mb-1 block text-zinc-500">Complemento</span>
-              <input v-model="editAddr.complement" type="text" class="admin-input" />
-            </label>
-            <label class="block text-sm text-zinc-300">
               <span class="mb-1 block text-zinc-500">Bairro (endereço)</span>
               <input v-model="editAddr.neighborhood" type="text" class="admin-input" />
             </label>
@@ -741,7 +737,6 @@ const edit = reactive({
 const editAddr = reactive({
   street: '',
   number: '',
-  complement: '',
   neighborhood: '',
   city: '',
   state_uf: '',
@@ -792,7 +787,6 @@ function syncFormFromDetail() {
   if (a && typeof a === 'object') {
     editAddr.street = a.street ?? ''
     editAddr.number = a.number ?? ''
-    editAddr.complement = a.complement ?? ''
     editAddr.neighborhood = a.neighborhood ?? ''
     editAddr.city = a.city ?? ''
     editAddr.state_uf = a.state_uf ?? ''
@@ -800,7 +794,6 @@ function syncFormFromDetail() {
   } else {
     editAddr.street = ''
     editAddr.number = ''
-    editAddr.complement = ''
     editAddr.neighborhood = ''
     editAddr.city = ''
     editAddr.state_uf = ''
@@ -849,7 +842,6 @@ function buildAddressPayload(): AddressJson | null {
     zipcode: editAddr.zipcode.trim() || undefined,
     street: editAddr.street.trim() || undefined,
     number: editAddr.number.trim() || undefined,
-    complement: editAddr.complement.trim() || undefined,
     neighborhood: editAddr.neighborhood.trim() || undefined,
     city: editAddr.city.trim() || undefined,
     state_uf: editAddr.state_uf.trim().toUpperCase() || undefined,

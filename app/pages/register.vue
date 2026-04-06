@@ -299,7 +299,6 @@
           <input v-model="draft.address.street" type="text" placeholder="Rua *" class="input" />
         </div>
         <input v-model="draft.address.number" type="text" placeholder="Número *" class="input" />
-        <input v-model="draft.address.complement" type="text" placeholder="Complemento" class="input" />
         <input v-model="draft.address.neighborhood" type="text" placeholder="Bairro *" class="input sm:col-span-2" />
       </div>
 
@@ -1146,7 +1145,6 @@ const draft = reactive({
     zipcode: '',
     street: '',
     number: '',
-    complement: '',
     neighborhood: '',
     city: '',
     state_uf: '',
@@ -2027,13 +2025,12 @@ async function fetchViaCep() {
   cepLoading.value = true
   try {
     const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
-    const data = (await res.json()) as { erro?: boolean; logradouro?: string; complemento?: string; bairro?: string; localidade?: string; uf?: string }
+    const data = (await res.json()) as { erro?: boolean; logradouro?: string; bairro?: string; localidade?: string; uf?: string }
     if (data.erro) {
       cepError.value = 'CEP não encontrado.'
       return
     }
     draft.address.street = data.logradouro || draft.address.street
-    draft.address.complement = data.complemento || ''
     draft.address.neighborhood = data.bairro || ''
     draft.address.city = data.localidade || ''
     draft.address.state_uf = data.uf || ''
@@ -2052,12 +2049,13 @@ onMounted(async () => {
 
   await fetchMe()
 
-  if (
-    tabActive &&
+  /** Retomar rascunho sempre que houver sessão de anunciante inativo — não só com marca na tab (senão o e-mail OTP não reenvia ao voltar). */
+  const cadastroResumePending =
     token.value &&
     user.value?.role === 'advertiser' &&
     user.value.account_status !== 'active'
-  ) {
+
+  if (cadastroResumePending) {
     resumingCadastroSession.value = true
     try {
       await loadProfileIntoWizard()
@@ -2303,7 +2301,6 @@ function hydrateFromProfile(p: Record<string, unknown>) {
     }
     draft.address.street = o.street ?? ''
     draft.address.number = o.number ?? ''
-    draft.address.complement = o.complement ?? ''
     draft.address.neighborhood = o.neighborhood ?? o.bairro ?? ''
     draft.address.city = o.city ?? o.localidade ?? ''
     draft.address.state_uf = o.state_uf ?? o.uf ?? ''
@@ -2349,7 +2346,8 @@ async function loadProfileIntoWizard(): Promise<boolean> {
     if (!p.registration_email_verified_at) {
       step.value = 1
       emailOtpDigits.value = [...emptyOtpDigits()]
-      await sendRegistrationEmailCode(true)
+      /** Não silenciar: cooldown / falha de envio deve aparecer na UI; manageBusy false para não bloquear o ecrã de carregamento do rascunho. */
+      await sendRegistrationEmailCode(false, { manageBusy: false })
       return true
     }
     let s = Math.min(Math.max(Number(p.current_step) || 1, 1), totalSteps)
@@ -2390,7 +2388,6 @@ function bodyFromDraft() {
       zipcode: zipDigits || null,
       street: draft.address.street,
       number: draft.address.number,
-      complement: draft.address.complement || null,
       neighborhood: draft.address.neighborhood,
       city: draft.address.city,
       state_uf: draft.address.state_uf,

@@ -6,6 +6,8 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   app: {
     head: {
+      /** Substitui o viewport padrão do Nuxt; maximum-scale=1 evita zoom por gesto (impacta acessibilidade). */
+      viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
       title: 'Prazer.Vip',
       titleTemplate: (titleChunk?: string | null) =>
         titleChunk ? `${titleChunk} · Prazer.Vip` : 'Prazer.Vip',

@@ -721,7 +721,6 @@ function formatDateTime(iso: string | null | undefined) {
 function formatAddress(a: AddressJson) {
   const parts = [
     a.street && a.number ? `${a.street}, ${a.number}` : a.street,
-    a.complement,
     a.neighborhood,
     a.city && a.state_uf ? `${a.city} · ${a.state_uf}` : a.city || a.state_uf,
     a.zipcode ? `CEP ${a.zipcode}` : '',
