@@ -247,6 +247,105 @@
           </button>
         </section>
 
+        <!-- WhatsApp do anúncio -->
+        <section v-show="activeSection === 'whatsapp'" class="profile-panel space-y-4">
+          <div>
+            <h2 class="text-lg font-semibold text-white">WhatsApp do anúncio</h2>
+            <p class="mt-2 text-sm leading-relaxed text-zinc-400">
+              Número exibido no perfil público para visitantes entrarem em contacto. Para alterar, confirme o código de 6
+              dígitos que enviamos ao <strong class="text-zinc-300">novo</strong> número (mesmo fluxo do cadastro).
+            </p>
+          </div>
+          <div class="rounded-xl border border-zinc-800 bg-zinc-950/50 px-4 py-3">
+            <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Número atual</p>
+            <p class="mt-1 font-mono text-lg text-white">
+              {{ profileWhatsappDisplay }}
+            </p>
+          </div>
+          <p
+            v-if="waFeedback"
+            class="rounded-lg border px-3 py-2 text-sm"
+            :class="
+              waFeedbackErr ? 'border-red-900/50 bg-red-950/30 text-red-200' : 'border-emerald-900/40 bg-emerald-950/25 text-emerald-100/90'
+            "
+          >
+            {{ waFeedback }}
+          </p>
+          <button
+            type="button"
+            class="rounded-xl border border-zinc-600 bg-zinc-900/60 px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-brand/50 hover:bg-zinc-900"
+            @click="toggleWaChangePanel"
+          >
+            {{ waChangeOpen ? 'Fechar' : 'Trocar número' }}
+          </button>
+          <div v-if="waChangeOpen" class="space-y-4 border-t border-zinc-800 pt-4">
+            <template v-if="!waAwaitingOtp">
+              <label class="form-label" for="wa-new">Novo WhatsApp (com DDD)</label>
+              <input
+                id="wa-new"
+                :value="waNewPhone"
+                type="text"
+                inputmode="tel"
+                autocomplete="tel"
+                maxlength="15"
+                class="form-input mt-2 max-w-md font-mono"
+                placeholder="(11) 98765-4321"
+                @input="onWaNewInput"
+              />
+              <button
+                type="button"
+                class="mt-5 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand/20 transition hover:opacity-90 disabled:opacity-45"
+                :disabled="waBusy || phoneDigits(waNewPhone).length < 10 || waResendSecondsLeft > 0"
+                @click="waSendOtp"
+              >
+                {{ waBusy ? 'A enviar…' : 'Enviar código por WhatsApp' }}
+              </button>
+              <p v-if="waResendSecondsLeft > 0" class="text-sm text-zinc-500">
+                Pode pedir novo código em {{ waResendSecondsLeft }}s
+              </p>
+            </template>
+            <template v-else>
+              <p class="text-sm text-zinc-400">
+                Código enviado para
+                <strong class="text-emerald-200/95">{{ formatPhoneBrMask(phoneDigits(waNewPhone)) }}</strong>
+              </p>
+              <label class="form-label" for="wa-otp">Código de 6 dígitos</label>
+              <input
+                id="wa-otp"
+                :value="waOtpDigits"
+                type="text"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="one-time-code"
+                class="form-input mt-2 max-w-xs font-mono text-xl tracking-[0.35em]"
+                placeholder="000000"
+                @input="onWaOtpInput"
+              />
+              <div class="mt-5 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  class="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand/20 transition hover:opacity-90 disabled:opacity-45"
+                  :disabled="waBusy || waOtpDigits.length !== 6"
+                  @click="waVerifyOtp"
+                >
+                  {{ waBusy ? 'A confirmar…' : 'Confirmar novo número' }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-xl border border-zinc-600 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 disabled:opacity-45"
+                  :disabled="waBusy || waResendSecondsLeft > 0 || phoneDigits(waNewPhone).length < 10"
+                  @click="waSendOtp"
+                >
+                  Reenviar código
+                </button>
+                <span v-if="waResendSecondsLeft > 0" class="text-sm text-zinc-500">
+                  Reenvio em {{ waResendSecondsLeft }}s
+                </span>
+              </div>
+            </template>
+          </div>
+        </section>
+
         <!-- Redes -->
         <section v-show="activeSection === 'redes'" class="profile-panel space-y-4">
           <div>
@@ -855,6 +954,8 @@
 
 <script setup lang="ts">
 import { useSwal } from '~/composables/useSwal'
+import { formatPhoneBrMask, phoneDigits } from '~/utils/brFormat'
+import { extractLaravelErrorMessage } from '~/utils/laravelApiErrors'
 import { buildPublicProfilePath } from '~/utils/public-profile-url'
 
 definePageMeta({
@@ -869,7 +970,7 @@ useHead({
 type ApiState = { id: number; name: string; uf: string }
 type ApiCity = { id: number; name: string }
 
-type SectionId = 'dados' | 'perfil' | 'local' | 'redes' | 'midias'
+type SectionId = 'dados' | 'perfil' | 'local' | 'whatsapp' | 'redes' | 'midias'
 
 type MediaMod = {
   id: number
@@ -930,6 +1031,8 @@ type Profile = {
   city_change_locked_until?: string | null
   portal_field_cooldown_hours?: number
   social_links?: SocialLinksPayload | null
+  /** Dígitos (ex.: 5511999999999) — número público do anúncio */
+  whatsapp?: string | null
 }
 
 const route = useRoute()
@@ -978,6 +1081,133 @@ const formSocial = ref({
   privacy: '',
 })
 const savingSocial = ref(false)
+
+const waChangeOpen = ref(false)
+const waNewPhone = ref('')
+const waAwaitingOtp = ref(false)
+const waOtpDigits = ref('')
+const waBusy = ref(false)
+const waFeedback = ref('')
+const waFeedbackErr = ref(false)
+const waResendUntil = ref<number | null>(null)
+const waResendSecondsLeft = ref(0)
+let waResendInterval: ReturnType<typeof setInterval> | null = null
+
+const profileWhatsappDisplay = computed(() => {
+  const digits = String(profile.value?.whatsapp ?? '').replace(/\D/g, '')
+  if (digits.length < 10) {
+    return '—'
+  }
+  return formatPhoneBrMask(digits)
+})
+
+function syncWaResendCountdown() {
+  const now = Math.floor(Date.now() / 1000)
+  waResendSecondsLeft.value =
+    waResendUntil.value == null ? 0 : Math.max(0, waResendUntil.value - now)
+}
+
+function startWaResendTicker() {
+  stopWaResendTicker()
+  syncWaResendCountdown()
+  waResendInterval = setInterval(syncWaResendCountdown, 1000)
+}
+
+function stopWaResendTicker() {
+  if (waResendInterval != null) {
+    clearInterval(waResendInterval)
+    waResendInterval = null
+  }
+}
+
+function resetWaChangeFlow() {
+  waAwaitingOtp.value = false
+  waNewPhone.value = ''
+  waOtpDigits.value = ''
+  waResendUntil.value = null
+  waResendSecondsLeft.value = 0
+  stopWaResendTicker()
+}
+
+function toggleWaChangePanel() {
+  waChangeOpen.value = !waChangeOpen.value
+  waFeedback.value = ''
+  if (!waChangeOpen.value) {
+    resetWaChangeFlow()
+  }
+}
+
+function onWaNewInput(e: Event) {
+  const el = e.target as HTMLInputElement
+  waNewPhone.value = formatPhoneBrMask(el.value)
+}
+
+function onWaOtpInput(e: Event) {
+  const el = e.target as HTMLInputElement
+  waOtpDigits.value = el.value.replace(/\D/g, '').slice(0, 6)
+}
+
+async function waSendOtp() {
+  const wa = phoneDigits(waNewPhone.value)
+  if (wa.length < 10) {
+    waFeedbackErr.value = true
+    waFeedback.value = 'Informe o novo número com DDD.'
+    return
+  }
+  waBusy.value = true
+  waFeedback.value = ''
+  waFeedbackErr.value = false
+  try {
+    const r = await request<{
+      sent?: boolean
+      can_resend_after?: number | null
+    }>('/v1/me/profile/whatsapp-change/send-code', {
+      method: 'POST',
+      body: { whatsapp: wa },
+    })
+    if (r.sent) {
+      waAwaitingOtp.value = true
+      waNewPhone.value = formatPhoneBrMask(wa)
+      waFeedbackErr.value = false
+      waFeedback.value = 'Código enviado. Verifique o WhatsApp do novo número.'
+    }
+    if (typeof r.can_resend_after === 'number') {
+      waResendUntil.value = r.can_resend_after
+      startWaResendTicker()
+    }
+  } catch (e: unknown) {
+    waFeedbackErr.value = true
+    waFeedback.value =
+      extractLaravelErrorMessage(e, ['whatsapp', 'cooldown']) ?? 'Não foi possível enviar o código.'
+  } finally {
+    waBusy.value = false
+  }
+}
+
+async function waVerifyOtp() {
+  const code = waOtpDigits.value.replace(/\D/g, '')
+  if (code.length !== 6) {
+    return
+  }
+  waBusy.value = true
+  waFeedback.value = ''
+  try {
+    await request('/v1/me/profile/whatsapp-change/verify-code', {
+      method: 'POST',
+      body: { code },
+    })
+    waFeedbackErr.value = false
+    waFeedback.value = 'WhatsApp atualizado com sucesso.'
+    waChangeOpen.value = false
+    resetWaChangeFlow()
+    await refreshProfile()
+  } catch (e: unknown) {
+    waFeedbackErr.value = true
+    waFeedback.value = extractLaravelErrorMessage(e, ['code']) ?? 'Código inválido ou expirado.'
+  } finally {
+    waBusy.value = false
+  }
+}
 
 const imagePreviewUrls = ref<Record<number, string>>({})
 const audioPlayerUrl = ref('')
@@ -1046,8 +1276,9 @@ const navItems = computed(() => {
   ]
   if (profile.value?.approval_status === 'approved') {
     items.push(
-      { id: 'perfil', label: 'Nome e link', icon: '✨' },
+      { id: 'perfil', label: 'Nome profissional e link', icon: '✨' },
       { id: 'local', label: 'Local', icon: '📍' },
+      { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
       { id: 'redes', label: 'Redes sociais', icon: '🔗' },
       { id: 'midias', label: 'Mídias', icon: '🖼' },
     )
@@ -1057,7 +1288,7 @@ const navItems = computed(() => {
 
 function normalizeSectionQuery(raw: unknown): SectionId | null {
   const s = typeof raw === 'string' ? raw : ''
-  const allowed: SectionId[] = ['dados', 'perfil', 'local', 'redes', 'midias']
+  const allowed: SectionId[] = ['dados', 'perfil', 'local', 'whatsapp', 'redes', 'midias']
   return allowed.includes(s as SectionId) ? (s as SectionId) : null
 }
 
@@ -1462,6 +1693,10 @@ async function load() {
 }
 
 onMounted(() => load())
+
+onUnmounted(() => {
+  stopWaResendTicker()
+})
 
 async function onStateChange() {
   formCityId.value = ''

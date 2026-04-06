@@ -278,8 +278,9 @@ const profileLocationLoading = ref(false)
 
 const profileSectionLinks = [
   { secao: 'dados', label: 'Dados pessoais' },
-  { secao: 'perfil', label: 'Nome e link' },
+  { secao: 'perfil', label: 'Nome profissional e link' },
   { secao: 'local', label: 'Local' },
+  { secao: 'whatsapp', label: 'WhatsApp do anúncio' },
   { secao: 'redes', label: 'Redes' },
   { secao: 'midias', label: 'Mídias' },
 ] as const
