@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto max-w-4xl space-y-6 pb-16">
+  <div class="w-full space-y-6 pb-16">
     <div>
       <NuxtLink to="/conta/suporte" class="text-sm text-zinc-500 hover:text-brand">← Voltar aos chamados</NuxtLink>
       <h1 class="mt-2 text-2xl font-bold text-white">{{ ticket?.title || 'Chamado' }}</h1>

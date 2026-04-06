@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto max-w-2xl space-y-10 pb-16">
+  <div class="w-full space-y-10 pb-16">
     <div>
       <NuxtLink to="/conta" class="text-sm text-zinc-500 transition hover:text-brand hover:underline">
         ← Minha conta

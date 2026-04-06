@@ -1,9 +1,9 @@
 <template>
-  <div class="mx-auto max-w-3xl space-y-8 pb-20">
+  <div class="w-full space-y-8 pb-20">
     <div>
       <NuxtLink to="/conta" class="text-sm text-zinc-500 transition hover:text-brand">← Minha conta</NuxtLink>
       <h1 class="mt-4 text-2xl font-bold tracking-tight text-white md:text-3xl">Editar seu perfil</h1>
-      <p class="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">
+      <p class="mt-2 max-w-4xl text-sm leading-relaxed text-zinc-400">
         Os dados pessoais do cadastro não podem ser alterados aqui. Use as seções abaixo para nome público, local,
         redes e mídias.
       </p>
@@ -357,7 +357,7 @@
               >).
             </p>
           </div>
-          <div class="space-y-4">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label class="form-label" for="soc-ig">Instagram</label>
               <div

@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto max-w-5xl space-y-6 pb-16">
+  <div class="w-full space-y-6 pb-16">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
         <NuxtLink to="/conta" class="text-sm text-zinc-500 hover:text-brand">← Minha conta</NuxtLink>

@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto max-w-2xl space-y-10 pb-16">
+  <div class="w-full space-y-10 pb-16">
     <div>
       <h1 class="text-2xl font-bold text-white">Minha conta</h1>
       <p class="mt-1 text-sm text-zinc-400">
