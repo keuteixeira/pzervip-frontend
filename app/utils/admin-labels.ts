@@ -77,12 +77,18 @@ export function adminMediaModerationStatusLabel(status?: string | null): string 
   return status?.trim() || '—'
 }
 
-export function adminAccountStatusLabel(status?: string | null): string {
+/** Estado da conta do usuário (valores da API: `pending_activation`, `active`, `suspended`). */
+export function accountStatusLabel(status?: string | null): string {
   const k = normKey(status)
-  if (k === 'pending_activation') return 'Pendente ativação'
+  if (k === 'pending_activation') return 'Pendente de ativação'
   if (k === 'active') return 'Ativa'
   if (k === 'suspended') return 'Suspensa'
   return status?.trim() || '—'
+}
+
+/** Alias para telas admin — mesmo texto que na área do anunciante. */
+export function adminAccountStatusLabel(status?: string | null): string {
+  return accountStatusLabel(status)
 }
 
 export function adminProfileTypeLabel(type?: string | null): string {

@@ -3,7 +3,7 @@
     <div>
       <h1 class="text-2xl font-bold text-white">Minha conta</h1>
       <p class="mt-1 text-sm text-zinc-400">
-        Dados, privacidade e exclusão de conta (conforme LGPD).
+        Resumo do perfil, visibilidade do anúncio e atalhos. Senha e exclusão de conta ficam em Segurança.
       </p>
     </div>
 
@@ -19,7 +19,7 @@
           <span class="mx-2 text-zinc-600">·</span>
           {{ user.email }}
           <span v-if="user.account_status" class="ml-2 rounded-full bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
-            {{ user.account_status }}
+            {{ accountStatusLabel(user.account_status) }}
           </span>
         </p>
         <div class="mt-4 flex flex-wrap gap-4">
@@ -29,6 +29,12 @@
             class="rounded-lg border border-brand/50 bg-brand/10 px-4 py-2 text-sm font-medium text-brand transition hover:bg-brand/20"
           >
             Editar perfil
+          </NuxtLink>
+          <NuxtLink
+            to="/conta/seguranca"
+            class="rounded-lg border border-violet-700/50 bg-violet-950/30 px-4 py-2 text-sm font-medium text-violet-200/95 transition hover:bg-violet-950/50"
+          >
+            Segurança
           </NuxtLink>
           <NuxtLink
             to="/conta/suporte"
@@ -217,72 +223,13 @@
           {{ availableNowMsg }}
         </p>
       </section>
-
-      <section v-if="deletionStatus" class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
-        <h2 class="text-lg font-semibold text-white">Privacidade e exclusão</h2>
-        <p class="mt-2 text-sm leading-relaxed text-zinc-400">
-          <template v-if="deletionStatus.deletion_requested_at">
-            Exclusão solicitada em
-            <span class="text-zinc-300">{{ formatDate(deletionStatus.deletion_requested_at) }}</span>.
-            Remoção efetiva prevista até
-            <span class="font-medium text-amber-200/90">{{ formatDate(deletionStatus.deletion_grace_ends_at) }}</span>.
-          </template>
-          <template v-else-if="deletionStatus.can_delete_immediately">
-            Seu perfil ainda não foi aprovado. Você pode excluir a conta agora; seus dados serão removidos
-            (registro mantido de forma anonimizada para auditoria).
-          </template>
-          <template v-else-if="deletionStatus.can_request_scheduled_deletion">
-            Seu perfil já foi aprovado. Caso solicite a exclusão o mesmo acontecerá em até 30 dias do solicitado, nesse período é possível desistir da exclusão.
-          </template>
-        </p>
-
-        <div class="mt-6 flex flex-wrap gap-3">
-          <button
-            v-if="deletionStatus.can_delete_immediately && !deletionStatus.deletion_requested_at"
-            type="button"
-            class="rounded-lg bg-red-600/90 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600"
-            :disabled="actionLoading"
-            @click="onImmediateDelete"
-          >
-            Excluir conta e dados agora
-          </button>
-          <button
-            v-if="deletionStatus.can_request_scheduled_deletion && !deletionStatus.deletion_requested_at"
-            type="button"
-            class="rounded-lg bg-red-600/90 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600"
-            :disabled="actionLoading"
-            @click="onRequestScheduled"
-          >
-            Solicitar exclusão da conta
-          </button>
-          <button
-            v-if="deletionStatus.deletion_requested_at"
-            type="button"
-            class="rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
-            :disabled="actionLoading"
-            @click="onCancelScheduled"
-          >
-            Cancelar pedido de exclusão
-          </button>
-        </div>
-        <p v-if="actionMsg" class="mt-4 text-sm" :class="actionErr ? 'text-red-400' : 'text-emerald-400'">
-          {{ actionMsg }}
-        </p>
-      </section>
-
-      <section v-else-if="user && user.account_status === 'pending_activation'" class="rounded-2xl border border-amber-900/40 bg-amber-950/20 p-6">
-        <p class="text-sm text-amber-100/90">
-          Sua conta ainda aguarda liberação do administrador. Você pode excluir os dados abaixo se não quiser mais
-          seguir.
-        </p>
-      </section>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { AccountDeletionStatus } from '~/composables/useAuth'
 import { useSwal } from '~/composables/useSwal'
+import { accountStatusLabel } from '~/utils/admin-labels'
 
 definePageMeta({
   layout: 'default',
@@ -293,17 +240,11 @@ useHead({
   title: 'Minha conta',
 })
 
-const { user, fetchMe, logout, fetchDeletionStatus, deleteAccountImmediate, requestAccountDeletion, cancelAccountDeletion } =
-  useAuth()
+const { user, fetchMe, logout } = useAuth()
 const { request } = useApi()
 const { swalConfirm } = useSwal()
 
 const loading = ref(true)
-const actionLoading = ref(false)
-const actionMsg = ref<string | null>(null)
-const actionErr = ref(false)
-
-const deletionStatus = ref<AccountDeletionStatus | null>(null)
 
 type ApiState = { id: number; name: string; uf: string }
 type ApiCity = { id: number; name: string }
@@ -446,9 +387,7 @@ function listingApiMessage(e: unknown): string {
 
 async function load() {
   loading.value = true
-  actionMsg.value = null
   try {
-    deletionStatus.value = await fetchDeletionStatus()
     try {
       const p = await request<ProfileDetail>('/v1/me/profile')
       profileDetail.value = p
@@ -482,72 +421,6 @@ onMounted(() => load())
 async function onLogout() {
   await logout()
   await navigateTo('/login')
-}
-
-async function onImmediateDelete() {
-  const ok = await swalConfirm({
-    title: 'Excluir conta agora?',
-    text: 'Todos os dados serão removidos de imediato. Esta ação não pode ser desfeita.',
-    icon: 'warning',
-    confirmButtonText: 'Sim, excluir agora',
-    cancelButtonText: 'Cancelar',
-  })
-  if (!ok) {
-    return
-  }
-  actionLoading.value = true
-  actionMsg.value = null
-  actionErr.value = false
-  try {
-    await deleteAccountImmediate()
-    actionMsg.value = 'Conta removida. Redirecionando…'
-    await navigateTo('/')
-  } catch {
-    actionErr.value = true
-    actionMsg.value = 'Não foi possível excluir. Tente novamente.'
-  } finally {
-    actionLoading.value = false
-  }
-}
-
-async function onRequestScheduled() {
-  const ok = await swalConfirm({
-    title: 'Solicitar exclusão da conta?',
-    text: 'Após o prazo configurado, os dados serão removidos. Você pode cancelar o pedido antes disso.',
-    icon: 'question',
-  })
-  if (!ok) {
-    return
-  }
-  actionLoading.value = true
-  actionMsg.value = null
-  actionErr.value = false
-  try {
-    await requestAccountDeletion()
-    actionMsg.value = 'Pedido registrado.'
-    await load()
-  } catch {
-    actionErr.value = true
-    actionMsg.value = 'Não foi possível concluir o pedido.'
-  } finally {
-    actionLoading.value = false
-  }
-}
-
-async function onCancelScheduled() {
-  actionLoading.value = true
-  actionMsg.value = null
-  actionErr.value = false
-  try {
-    await cancelAccountDeletion()
-    actionMsg.value = 'Pedido cancelado.'
-    await load()
-  } catch {
-    actionErr.value = true
-    actionMsg.value = 'Não foi possível cancelar.'
-  } finally {
-    actionLoading.value = false
-  }
 }
 
 async function onPauseProfile() {

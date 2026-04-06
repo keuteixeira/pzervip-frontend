@@ -156,10 +156,21 @@ export function useAuth() {
     user.value = null
   }
 
-  async function setPassword(password: string, password_confirmation: string) {
+  /**
+   * Define senha (primeira vez, `password_set_at` null) ou altera (exige `current_password` no backend).
+   */
+  async function setPassword(
+    password: string,
+    password_confirmation: string,
+    current_password?: string,
+  ) {
+    const body: Record<string, string> = { password, password_confirmation }
+    if (current_password !== undefined && current_password !== '') {
+      body.current_password = current_password
+    }
     await request('/v1/me/password', {
       method: 'PUT',
-      body: { password, password_confirmation },
+      body,
     })
     await fetchMe()
   }
