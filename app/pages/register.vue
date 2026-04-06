@@ -195,7 +195,7 @@
             :aria-label="'Dígito ' + slot + ' do código de e-mail'"
             @input="onEmailOtpInput(slot - 1, $event)"
             @keydown="onOtpKeydown('email', slot - 1, $event)"
-            :ref="bindEmailOtpRef(slot - 1)"
+            :ref="emailOtpRefBinders[slot - 1]"
           />
         </div>
         <div class="flex flex-wrap items-center gap-3">
@@ -341,7 +341,7 @@
             :aria-label="'Dígito ' + slot + ' do código do WhatsApp'"
             @input="onWhatsappOtpInput(slot - 1, $event)"
             @keydown="onOtpKeydown('whatsapp', slot - 1, $event)"
-            :ref="bindWhatsappOtpRef(slot - 1)"
+            :ref="whatsappOtpRefBinders[slot - 1]"
           />
         </div>
         <button
@@ -958,27 +958,40 @@ function syncOtpResendCountdowns() {
     whatsappResendUntil.value == null ? 0 : Math.max(0, whatsappResendUntil.value - now)
 }
 
-function bindEmailOtpRef(index: number) {
+/**
+ * Callbacks de ref estáveis (uma função por índice, criadas uma vez).
+ * Se `:ref="bindEmailOtpRef(i)"` gerar função nova a cada render, o Vue trata como ref alterada,
+ * atualiza o array reativo e re-renderiza em loop → UI trava e pode estourar memória (visto em produção).
+ */
+const emailOtpRefBinders = Array.from({ length: 6 }, (_, index) => {
   return (el: unknown) => {
     const arr = [...emailOtpInputEls.value]
     while (arr.length < 6) {
       arr.push(null)
     }
-    arr[index] = (el as HTMLInputElement) ?? null
+    const html = (el as HTMLInputElement) ?? null
+    if (arr[index] === html) {
+      return
+    }
+    arr[index] = html
     emailOtpInputEls.value = arr
   }
-}
+})
 
-function bindWhatsappOtpRef(index: number) {
+const whatsappOtpRefBinders = Array.from({ length: 6 }, (_, index) => {
   return (el: unknown) => {
     const arr = [...whatsappOtpInputEls.value]
     while (arr.length < 6) {
       arr.push(null)
     }
-    arr[index] = (el as HTMLInputElement) ?? null
+    const html = (el as HTMLInputElement) ?? null
+    if (arr[index] === html) {
+      return
+    }
+    arr[index] = html
     whatsappOtpInputEls.value = arr
   }
-}
+})
 
 function fillOtpDigits(target: 'email' | 'whatsapp', digitsOnly: string) {
   const d = digitsOnly.replace(/\D/g, '').slice(0, 6)
