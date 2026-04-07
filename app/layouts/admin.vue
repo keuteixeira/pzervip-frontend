@@ -15,7 +15,7 @@
           />
         </NuxtLink>
 
-        <nav class="hidden items-center gap-1 text-sm md:flex" aria-label="Secções do painel">
+        <nav class="hidden items-center gap-1 text-sm md:flex" aria-label="Seções do painel">
           <NuxtLink
             v-for="l in links"
             :key="l.to"

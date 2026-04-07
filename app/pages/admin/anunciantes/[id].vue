@@ -14,7 +14,7 @@
     <p v-else-if="errorMsg" class="text-red-400">{{ errorMsg }}</p>
 
     <template v-else-if="detail">
-      <nav class="flex flex-wrap gap-1 border-b border-zinc-800 pb-3" aria-label="Secções do anunciante">
+      <nav class="flex flex-wrap gap-1 border-b border-zinc-800 pb-3" aria-label="Seções do anunciante">
         <button
           v-for="t in adminTabs"
           :key="t.id"
@@ -35,7 +35,7 @@
       <section class="rounded-xl border border-emerald-900/40 bg-emerald-950/15 p-6">
         <h2 class="text-lg font-semibold text-emerald-100">Visão geral</h2>
         <p class="mt-1 text-sm text-emerald-100/75">
-          Identificadores, status do cadastro e plano. O que estiver vinculado ao perfil aparece nas secções abaixo.
+          Identificadores, status do cadastro e plano. O que estiver vinculado ao perfil aparece nas seções abaixo.
         </p>
         <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
           <div>

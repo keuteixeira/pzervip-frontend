@@ -41,6 +41,8 @@ export default defineNuxtConfig({
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || '',
       /** Google Analytics 4 — ex.: G-XXXXXXXXXX */
       gaMeasurementId: process.env.NUXT_PUBLIC_GA_MEASUREMENT_ID || '',
+      /** Microsoft Clarity — ID do projeto (ex.: w7zhnpwtuq). Vazio desativa. */
+      clarityProjectId: process.env.NUXT_PUBLIC_CLARITY_PROJECT_ID || '',
     },
   },
 })
