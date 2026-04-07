@@ -49,6 +49,8 @@ export interface ProfileSummary {
   public_slug: string
   displayName: string
   city: string
+  /** UF do estado (listagem por cidade), ex.: RN */
+  state_uf?: string
   neighborhood?: string
   premium?: boolean
   featured?: boolean

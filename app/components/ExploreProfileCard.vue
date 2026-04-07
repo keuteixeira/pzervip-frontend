@@ -96,7 +96,7 @@
         {{ profile.displayName }}
       </h3>
       <p
-        v-if="tipoLabel || profile.neighborhood"
+        v-if="tipoLabel || locationLine"
         class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs text-zinc-400 sm:text-sm"
       >
         <span
@@ -106,13 +106,13 @@
           {{ tipoLabel }}
         </span>
         <span
-          v-if="tipoLabel && profile.neighborhood"
+          v-if="tipoLabel && locationLine"
           class="select-none text-zinc-500"
           aria-hidden="true"
         >
           ·
         </span>
-        <span v-if="profile.neighborhood">{{ profile.neighborhood }}</span>
+        <span v-if="locationLine">{{ locationLine }}</span>
       </p>
     </div>
   </NuxtLink>
@@ -189,6 +189,21 @@ const tipoLabel = computed(() => {
     return 'Acompanhante'
   }
   return null
+})
+
+/** Ex.: «Ponta Negra, Natal - RN» ou «Natal - RN» sem bairro. */
+const locationLine = computed(() => {
+  const city = (props.profile.city ?? '').trim()
+  const uf = (props.profile.state_uf ?? '').trim().toUpperCase()
+  const neighborhood = (props.profile.neighborhood ?? '').trim()
+  const cityState = city && uf ? `${city} - ${uf}` : city || (uf ? uf : '')
+  if (!cityState) {
+    return neighborhood || ''
+  }
+  if (neighborhood) {
+    return `${neighborhood}, ${cityState}`
+  }
+  return cityState
 })
 
 const rightBadgeText = computed(() => {
