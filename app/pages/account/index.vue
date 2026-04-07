@@ -202,7 +202,7 @@
       >
         <h2 class="text-lg font-semibold text-white">Disponível agora</h2>
         <p class="mt-2 text-sm leading-relaxed text-zinc-400">
-          Ao ativar, o seu perfil na listagem da cidade mostra a mensagem verde «Disponível agora». O aviso fica visível por
+          Ao ativar, seu perfil na listagem da cidade exibe o selo verde "Disponível agora". O aviso fica visível por
           <span class="text-zinc-200">{{ profileDetail.available_now_duration_minutes ?? 60 }} minutos</span>. Pode
           ativar no máximo
           <span class="text-zinc-200">1 vez a cada {{ profileDetail.available_now_cooldown_hours ?? 24 }} horas</span>.
@@ -226,7 +226,7 @@
           :disabled="availableNowLoading"
           @click="onActivateAvailableNow"
         >
-          {{ availableNowLoading ? 'A ativar…' : 'Ativar «Disponível agora»' }}
+          {{ availableNowLoading ? 'Ativando…' : 'Ativar "Disponível agora"' }}
         </button>
         <p v-if="availableNowMsg" class="mt-3 text-sm" :class="availableNowErr ? 'text-red-400' : 'text-emerald-400'">
           {{ availableNowMsg }}
@@ -290,7 +290,7 @@ const profileLocationLoading = ref(false)
 
 const profileSectionLinks = [
   { secao: 'dados', label: 'Dados pessoais' },
-  { secao: 'perfil', label: 'Nome profissional e link' },
+  { secao: 'perfil', label: 'Nome profissional, bio e link' },
   { secao: 'local', label: 'Local' },
   { secao: 'whatsapp', label: 'WhatsApp do anúncio' },
   { secao: 'redes', label: 'Redes' },
@@ -509,7 +509,7 @@ async function onReactivateProfile() {
 
 async function onActivateAvailableNow() {
   const ok = await swalConfirm({
-    title: 'Ativar o selo «Disponível agora»?',
+    title: 'Ativar o selo "Disponível agora"?',
     text: 'Ele ficará visível na listagem pelo tempo indicado e só poderá ser ativado de novo após o intervalo de espera.',
     icon: 'question',
   })
@@ -523,7 +523,7 @@ async function onActivateAvailableNow() {
     const p = await request<ProfileDetail>('/v1/me/profile/available-now', { method: 'POST' })
     profileDetail.value = p
     syncPauseChoiceFromProfile()
-    availableNowMsg.value = 'Badge «Disponível agora» ativado.'
+    availableNowMsg.value = 'Selo "Disponível agora" ativado.'
   } catch (e) {
     availableNowErr.value = true
     availableNowMsg.value = listingApiMessage(e)

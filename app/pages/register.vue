@@ -295,11 +295,18 @@
           <p v-if="cepLoading" class="mt-1 text-xs text-zinc-500">Consultando CEP…</p>
           <p v-if="cepError" class="mt-1 text-xs text-amber-400">{{ cepError }}</p>
         </div>
-        <div class="sm:col-span-2">
-          <input v-model="draft.address.street" type="text" placeholder="Rua *" class="input" />
+        <div>
+          <p class="mb-1 text-xs font-medium text-zinc-500">Rua *</p>
+          <input v-model="draft.address.street" type="text" placeholder="Logradouro" class="input" />
         </div>
-        <input v-model="draft.address.number" type="text" placeholder="Número *" class="input" />
-        <input v-model="draft.address.neighborhood" type="text" placeholder="Bairro *" class="input sm:col-span-2" />
+        <div>
+          <p class="mb-1 text-xs font-medium text-zinc-500">Número *</p>
+          <input v-model="draft.address.number" type="text" placeholder="Número da casa/apartamento" class="input" />
+        </div>
+        <div>
+          <p class="mb-1 text-xs font-medium text-zinc-500">Bairro *</p>
+          <input v-model="draft.address.neighborhood" type="text" placeholder="Bairro" class="input" />
+        </div>
       </div>
 
       <div
@@ -354,59 +361,8 @@
       </div>
     </section>
 
-    <!-- 3 — Documentos -->
-    <section v-show="step === 3" class="mt-10 space-y-6">
-      <h2 class="text-xl font-semibold text-white">Documentos</h2>
-      <p class="text-sm text-zinc-400">
-        Envie os quatro arquivos obrigatórios. Imagens: JPG, PNG ou WebP (até 10&nbsp;MB). Vídeo: MP4, WebM ou MOV (até 50&nbsp;MB).
-      </p>
-      <div
-        v-for="doc in docLabels"
-        :key="doc.key"
-        role="button"
-        tabindex="0"
-        class="cursor-pointer rounded-xl border border-dashed p-6 text-center outline-none transition focus-visible:ring-2 focus-visible:ring-brand"
-        :class="verificationDropClass(doc.key)"
-        @click="openVerificationPicker(doc.key)"
-        @keydown.enter.prevent="openVerificationPicker(doc.key)"
-        @keydown.space.prevent="openVerificationPicker(doc.key)"
-        @dragenter.prevent="verificationDragKey = doc.key"
-        @dragleave.prevent="onVerificationDragLeave($event, doc.key)"
-        @dragover.prevent="onVerificationDragOver"
-        @drop.prevent="onVerificationDrop($event, doc)"
-      >
-        <p class="font-medium text-zinc-200">{{ doc.label }}</p>
-        <div
-          v-if="doc.key === 'video'"
-          class="mt-4 rounded-lg border border-amber-900/50 bg-amber-950/25 p-4 text-left text-sm text-amber-100/95"
-        >
-          <p class="font-medium text-amber-200">Grave um vídeo mostrando corpo e rosto, segurando seu documento e falando:</p>
-          <p class="mt-2 italic leading-relaxed text-white">
-            “Meu nome é [nome profissional], e quero anunciar no site Prazer.Vip em {{ hoje }}”
-          </p>
-        </div>
-        <p
-          class="text-xs"
-          :class="[
-            doc.key === 'video' ? 'mt-4' : 'mt-2',
-            verificationErrors[doc.key] ? 'text-red-400' : 'text-zinc-500',
-          ]"
-        >
-          {{ verificationHint(doc) }}
-        </p>
-        <input
-          :id="'vdoc-' + doc.key"
-          type="file"
-          class="sr-only"
-          :accept="doc.accept"
-          @click.stop
-          @change="onVerificationInputChange($event, doc)"
-        />
-      </div>
-    </section>
-
-    <!-- 4 — Dados profissionais -->
-    <section v-show="step === 4" class="mt-10 space-y-4">
+    <!-- 3 — Dados profissionais -->
+    <section v-show="step === 3" class="mt-10 space-y-4">
       <h2 class="text-xl font-semibold text-white">Dados profissionais</h2>
       <input v-model="draft.professional_name" type="text" placeholder="Nome profissional *" class="input" />
       <p class="text-xs text-zinc-500">Este é o nome que aparecerá no perfil público (diferente do nome legal na etapa 1).</p>
@@ -447,6 +403,58 @@
             {{ opt.label }}
           </button>
         </div>
+      </div>
+    </section>
+
+    <!-- 4 — Documentos -->
+    <section v-show="step === 4" class="mt-10 space-y-6">
+      <h2 class="text-xl font-semibold text-white">Documentos</h2>
+      <p class="text-sm text-zinc-400">
+        Envie os quatro arquivos obrigatórios. Imagens: JPG, PNG ou WebP (até
+        {{ registerImageMaxMbDisplay }}&nbsp;MB). Vídeo: MP4, WebM ou MOV (até 50&nbsp;MB).
+      </p>
+      <div
+        v-for="doc in docLabels"
+        :key="doc.key"
+        role="button"
+        tabindex="0"
+        class="cursor-pointer rounded-xl border border-dashed p-6 text-center outline-none transition focus-visible:ring-2 focus-visible:ring-brand"
+        :class="verificationDropClass(doc.key)"
+        @click="openVerificationPicker(doc.key)"
+        @keydown.enter.prevent="openVerificationPicker(doc.key)"
+        @keydown.space.prevent="openVerificationPicker(doc.key)"
+        @dragenter.prevent="verificationDragKey = doc.key"
+        @dragleave.prevent="onVerificationDragLeave($event, doc.key)"
+        @dragover.prevent="onVerificationDragOver"
+        @drop.prevent="onVerificationDrop($event, doc)"
+      >
+        <p class="font-medium text-zinc-200">{{ doc.label }}</p>
+        <div
+          v-if="doc.key === 'video'"
+          class="mt-4 rounded-lg border border-amber-900/50 bg-amber-950/25 p-4 text-left text-sm text-amber-100/95"
+        >
+          <p class="font-medium text-amber-200 text-center">Grave um vídeo mostrando corpo e rosto, segurando seu documento e falando:</p>
+          <p class="mt-2 italic leading-relaxed text-white text-center">
+            “Meu nome é {{ verificationVideoSpokenName }}, e quero anunciar no site Prazer.Vip em {{ hoje }}”
+          </p>
+        </div>
+        <p
+          class="text-xs"
+          :class="[
+            doc.key === 'video' ? 'mt-4' : 'mt-2',
+            verificationErrors[doc.key] ? 'text-red-400' : 'text-zinc-500',
+          ]"
+        >
+          {{ verificationHint(doc) }}
+        </p>
+        <input
+          :id="'vdoc-' + doc.key"
+          type="file"
+          class="sr-only"
+          :accept="doc.accept"
+          @click.stop
+          @change="onVerificationInputChange($event, doc)"
+        />
       </div>
     </section>
 
@@ -875,6 +883,14 @@
         </div>
       </div>
     </Teleport>
+
+    <ImageCropModal
+      v-model="imageCropOpen"
+      :file="imageCropFile"
+      :aspect-ratio="imageCropAspect"
+      :title="imageCropTitle"
+      @cropped="onRegisterImageCropped"
+    />
   </div>
 </template>
 
@@ -888,7 +904,13 @@ import {
   markCadastroTabActive,
   useRegisterCadastroRouteGuard,
 } from '~/composables/useRegisterCadastroTabSession'
-import { REGISTER_COVER, REGISTER_GALLERY_DEFAULTS, REGISTER_PROFILE_AVATAR } from '~/config/registerPresentation'
+import {
+  REGISTER_COVER,
+  REGISTER_COVER_ASPECT_RATIO,
+  REGISTER_GALLERY_DEFAULTS,
+  REGISTER_IMAGE_MAX_FILE_MB,
+  REGISTER_PROFILE_AVATAR,
+} from '~/config/registerPresentation'
 import { cpfDigits, formatCepMask, formatCpfMask, formatPhoneBrMask, phoneDigits } from '~/utils/brFormat'
 import type { AuthUser } from '~/composables/useAuth'
 import { extractLaravelErrorMessage } from '~/utils/laravelApiErrors'
@@ -908,6 +930,32 @@ usePublicPageSeo({
 
 const totalSteps = 7
 const step = ref(1)
+
+const imageCropOpen = ref(false)
+const imageCropFile = ref<File | null>(null)
+const imageCropAspect = ref(1)
+const imageCropTitle = ref('')
+const imageCropTarget = ref<'cover' | 'avatar' | null>(null)
+
+function openRegisterImageCrop(file: File, target: 'cover' | 'avatar') {
+  imageCropTarget.value = target
+  imageCropFile.value = file
+  imageCropAspect.value = target === 'cover' ? REGISTER_COVER_ASPECT_RATIO : 1
+  imageCropTitle.value =
+    target === 'cover' ? 'Ajustar banner (capa)' : 'Ajustar foto de perfil'
+  imageCropOpen.value = true
+}
+
+function onRegisterImageCropped(file: File) {
+  const t = imageCropTarget.value
+  imageCropTarget.value = null
+  imageCropFile.value = null
+  if (t === 'cover') {
+    void uploadCoverFile(file)
+  } else if (t === 'avatar') {
+    void uploadAvatarFile(file)
+  }
+}
 /** True enquanto carrega o rascunho nesta aba (evita flash na etapa 1). */
 const resumingCadastroSession = ref(false)
 const busy = ref(false)
@@ -1315,6 +1363,22 @@ watch(
   },
 )
 
+/** Ao mudar de etapa, voltar o scroll ao topo para o conteúdo novo ficar visível (evita ficar no rodapé com «Próximo»). */
+watch(
+  () => step.value,
+  async (newStep, oldStep) => {
+    if (!import.meta.client || oldStep === undefined) {
+      return
+    }
+    if (newStep === oldStep) {
+      return
+    }
+    await nextTick()
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  },
+  { flush: 'post' },
+)
+
 watch(
   () => draft.has_venue,
   (v) => {
@@ -1348,6 +1412,12 @@ const verificationFileNames = reactive<Record<string, string>>({})
 const hoje = computed(() => {
   const d = new Date()
   return d.toLocaleDateString('pt-BR')
+})
+
+/** Texto do roteiro do vídeo: usa o nome profissional já informado na etapa anterior. */
+const verificationVideoSpokenName = computed(() => {
+  const n = draft.professional_name.trim()
+  return n || '[nome profissional]'
 })
 
 function mediaIdForDoc(doc: DocItem): number | null {
@@ -1460,6 +1530,9 @@ const galleryRules = ref<{ min: number; max: number }>({
   max: REGISTER_GALLERY_DEFAULTS.max,
 })
 
+/** Alinhado a GET /v1/config/register-media → image_max_mb (fallback: REGISTER_IMAGE_MAX_FILE_MB). */
+const registerImageMaxMbDisplay = ref<number>(REGISTER_IMAGE_MAX_FILE_MB)
+
 const dragCover = ref(false)
 const dragGallery = ref(false)
 const dragAvatar = ref(false)
@@ -1475,7 +1548,17 @@ const galleryItems = ref<{ id: number; name: string }[]>([])
 
 async function loadRegisterMediaConfig() {
   try {
-    const c = await request<{ gallery_min: number; gallery_max: number }>('/v1/config/register-media')
+    const c = await request<{
+      gallery_min: number
+      gallery_max: number
+      image_max_mb?: number
+    }>('/v1/config/register-media')
+    const imb = Number(c.image_max_mb)
+    if (Number.isFinite(imb) && imb > 0) {
+      registerImageMaxMbDisplay.value = Math.round(imb)
+    } else {
+      registerImageMaxMbDisplay.value = REGISTER_IMAGE_MAX_FILE_MB
+    }
     const min = Number(c.gallery_min)
     const max = Number(c.gallery_max)
     if (!Number.isFinite(min) || !Number.isFinite(max)) {
@@ -1485,6 +1568,7 @@ async function loadRegisterMediaConfig() {
     galleryRules.value = { min: Math.min(min, max), max: Math.max(min, max) }
   } catch {
     galleryRules.value = { ...REGISTER_GALLERY_DEFAULTS }
+    registerImageMaxMbDisplay.value = REGISTER_IMAGE_MAX_FILE_MB
   }
 }
 
@@ -1786,14 +1870,14 @@ function onPresentationDrop(e: DragEvent, zone: 'cover' | 'gallery' | 'avatar') 
   if (zone === 'cover') {
     const f = raw[0]
     if (f && isProbablyImageFile(f)) {
-      void uploadCoverFile(f)
+      openRegisterImageCrop(f, 'cover')
     }
     return
   }
   if (zone === 'avatar') {
     const f = raw[0]
     if (f && isProbablyImageFile(f)) {
-      void uploadAvatarFile(f)
+      openRegisterImageCrop(f, 'avatar')
     }
     return
   }
@@ -1804,8 +1888,8 @@ function onCoverFileInput(e: Event) {
   const input = e.target as HTMLInputElement
   const f = input.files?.[0]
   input.value = ''
-  if (f) {
-    void uploadCoverFile(f)
+  if (f && isProbablyImageFile(f)) {
+    openRegisterImageCrop(f, 'cover')
   }
 }
 
@@ -1849,8 +1933,8 @@ function onAvatarFileInput(e: Event) {
   const input = e.target as HTMLInputElement
   const f = input.files?.[0]
   input.value = ''
-  if (f) {
-    void uploadAvatarFile(f)
+  if (f && isProbablyImageFile(f)) {
+    openRegisterImageCrop(f, 'avatar')
   }
 }
 
@@ -2244,6 +2328,26 @@ async function submitWhatsappOtp() {
     const wa = phoneDigits(draft.whatsapp)
     lastVerifiedWhatsappDigits.value = wa
     await fetchMe()
+    await nextTick()
+    whatsappOtpGateOpen.value = false
+
+    /**
+     * Com senha já definida e dados da etapa 2 ok, avançar já para «Dados profissionais» (evita outro «Próximo»
+     * só para sair do cartão de WhatsApp).
+     */
+    if (step.value === 2 && !needsAccountPassword.value) {
+      const draftErr = validateStep2DraftOnly()
+      if (draftErr == null && registrationWhatsappVerified.value) {
+        try {
+          await persistStep({ manageBusy: false })
+          step.value = 3
+        } catch (e: unknown) {
+          formError.value =
+            extractLaravelErrorMessage(e, ['current_step', 'form_status']) ??
+            'Não foi possível salvar o progresso. Use «Próximo» para tentar de novo.'
+        }
+      }
+    }
   } catch (e: unknown) {
     formError.value = extractLaravelErrorMessage(e, ['code']) ?? 'Código inválido ou expirado.'
   } finally {
@@ -2340,14 +2444,25 @@ async function loadProfileIntoWizard(): Promise<boolean> {
     return false
   }
   await fetchMe()
+
+  /**
+   * Disparar o e-mail de verificação assim que soubermos pela sessão (/me) que o e-mail ainda não foi confirmado.
+   * Antes o envio só ocorria depois de GET /me/profile; se essa requisição falhasse, o painel «Confirme seu e-mail»
+   * aparecia (texto «Enviamos um código…») mas nenhum envio tinha sido feito.
+   */
+  const emailStillPending = !registrationEmailVerified.value
+  if (emailStillPending) {
+    step.value = 1
+    emailOtpDigits.value = [...emptyOtpDigits()]
+    await sendRegistrationEmailCode(false, { manageBusy: false })
+  }
+
   try {
     const p = await request<Record<string, unknown>>('/v1/me/profile')
     hydrateFromProfile(p)
     if (!p.registration_email_verified_at) {
       step.value = 1
       emailOtpDigits.value = [...emptyOtpDigits()]
-      /** Não silenciar: cooldown / falha de envio deve aparecer na UI; manageBusy false para não bloquear o ecrã de carregamento do rascunho. */
-      await sendRegistrationEmailCode(false, { manageBusy: false })
       return true
     }
     let s = Math.min(Math.max(Number(p.current_step) || 1, 1), totalSteps)
@@ -2516,17 +2631,6 @@ function validateStepForNext(s: number): string | null {
     return null
   }
   if (s === 3) {
-    if (
-      !draft.id_document_front_media_id ||
-      !draft.id_document_back_media_id ||
-      !draft.selfie_media_id ||
-      !draft.video_media_id
-    ) {
-      return 'Envie os quatro arquivos: documento (frente e verso), selfie e vídeo de verificação.'
-    }
-    return null
-  }
-  if (s === 4) {
     if (!draft.professional_name.trim()) {
       return 'Informe o nome profissional.'
     }
@@ -2535,6 +2639,17 @@ function validateStepForNext(s: number): string | null {
     }
     if (!draft.service_type) {
       return 'Selecione o tipo de atendimento.'
+    }
+    return null
+  }
+  if (s === 4) {
+    if (
+      !draft.id_document_front_media_id ||
+      !draft.id_document_back_media_id ||
+      !draft.selfie_media_id ||
+      !draft.video_media_id
+    ) {
+      return 'Envie os quatro arquivos: documento (frente e verso), selfie e vídeo de verificação.'
     }
     return null
   }

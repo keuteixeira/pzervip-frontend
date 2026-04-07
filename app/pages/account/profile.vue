@@ -298,7 +298,7 @@
                 :disabled="waBusy || phoneDigits(waNewPhone).length < 10 || waResendSecondsLeft > 0"
                 @click="waSendOtp"
               >
-                {{ waBusy ? 'A enviar…' : 'Enviar código por WhatsApp' }}
+                {{ waBusy ? 'Enviando…' : 'Enviar código por WhatsApp' }}
               </button>
               <p v-if="waResendSecondsLeft > 0" class="text-sm text-zinc-500">
                 Pode pedir novo código em {{ waResendSecondsLeft }}s
@@ -498,7 +498,8 @@
               <h2 class="text-lg font-semibold text-white">Banner (capa)</h2>
               <p class="mt-1 text-sm text-zinc-400">
                 Uma imagem larga no topo do seu perfil público. Só existe um banner: ao enviar outro, o anterior deixa de
-                ser a capa ativa. Novos envios ficam em análise até a equipe aprovar.
+                ser a capa ativa. Novos envios ficam em análise até a equipe aprovar. Formatos: JPG, PNG ou WebP; até
+                {{ REGISTER_IMAGE_MAX_FILE_MB }} MB.
               </p>
             </div>
 
@@ -618,7 +619,8 @@
               <h2 class="text-lg font-semibold text-white">Foto de perfil</h2>
               <p class="mt-1 text-sm text-zinc-400">
                 A foto aprovada continua no site até uma nova troca ser aprovada. Envios novos ficam em análise; você pode
-                pré-visualizar e remover antes da decisão da equipe.
+                pré-visualizar e remover antes da decisão da equipe. Formatos: JPG, PNG ou WebP; até
+                {{ REGISTER_IMAGE_MAX_FILE_MB }} MB.
               </p>
             </div>
 
@@ -832,8 +834,9 @@
             <div>
               <h2 class="text-lg font-semibold text-white">Galeria (fotos e vídeos)</h2>
               <p class="mt-2 text-sm leading-relaxed text-zinc-400">
-                Novos arquivos ficam pendentes até moderação. Na página pública, os vídeos aparecem antes das fotos,
-                na ordem que você definir abaixo.
+                Novos arquivos ficam pendentes até moderação. Imagens: JPG, PNG ou WebP até {{ REGISTER_IMAGE_MAX_FILE_MB }}
+                MB; vídeos com limite maior. Na página pública, os vídeos aparecem antes das fotos, na ordem que você
+                definir abaixo.
                 <span v-if="galleryDestaqueActive" class="mt-2 block text-zinc-300">
                   Com destaque ativo você pode ter até {{ galleryOrderedMax }} itens; todos podem aparecer no site.
                 </span>
@@ -949,10 +952,19 @@
         aprovação.
       </section>
     </template>
+
+    <ImageCropModal
+      v-model="imageCropOpen"
+      :file="imageCropFile"
+      :aspect-ratio="imageCropAspect"
+      :title="imageCropTitle"
+      @cropped="onProfileImageCropped"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { REGISTER_COVER_ASPECT_RATIO, REGISTER_IMAGE_MAX_FILE_MB } from '~/config/registerPresentation'
 import { useSwal } from '~/composables/useSwal'
 import { formatPhoneBrMask, phoneDigits } from '~/utils/brFormat'
 import { extractLaravelErrorMessage } from '~/utils/laravelApiErrors'
@@ -1276,7 +1288,7 @@ const navItems = computed(() => {
   ]
   if (profile.value?.approval_status === 'approved') {
     items.push(
-      { id: 'perfil', label: 'Nome profissional e link', icon: '✨' },
+      { id: 'perfil', label: 'Nome profissional, bio e link', icon: '✨' },
       { id: 'local', label: 'Local', icon: '📍' },
       { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
       { id: 'redes', label: 'Redes sociais', icon: '🔗' },
@@ -1824,6 +1836,17 @@ async function applyGalleryOrder() {
   }
 }
 
+const imageCropOpen = ref(false)
+const imageCropFile = ref<File | null>(null)
+const imageCropAspect = ref(1)
+const imageCropTitle = ref('')
+const profileCropPurpose = ref<'cover' | 'portal_avatar' | null>(null)
+
+function isRasterImageForCrop(file: File): boolean {
+  const t = file.type.toLowerCase()
+  return t.startsWith('image/') && !t.includes('svg') && !t.includes('gif')
+}
+
 async function onSingleMediaPick(e: Event, purpose: 'portal_avatar' | 'audio' | 'cover') {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
@@ -1831,6 +1854,32 @@ async function onSingleMediaPick(e: Event, purpose: 'portal_avatar' | 'audio' | 
   if (!file) {
     return
   }
+  if (purpose === 'audio') {
+    await uploadSingleMediaRaw(file, 'audio')
+    return
+  }
+  if (!isRasterImageForCrop(file)) {
+    err.value = true
+    msg.value = 'Envie uma imagem (JPG, PNG ou WebP).'
+    return
+  }
+  profileCropPurpose.value = purpose
+  imageCropFile.value = file
+  imageCropAspect.value = purpose === 'cover' ? REGISTER_COVER_ASPECT_RATIO : 1
+  imageCropTitle.value = purpose === 'cover' ? 'Ajustar banner' : 'Ajustar foto de perfil'
+  imageCropOpen.value = true
+}
+
+async function onProfileImageCropped(file: File) {
+  const purpose = profileCropPurpose.value
+  profileCropPurpose.value = null
+  imageCropFile.value = null
+  if (purpose === 'cover' || purpose === 'portal_avatar') {
+    await uploadSingleMediaRaw(file, purpose)
+  }
+}
+
+async function uploadSingleMediaRaw(file: File, purpose: 'portal_avatar' | 'audio' | 'cover') {
   const uploadingRef =
     purpose === 'portal_avatar' ? uploadingAvatar : purpose === 'audio' ? uploadingAudio : uploadingCover
   uploadingRef.value = true

@@ -13,6 +13,7 @@
     "postinstall": "npx nuxt prepare"
   },
   "dependencies": {
+    "cropperjs": "^1.6.2",
     "qrcode": "^1.5.4",
     "sweetalert2": "^11.22.2",
     "nuxt": "^4.4.2",

@@ -106,17 +106,17 @@
         <div class="mt-6 rounded-lg border border-zinc-800/80 bg-zinc-950/40 p-4">
           <h3 class="text-sm font-medium text-zinc-300">Endereço (cadastro / documento)</h3>
           <div class="mt-3 grid gap-3 sm:grid-cols-2">
-            <label class="block text-sm text-zinc-300 sm:col-span-2">
+            <label class="block text-sm text-zinc-300">
+              <span class="mb-1 block text-zinc-500">CEP</span>
+              <input v-model="editAddr.zipcode" type="text" class="admin-input" />
+            </label>
+            <label class="block text-sm text-zinc-300">
               <span class="mb-1 block text-zinc-500">Logradouro</span>
               <input v-model="editAddr.street" type="text" class="admin-input" />
             </label>
             <label class="block text-sm text-zinc-300">
               <span class="mb-1 block text-zinc-500">Número</span>
               <input v-model="editAddr.number" type="text" class="admin-input" />
-            </label>
-            <label class="block text-sm text-zinc-300">
-              <span class="mb-1 block text-zinc-500">CEP</span>
-              <input v-model="editAddr.zipcode" type="text" class="admin-input" />
             </label>
             <label class="block text-sm text-zinc-300">
               <span class="mb-1 block text-zinc-500">Bairro (endereço)</span>
@@ -160,14 +160,27 @@
         <p class="mt-2 text-xs text-zinc-500">
           Imagens, vídeos e áudio abrem no visualizador (setas ou botões Anterior/Próximo). Outros tipos abrem numa nova aba.
         </p>
-        <div v-if="lightboxableMedia.length > 1" class="mt-2">
+        <div
+          v-if="lightboxableDocumentMedia.length > 1 || lightboxableMidiaMedia.length > 1"
+          class="mt-2 flex flex-wrap gap-2"
+        >
           <button
+            v-if="lightboxableDocumentMedia.length > 1"
             type="button"
             class="rounded-lg border border-zinc-600 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-40"
             :disabled="mediaPreviewBusy"
-            @click="openReviewLightbox(0)"
+            @click="openReviewLightbox('documentos', 0)"
           >
-            {{ mediaPreviewBusy ? 'A carregar…' : 'Ver todas em sequência' }}
+            {{ mediaPreviewBusy ? 'Carregando…' : 'Ver documentos em sequência' }}
+          </button>
+          <button
+            v-if="lightboxableMidiaMedia.length > 1"
+            type="button"
+            class="rounded-lg border border-zinc-600 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-zinc-800 disabled:opacity-40"
+            :disabled="mediaPreviewBusy"
+            @click="openReviewLightbox('midias', 0)"
+          >
+            {{ mediaPreviewBusy ? 'Carregando…' : 'Ver mídias em sequência' }}
           </button>
         </div>
 
@@ -235,7 +248,7 @@
                   :disabled="mediaPreviewBusy"
                   @click="openMedia(row.media)"
                 >
-                  {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
+                  {{ mediaPreviewBusy ? 'Carregando…' : 'Visualizar' }}
                 </button>
               </div>
             </li>
@@ -260,7 +273,7 @@
                 :disabled="mediaPreviewBusy"
                 @click="openMedia(m)"
               >
-                {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
+                {{ mediaPreviewBusy ? 'Carregando…' : 'Visualizar' }}
               </button>
             </li>
           </ul>
@@ -299,7 +312,7 @@
                   :disabled="mediaPreviewBusy"
                   @click="openMedia(row.media)"
                 >
-                  {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
+                  {{ mediaPreviewBusy ? 'Carregando…' : 'Visualizar' }}
                 </button>
                 <button
                   type="button"
@@ -346,7 +359,7 @@
                     :disabled="mediaPreviewBusy"
                     @click="openMedia(row.media)"
                   >
-                    {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
+                    {{ mediaPreviewBusy ? 'Carregando…' : 'Visualizar' }}
                   </button>
                   <button
                     type="button"
@@ -382,7 +395,7 @@
                   :disabled="mediaPreviewBusy"
                   @click="openMedia(m)"
                 >
-                  {{ mediaPreviewBusy ? 'A carregar…' : 'Visualizar' }}
+                  {{ mediaPreviewBusy ? 'Carregando…' : 'Visualizar' }}
                 </button>
                 <button
                   type="button"
@@ -564,7 +577,25 @@ function lightboxKindFromRow(m: MediaRow): 'image' | 'video' | 'audio' {
   return 'image'
 }
 
-const lightboxableMedia = computed(() => mediaList.value.filter(isLightboxableMedia))
+function isDocumentScopeLightboxMedia(m: MediaRow): boolean {
+  return DOC_COLLECTION_SET.has(m.collection_name)
+}
+
+function isMidiaScopeLightboxMedia(m: MediaRow): boolean {
+  if (MIDIA_COLLECTION_SET.has(m.collection_name)) {
+    return true
+  }
+  const k = (m.kind || '').toLowerCase()
+  return k === 'gallery_image' || k === 'gallery_video' || k === 'banner' || k === 'profile_photo'
+}
+
+const lightboxableDocumentMedia = computed(() =>
+  mediaList.value.filter((m) => isLightboxableMedia(m) && isDocumentScopeLightboxMedia(m)),
+)
+
+const lightboxableMidiaMedia = computed(() =>
+  mediaList.value.filter((m) => isLightboxableMedia(m) && isMidiaScopeLightboxMedia(m)),
+)
 
 const documentSlotRows = computed(() => {
   const reg = detail.value?.registration
@@ -929,9 +960,9 @@ async function fetchAdminTemporaryUrl(mediaNumericId: number): Promise<string> {
   return res.url
 }
 
-/** Mesmo fluxo que a área do anunciante: `ProfileMediaLightbox` com Anterior/Próximo e setas. */
-async function openReviewLightbox(startIdx: number) {
-  const list = lightboxableMedia.value
+/** Documentos e mídias do anúncio em sequências separadas (não misturar RG com galeria). */
+async function openReviewLightbox(scope: 'documentos' | 'midias', startIdx: number) {
+  const list = scope === 'documentos' ? lightboxableDocumentMedia.value : lightboxableMidiaMedia.value
   if (list.length === 0 || mediaPreviewBusy.value) {
     return
   }
@@ -950,7 +981,7 @@ async function openReviewLightbox(startIdx: number) {
     await swalAlert({
       icon: 'error',
       title: 'Pré-visualização',
-      text: 'Não foi possível obter os endereços dos ficheiros. Tente de novo.',
+      text: 'Não foi possível obter os endereços dos arquivos. Tente de novo.',
     })
   } finally {
     mediaPreviewBusy.value = false
@@ -973,7 +1004,7 @@ async function openMedia(m: MediaRow) {
     } catch {
       await swalAlert({
         icon: 'error',
-        title: 'Abrir ficheiro',
+        title: 'Abrir arquivo',
         text: 'Não foi possível obter o link temporário.',
       })
     } finally {
@@ -982,11 +1013,38 @@ async function openMedia(m: MediaRow) {
     return
   }
 
-  const idx = lightboxableMedia.value.findIndex((x) => mediaId(x) === mid)
-  if (idx < 0) {
+  const docIdx = lightboxableDocumentMedia.value.findIndex((x) => mediaId(x) === mid)
+  if (docIdx >= 0) {
+    await openReviewLightbox('documentos', docIdx)
     return
   }
-  await openReviewLightbox(idx)
+  const midIdx = lightboxableMidiaMedia.value.findIndex((x) => mediaId(x) === mid)
+  if (midIdx >= 0) {
+    await openReviewLightbox('midias', midIdx)
+    return
+  }
+
+  mediaPreviewBusy.value = true
+  try {
+    const url = await fetchAdminTemporaryUrl(mid)
+    reviewLightboxItems.value = [
+      {
+        kind: lightboxKindFromRow(m),
+        url,
+        caption: `${m.kind_label || m.collection_name} · ${m.file_name}`,
+      },
+    ]
+    reviewLightboxStart.value = 0
+    reviewLightboxOpen.value = true
+  } catch {
+    await swalAlert({
+      icon: 'error',
+      title: 'Pré-visualização',
+      text: 'Não foi possível obter o endereço do arquivo. Tente de novo.',
+    })
+  } finally {
+    mediaPreviewBusy.value = false
+  }
 }
 
 async function removeMedia(m: MediaRow) {
