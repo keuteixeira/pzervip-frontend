@@ -100,6 +100,7 @@
                   target="_blank"
                   rel="noopener noreferrer"
                   class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-950/30 transition hover:bg-[#20bd5a]"
+                  @click="onWhatsappButtonClick"
                 >
                   <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path
@@ -635,6 +636,39 @@ const whatsappUrl = computed(() => {
   }
   return buildWhatsAppSendUrl(p.phoneDigits, p.displayName)
 })
+
+function visitorSessionIdForMetrics(): string {
+  if (!import.meta.client) {
+    return ''
+  }
+  const k = 'pzv_visitor_session'
+  let v = sessionStorage.getItem(k)
+  if (!v) {
+    v = crypto.randomUUID()
+    sessionStorage.setItem(k, v)
+  }
+  return v
+}
+
+async function onWhatsappButtonClick(e: MouseEvent) {
+  const url = whatsappUrl.value
+  if (!url) {
+    return
+  }
+  e.preventDefault()
+  const sid = visitorSessionIdForMetrics()
+  if (sid) {
+    try {
+      await $fetch(`${config.public.apiBase}/v1/public/advertisers/${slug.value}/whatsapp-click`, {
+        method: 'POST',
+        body: { visitor_session_id: sid },
+      })
+    } catch {
+      /* não bloquear o contacto */
+    }
+  }
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
 
 const commentAuthor = ref('')
 const commentBody = ref('')

@@ -942,6 +942,247 @@
             alt-text="Mídia da sua galeria"
           />
         </section>
+
+        <section v-show="activeSection === 'metricas'" class="profile-panel space-y-6">
+          <div>
+            <h2 class="text-lg font-semibold text-white">Métricas</h2>
+            <p class="mt-2 text-sm leading-relaxed text-zinc-400">
+              Acompanhe quantas visitas ao seu perfil público geraram um clique no botão do WhatsApp (uma contagem por
+              visita, mesmo com vários cliques seguidos).
+            </p>
+          </div>
+          <div
+            v-if="!profile?.whatsapp_metrics_unlocked"
+            class="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed text-amber-100/95"
+          >
+            As métricas detalhadas ficam disponíveis com
+            <strong class="text-amber-50">destaque ativo</strong>. No plano gratuito você vê este aviso; ao ativar o
+            destaque em <NuxtLink class="font-medium text-brand underline hover:text-brand-muted" to="/conta/perfil?secao=financeiro">Financeiro</NuxtLink>, o gráfico passa a ser preenchido.
+          </div>
+          <WhatsappClicksChart
+            :series="waMetricsSeries"
+            :total="waMetricsTotal"
+            :loading="waMetricsLoading"
+          />
+        </section>
+
+        <section v-show="activeSection === 'financeiro'" class="profile-panel space-y-6">
+          <div>
+            <h2 class="text-lg font-semibold text-white">Financeiro</h2>
+            <p class="mt-2 text-sm leading-relaxed text-zinc-400">
+              Veja o seu destaque atual (nível e validade), pague com PIX para ativar ou subir de nível e consulte o
+              histórico. No <strong class="text-zinc-300">upgrade</strong> o PIX é pelo
+              <strong class="text-zinc-300">valor integral</strong> do plano escolhido; o tempo que ainda tinha no nível
+              antigo é <strong class="text-zinc-300">convertido em dias no novo nível</strong> (pro-rata pelo preço mensal:
+              ex. 1★ a R$150 → 2★ a R$300, o mesmo valor vira metade dos dias). Não somamos “25 dias antigos + 30 do novo
+              mês”: os 25 no 1★ viram ~12,5 dias no 2★ e somam-se os 30 pagos (~42,5 dias no total nesse exemplo).
+            </p>
+          </div>
+
+          <div
+            class="relative overflow-hidden rounded-2xl border-2 border-amber-500/45 bg-gradient-to-br from-amber-950/50 via-zinc-950 to-zinc-900 p-5 shadow-[0_0_36px_-12px_rgba(245,158,11,0.45)] md:p-6"
+          >
+            <div
+              class="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-500/20 blur-3xl"
+              aria-hidden="true"
+            />
+            <div class="relative flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="text-xs font-bold uppercase tracking-[0.18em] text-amber-200/90">Plano no portal</p>
+                  <span
+                    v-if="financeQuoteLoading"
+                    class="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-400"
+                  >
+                    A sincronizar…
+                  </span>
+                </div>
+                <p class="mt-3 text-2xl font-bold tracking-tight text-white md:text-3xl">
+                  <template v-if="financeStatusHasDestaque">
+                    Destaque
+                    <span class="whitespace-nowrap text-amber-400" aria-hidden="true">{{ financeStarsVisual }}</span>
+                    <span class="sr-only">{{ financeStatusStars }} estrela(s)</span>
+                  </template>
+                  <template v-else>Plano gratuito</template>
+                </p>
+                <p v-if="financeStatusHasDestaque" class="mt-2 text-sm text-zinc-300">
+                  Nível <strong class="text-white">{{ financeStatusStars }}</strong> estrela(s)
+                  <span v-if="profile?.plan_type === 'premium'" class="text-zinc-500"> · Premium</span>
+                </p>
+                <p v-else class="mt-2 text-sm text-zinc-400">
+                  Sem destaque pago ativo — use os botões abaixo para ativar e aparecer em evidência no site.
+                </p>
+
+                <template v-if="financeStatusHasDestaque">
+                  <p
+                    v-if="financeStatusFrozen"
+                    class="mt-3 rounded-lg border border-sky-900/50 bg-sky-950/35 px-3 py-2 text-sm text-sky-100/95"
+                  >
+                    O tempo de destaque está <strong class="text-sky-50">pausado</strong> enquanto o anúncio está
+                    inativo. Ao reativar o perfil, o relógio volta a contar; a data abaixo aplica-se com o anúncio ativo.
+                  </p>
+                  <p v-else-if="financeStatusEndsAtLabel" class="mt-3 text-sm text-zinc-300">
+                    Término aproximado (anúncio ativo):
+                    <strong class="text-amber-100">{{ financeStatusEndsAtLabel }}</strong>
+                  </p>
+                  <p class="mt-2 text-sm text-zinc-500">
+                    Tempo restante estimado:
+                    <strong class="text-zinc-300">{{ formatDestaqueDuration(financeStatusRemainingSec) }}</strong>
+                  </p>
+                </template>
+
+                <p
+                  v-if="financeQuote?.upgrade_carry_seconds_preview != null && financeQuote.upgrade_carry_preview_stars"
+                  class="mt-3 rounded-lg border border-emerald-900/40 bg-emerald-950/25 px-3 py-2 text-sm text-emerald-100/95"
+                >
+                  Exemplo de pro-rata: ao subir para
+                  <strong class="text-emerald-50">{{ financeQuote.upgrade_carry_preview_stars }} estrela(s)</strong>, o
+                  tempo restante equivale a
+                  <strong class="text-emerald-50">{{ formatDaysApprox(financeQuote.upgrade_carry_seconds_preview) }}</strong>
+                  nesse nível (antes de somar os meses que comprar).
+                </p>
+                <p
+                  v-if="financeAtMaxTier"
+                  class="mt-3 rounded-lg border border-amber-800/50 bg-amber-950/40 px-3 py-2 text-sm text-amber-100/95"
+                >
+                  Está no <strong class="text-amber-50">nível máximo</strong> de destaque. Quando o plano vencer, poderá
+                  renovar ou escolher outro nível aqui.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-zinc-800 bg-zinc-950/40 p-5">
+            <h3 class="text-base font-semibold text-white">Ativar ou aumentar destaque</h3>
+            <p class="mt-2 text-sm text-zinc-500">
+              Escolha estrelas e meses; o PIX abre no passo seguinte.
+            </p>
+            <p
+              v-if="financeCarriedSecondsForSelectedUpgrade != null"
+              class="mt-3 rounded-lg border border-zinc-700/80 bg-zinc-900/50 px-3 py-2 text-sm text-zinc-300"
+            >
+              Com o nível <strong class="text-white">{{ finSelectedStars }} estrela(s)</strong> selecionado, o tempo que
+              resta hoje passa a valer cerca de
+              <strong class="text-amber-200/95">{{ formatDaysApprox(financeCarriedSecondsForSelectedUpgrade) }}</strong>
+              nesse nível; depois somam-se os meses do PIX.
+            </p>
+
+            <p v-if="financeErr" class="mt-3 text-sm text-red-400">{{ financeErr }}</p>
+            <p
+              v-if="financeNeedsQuoteForPurchase && !financeQuoteLoading"
+              class="mt-3 rounded-lg border border-amber-900/40 bg-amber-950/25 px-3 py-2 text-sm text-amber-100/90"
+            >
+              Precisamos da cotação do servidor para calcular o upgrade.
+              <button
+                type="button"
+                class="ml-1 font-medium text-brand underline hover:text-brand-muted"
+                @click="void loadFinanceQuote()"
+              >
+                Tentar de novo
+              </button>
+            </p>
+
+            <div v-if="!effectiveFinancePricing && (financeQuoteLoading || financePricingFallbackLoading)" class="mt-6 text-sm text-zinc-500">
+              Carregando tabela de preços…
+            </div>
+            <p
+              v-else-if="!effectiveFinancePricing"
+              class="mt-6 text-sm text-amber-100/90"
+            >
+              Não foi possível carregar os preços. Verifique a ligação e use «Atualizar plano».
+            </p>
+
+            <template v-else-if="effectiveFinancePricing">
+              <div class="mt-6 space-y-3">
+                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Nível (estrelas)</p>
+                <div class="flex flex-wrap gap-1 text-amber-400">
+                  <button
+                    v-for="s in financeStarRange"
+                    :key="'fin-star-' + s"
+                    type="button"
+                    class="text-xl leading-none transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-25"
+                    :disabled="s < financeMinSelectableStarsForUi"
+                    :title="`Nível ${s} — ${formatBrl(priceForFinTier(s))}/mês`"
+                    @click="finSelectedStars = s"
+                  >
+                    {{ s <= finSelectedStars ? '★' : '☆' }}
+                  </button>
+                </div>
+                <p class="text-xs text-zinc-500">
+                  Selecionado: nível <strong class="text-zinc-300">{{ finSelectedStars }}</strong> —
+                  {{ formatBrl(priceForFinTier(finSelectedStars)) }}/mês
+                </p>
+              </div>
+
+              <div class="mt-5 max-w-xs">
+                <label class="form-label" for="fin-months">Período (meses)</label>
+                <select id="fin-months" v-model.number="finPeriodMonths" class="form-select mt-1">
+                  <option v-for="m in 24" :key="'mo-' + m" :value="m">{{ m }} {{ m === 1 ? 'mês' : 'meses' }}</option>
+                </select>
+              </div>
+
+              <div class="mt-6 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  class="rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-brand/25 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-45"
+                  :disabled="financePixDisabled"
+                  @click="startDestaquePix"
+                >
+                  {{ financePixBusy ? 'A gerar PIX…' : 'Pagar com PIX' }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-xl border border-zinc-600 px-4 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-800"
+                  :disabled="financeQuoteLoading"
+                  @click="void loadFinanceSectionData()"
+                >
+                  Atualizar plano
+                </button>
+              </div>
+            </template>
+          </div>
+
+          <div class="mt-10 border-t border-zinc-800 pt-8">
+            <h3 class="text-base font-semibold text-white">Transações</h3>
+            <p v-if="financeOrdersLoading" class="mt-3 text-sm text-zinc-500">Carregando…</p>
+            <ul v-else-if="financeOrders.length" class="mt-4 space-y-3">
+              <li
+                v-for="o in financeOrders"
+                :key="o.order_uuid"
+                class="rounded-xl border border-zinc-800 bg-zinc-950/40 px-4 py-3 text-sm"
+              >
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <span class="font-medium text-zinc-200">{{ o.stars }} estrela(s) × {{ o.period_months }} mês(es)</span>
+                  <span
+                    class="rounded-full px-2 py-0.5 text-xs font-medium"
+                    :class="
+                      o.payment_status === 'paid'
+                        ? 'bg-emerald-950/70 text-emerald-200'
+                        : o.payment_status === 'pending'
+                          ? 'bg-amber-950/60 text-amber-100'
+                          : 'bg-zinc-800 text-zinc-400'
+                    "
+                  >
+                    {{ financeOrderStatusLabel(o.payment_status) }}
+                  </span>
+                </div>
+                <p class="mt-1 tabular-nums text-zinc-400">
+                  {{ formatBrl(o.amount_brl) }}
+                  <span v-if="o.is_upgrade && o.pro_rata_carried_seconds != null" class="text-zinc-500">
+                    · tempo convertido (pro-rata) ≈ {{ formatDaysApprox(o.pro_rata_carried_seconds) }}
+                  </span>
+                  <span v-else-if="o.is_upgrade && o.credit_brl" class="text-zinc-500">
+                    · (ordem antiga) desconto {{ formatBrl(o.credit_brl) }}
+                  </span>
+                </p>
+                <p class="mt-1 text-xs text-zinc-600">
+                  {{ o.paid_at ? formatDate(o.paid_at) : formatDate(o.created_at) }}
+                </p>
+              </li>
+            </ul>
+            <p v-else class="mt-3 text-sm text-zinc-500">Nenhuma ordem de destaque ainda.</p>
+          </div>
+        </section>
       </template>
 
       <section
@@ -960,11 +1201,85 @@
       :title="imageCropTitle"
       @cropped="onProfileImageCropped"
     />
+
+    <Teleport to="body">
+      <div
+        v-if="destaquePixModalOpen"
+        class="fixed inset-0 z-[100] flex items-end justify-center bg-black/75 p-4 backdrop-blur-sm sm:items-center"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="destaque-pix-title"
+        @click.self="closeDestaquePixModal"
+      >
+        <div
+          class="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl"
+          @click.stop
+        >
+          <template v-if="!destaquePixPaid">
+            <h3 id="destaque-pix-title" class="text-lg font-semibold text-white">PIX — destaque</h3>
+            <p v-if="destaquePixPricingNote" class="mt-2 text-xs text-zinc-500">{{ destaquePixPricingNote }}</p>
+            <div v-if="destaquePixQr" class="mt-5 flex justify-center rounded-xl bg-white p-4">
+              <img :src="destaquePixQr" alt="QR Code PIX" width="260" height="260" class="h-[260px] w-[260px] object-contain" />
+            </div>
+            <p v-else class="mt-5 text-center text-sm text-zinc-500">A gerar QR Code…</p>
+            <p class="mt-2 text-center text-sm font-medium text-white">{{ formatBrl(destaquePixAmount) }}</p>
+            <div class="mt-4 space-y-2">
+              <label class="block text-xs font-medium text-zinc-500">Pix copia e cola</label>
+              <textarea
+                readonly
+                rows="4"
+                class="form-input min-h-[5.5rem] resize-none break-all font-mono text-xs leading-relaxed text-zinc-200"
+                :value="destaquePixBr"
+              />
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="rounded-xl border border-zinc-600 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+                  @click="copyDestaquePix"
+                >
+                  Copiar código
+                </button>
+                <button
+                  v-if="destaquePixMock"
+                  type="button"
+                  class="rounded-xl border border-amber-700/60 bg-amber-950/40 px-4 py-2 text-sm text-amber-100 transition hover:bg-amber-950/70"
+                  @click="mockConfirmDestaquePix"
+                >
+                  Simular pagamento (local)
+                </button>
+              </div>
+              <p v-if="destaquePixCopyMsg" class="text-sm text-emerald-400">{{ destaquePixCopyMsg }}</p>
+            </div>
+            <p class="mt-4 text-sm text-zinc-500">Aguardando confirmação…</p>
+            <button
+              type="button"
+              class="mt-6 w-full rounded-xl border border-zinc-600 py-3 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+              @click="closeDestaquePixModal"
+            >
+              Fechar (continua pendente)
+            </button>
+          </template>
+          <template v-else>
+            <h3 class="text-lg font-semibold text-emerald-400">Pagamento confirmado</h3>
+            <p class="mt-3 text-sm text-zinc-300">Seu destaque foi atualizado. Pode levar alguns segundos para refletir no site.</p>
+            <button
+              type="button"
+              class="mt-6 w-full rounded-xl bg-brand py-3 text-sm font-semibold text-white shadow-lg shadow-rose-900/30 hover:bg-brand-muted"
+              @click="closeDestaquePixModalAfterPaid"
+            >
+              Fechar
+            </button>
+          </template>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
+import WhatsappClicksChart from '~/components/WhatsappClicksChart.vue'
 import { REGISTER_COVER_ASPECT_RATIO, REGISTER_IMAGE_MAX_FILE_MB } from '~/config/registerPresentation'
+import { usePrazervipAnalytics } from '~/composables/usePrazervipAnalytics'
 import { useSwal } from '~/composables/useSwal'
 import { formatPhoneBrMask, phoneDigits } from '~/utils/brFormat'
 import { extractLaravelErrorMessage } from '~/utils/laravelApiErrors'
@@ -982,7 +1297,7 @@ useHead({
 type ApiState = { id: number; name: string; uf: string }
 type ApiCity = { id: number; name: string }
 
-type SectionId = 'dados' | 'perfil' | 'local' | 'whatsapp' | 'redes' | 'midias'
+type SectionId = 'dados' | 'perfil' | 'local' | 'whatsapp' | 'redes' | 'midias' | 'metricas' | 'financeiro'
 
 type MediaMod = {
   id: number
@@ -1036,6 +1351,13 @@ type Profile = {
   gallery_ordered_max?: number
   gallery_public_basic_cap?: number
   gallery_destaque_time_active?: boolean
+  plan_type?: string | null
+  highlight_stars_cached?: number | null
+  destaque_remaining_seconds?: number | null
+  destaque_clock_frozen?: boolean
+  destaque_month_seconds?: number
+  /** Destaque ativo: métricas de cliques no WhatsApp liberadas */
+  whatsapp_metrics_unlocked?: boolean
   media_moderation?: MediaMod[]
   professional_slug_cooldown_active?: boolean
   professional_slug_locked_until?: string | null
@@ -1052,6 +1374,7 @@ const route = useRoute()
 const { user, fetchMe } = useAuth()
 const { request } = useApi()
 const { swalConfirm } = useSwal()
+const { portalDestaquePixGenerated, portalDestaquePixPaid } = usePrazervipAnalytics()
 
 const loading = ref(true)
 const profile = ref<Profile | null>(null)
@@ -1293,6 +1616,8 @@ const navItems = computed(() => {
       { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
       { id: 'redes', label: 'Redes sociais', icon: '🔗' },
       { id: 'midias', label: 'Mídias', icon: '🖼' },
+      { id: 'metricas', label: 'Métricas', icon: '🔥' },
+      { id: 'financeiro', label: 'Financeiro', icon: '💰' },
     )
   }
   return items
@@ -1300,7 +1625,16 @@ const navItems = computed(() => {
 
 function normalizeSectionQuery(raw: unknown): SectionId | null {
   const s = typeof raw === 'string' ? raw : ''
-  const allowed: SectionId[] = ['dados', 'perfil', 'local', 'whatsapp', 'redes', 'midias']
+  const allowed: SectionId[] = [
+    'dados',
+    'perfil',
+    'local',
+    'whatsapp',
+    'redes',
+    'midias',
+    'metricas',
+    'financeiro',
+  ]
   return allowed.includes(s as SectionId) ? (s as SectionId) : null
 }
 
@@ -1338,11 +1672,6 @@ watch(
   () => route.query.secao,
   () => syncSectionFromRoute(),
 )
-
-watch(activeSection, () => {
-  msg.value = ''
-  err.value = false
-})
 
 watch(formHasVenue, (v) => {
   if (!v) {
@@ -1692,6 +2021,515 @@ async function refreshProfile() {
   syncSectionFromRoute()
 }
 
+type FinanceQuote = {
+  plan_type?: string
+  current_stars: number
+  remaining_seconds: number
+  destaque_month_seconds?: number
+  monthly_price_current_tier_brl?: number | null
+  upgrade_carry_seconds_preview?: number | null
+  upgrade_carry_preview_stars?: number | null
+  upgrade_pays_full_price?: boolean
+  min_selectable_stars: number
+  tier_min: number
+  tier_max: number
+  price_per_tier_brl: number
+  destaque_clock_frozen?: boolean
+  destaque_ends_at_approx?: string | null
+  at_max_tier?: boolean
+  can_purchase_destaque?: boolean
+}
+
+type PremiumPricingFallback = {
+  tier_min: number
+  tier_max: number
+  price_per_tier_brl: number
+}
+
+type FinanceOrderRow = {
+  order_uuid: string
+  amount_brl: number
+  stars: number
+  period_months: number
+  payment_status: string
+  paid_at: string | null
+  created_at: string | null
+  is_upgrade: boolean
+  credit_brl: number | null
+  pro_rata_carried_seconds?: number | null
+  pro_rata_remaining_before_seconds?: number | null
+}
+
+const waMetricsLoading = ref(false)
+const waMetricsSeries = ref<{ date: string; count: number }[]>([])
+const waMetricsTotal = ref(0)
+
+const financeQuoteLoading = ref(false)
+const financeQuote = ref<FinanceQuote | null>(null)
+const financePricingFallback = ref<PremiumPricingFallback | null>(null)
+const financePricingFallbackLoading = ref(false)
+const financeOrdersLoading = ref(false)
+const financeOrders = ref<FinanceOrderRow[]>([])
+const financeErr = ref('')
+const financePixBusy = ref(false)
+const finPeriodMonths = ref(1)
+const finSelectedStars = ref(1)
+
+const financeStatusStars = computed(() => {
+  if (financeQuote.value) {
+    return financeQuote.value.current_stars
+  }
+  return Math.max(0, Number(profile.value?.highlight_stars_cached ?? 0))
+})
+
+const financeStatusRemainingSec = computed(() => {
+  if (financeQuote.value) {
+    return financeQuote.value.remaining_seconds
+  }
+  return Math.max(0, Number(profile.value?.destaque_remaining_seconds ?? 0))
+})
+
+const financeStatusHasDestaque = computed(
+  () => financeStatusStars.value > 0 && financeStatusRemainingSec.value > 0,
+)
+
+const financeStatusFrozen = computed(
+  () => financeQuote.value?.destaque_clock_frozen === true || profile.value?.destaque_clock_frozen === true,
+)
+
+const financeStatusEndsAtLabel = computed(() => {
+  const iso = financeQuote.value?.destaque_ends_at_approx
+  if (!iso || financeStatusFrozen.value) {
+    return ''
+  }
+  try {
+    return new Date(iso).toLocaleString('pt-BR', {
+      dateStyle: 'long',
+      timeStyle: 'short',
+    })
+  } catch {
+    return iso
+  }
+})
+
+const financeStarsVisual = computed(() => '★'.repeat(Math.min(10, Math.max(1, financeStatusStars.value))))
+
+const financeAtMaxTier = computed(() => Boolean(financeQuote.value?.at_max_tier))
+
+/** Dias/horas equivalentes após pro-rata para o nível atualmente selecionado (upgrade). */
+const financeCarriedSecondsForSelectedUpgrade = computed((): number | null => {
+  const q = financeQuote.value
+  if (!q || q.current_stars <= 0 || q.remaining_seconds <= 0) {
+    return null
+  }
+  const sel = finSelectedStars.value
+  if (sel <= q.current_stars) {
+    return null
+  }
+  const unit = q.price_per_tier_brl
+  const pOld = (q.monthly_price_current_tier_brl ?? q.current_stars * unit) || 0
+  const pNew = sel * unit
+  if (pOld <= 0 || pNew <= 0) {
+    return null
+  }
+  return Math.round(q.remaining_seconds * (pOld / pNew))
+})
+
+const effectiveFinancePricing = computed(() => {
+  const q = financeQuote.value
+  if (q) {
+    return {
+      tier_min: q.tier_min,
+      tier_max: q.tier_max,
+      price_per_tier_brl: q.price_per_tier_brl,
+      min_selectable: q.min_selectable_stars,
+      can_purchase: q.can_purchase_destaque !== false && !q.at_max_tier,
+    }
+  }
+  const f = financePricingFallback.value
+  if (f) {
+    return {
+      tier_min: f.tier_min,
+      tier_max: f.tier_max,
+      price_per_tier_brl: f.price_per_tier_brl,
+      min_selectable: f.tier_min,
+      can_purchase: true,
+    }
+  }
+  return null
+})
+
+const financeStarRange = computed(() => {
+  const e = effectiveFinancePricing.value
+  if (!e) {
+    return []
+  }
+  const out: number[] = []
+  for (let s = e.tier_min; s <= e.tier_max; s++) {
+    out.push(s)
+  }
+  return out
+})
+
+const financeMinSelectableStarsForUi = computed(() => effectiveFinancePricing.value?.min_selectable ?? 1)
+
+const financeNeedsQuoteForPurchase = computed(() => {
+  if (financeQuote.value) {
+    return false
+  }
+  const p = profile.value
+  const stars = Number(p?.highlight_stars_cached ?? 0) > 0
+  const time =
+    p?.gallery_destaque_time_active === true || Number(p?.destaque_remaining_seconds ?? 0) > 0
+  return stars && time
+})
+
+const financePixDisabled = computed(() => {
+  if (financePixBusy.value) {
+    return true
+  }
+  const e = effectiveFinancePricing.value
+  if (!e) {
+    return true
+  }
+  if (financeQuote.value) {
+    if (financeQuote.value.at_max_tier) {
+      return true
+    }
+    if (finSelectedStars.value < financeQuote.value.min_selectable_stars) {
+      return true
+    }
+    return false
+  }
+  if (financeNeedsQuoteForPurchase.value) {
+    return true
+  }
+  return finSelectedStars.value < e.min_selectable
+})
+
+watch(
+  () => effectiveFinancePricing.value,
+  (ev) => {
+    if (ev) {
+      finSelectedStars.value = Math.max(ev.min_selectable, ev.tier_min)
+    }
+  },
+  { immediate: true },
+)
+
+function formatBrl(n: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
+}
+
+function formatDestaqueDuration(sec: number) {
+  const d = Math.floor(sec / 86400)
+  if (d >= 1) {
+    return `${d} dia(s)`
+  }
+  const h = Math.floor(sec / 3600)
+  return `${Math.max(1, h)} h`
+}
+
+function formatDaysApprox(sec: number) {
+  const d = sec / 86400
+  if (d >= 1) {
+    return `${d.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} dias`
+  }
+  const h = Math.max(1, Math.round(sec / 3600))
+  return `${h} h`
+}
+
+function priceForFinTier(t: number) {
+  const u = effectiveFinancePricing.value?.price_per_tier_brl ?? 0
+  return t * u
+}
+
+function financeOrderStatusLabel(s: string) {
+  if (s === 'paid') {
+    return 'Pago'
+  }
+  if (s === 'pending') {
+    return 'Pendente'
+  }
+  if (s === 'failed') {
+    return 'Falhou'
+  }
+  return s
+}
+
+async function loadWhatsappMetrics() {
+  waMetricsLoading.value = true
+  try {
+    const r = await request<{
+      series: { date: string; count: number }[]
+      total_unique_sessions: number
+    }>('/v1/me/profile/whatsapp-metrics', { query: { days: 30 } })
+    waMetricsSeries.value = r.series
+    waMetricsTotal.value = r.total_unique_sessions
+  } catch {
+    waMetricsSeries.value = []
+    waMetricsTotal.value = 0
+  } finally {
+    waMetricsLoading.value = false
+  }
+}
+
+async function loadFinanceQuote() {
+  financeQuoteLoading.value = true
+  financeErr.value = ''
+  try {
+    financeQuote.value = await request<FinanceQuote>('/v1/me/highlight/quote')
+  } catch {
+    financeQuote.value = null
+    financeErr.value = 'Não foi possível carregar a cotação de destaque.'
+  } finally {
+    financeQuoteLoading.value = false
+  }
+}
+
+async function loadPremiumPricingFallback() {
+  financePricingFallbackLoading.value = true
+  try {
+    financePricingFallback.value = await request<PremiumPricingFallback>('/v1/config/premium-pricing')
+  } catch {
+    financePricingFallback.value = null
+  } finally {
+    financePricingFallbackLoading.value = false
+  }
+}
+
+async function loadFinanceSectionData() {
+  await Promise.all([loadFinanceQuote(), loadFinanceOrders(), loadPremiumPricingFallback()])
+}
+
+async function loadFinanceOrders() {
+  financeOrdersLoading.value = true
+  try {
+    const r = await request<{ data: FinanceOrderRow[] }>('/v1/me/highlight/orders')
+    financeOrders.value = r.data ?? []
+  } catch {
+    financeOrders.value = []
+  } finally {
+    financeOrdersLoading.value = false
+  }
+}
+
+const destaquePixModalOpen = ref(false)
+const destaquePixPaid = ref(false)
+const destaquePixQr = ref<string | null>(null)
+const destaquePixBr = ref('')
+const destaquePixAmount = ref(0)
+const destaquePixMock = ref(false)
+const destaquePixCopyMsg = ref<string | null>(null)
+const destaquePixOrderUuid = ref<string | null>(null)
+const destaquePixPricingNote = ref('')
+
+type DestaquePixAnalyticsMeta = { stars: number; period_months: number; is_upgrade: boolean }
+const destaquePixAnalyticsMeta = ref<DestaquePixAnalyticsMeta | null>(null)
+let destaquePixPaidAnalyticsSent = false
+
+let destaquePixPollTimer: ReturnType<typeof setInterval> | null = null
+
+function firePortalDestaquePixPaidAnalytics() {
+  if (destaquePixPaidAnalyticsSent) {
+    return
+  }
+  const meta = destaquePixAnalyticsMeta.value
+  const id = destaquePixOrderUuid.value
+  if (!meta || !id) {
+    return
+  }
+  destaquePixPaidAnalyticsSent = true
+  portalDestaquePixPaid({
+    transaction_id: id,
+    value: destaquePixAmount.value,
+    stars: meta.stars,
+    period_months: meta.period_months,
+    mock: destaquePixMock.value,
+    is_upgrade: meta.is_upgrade,
+  })
+}
+
+function stopDestaquePixPolling() {
+  if (destaquePixPollTimer != null) {
+    clearInterval(destaquePixPollTimer)
+    destaquePixPollTimer = null
+  }
+}
+
+function startDestaquePixPolling() {
+  stopDestaquePixPolling()
+  destaquePixPollTimer = setInterval(async () => {
+    const id = destaquePixOrderUuid.value
+    if (!id) {
+      return
+    }
+    try {
+      const st = await request<{ status: string }>('/v1/me/highlight/payment-status', {
+        query: { order_uuid: id },
+      })
+      if (st.status === 'paid') {
+        stopDestaquePixPolling()
+        firePortalDestaquePixPaidAnalytics()
+        destaquePixPaid.value = true
+        destaquePixCopyMsg.value = null
+        await refreshProfile()
+        await loadFinanceSectionData()
+        await loadWhatsappMetrics()
+      }
+    } catch {
+      /* continua */
+    }
+  }, 3000)
+}
+
+function closeDestaquePixModal() {
+  stopDestaquePixPolling()
+  destaquePixModalOpen.value = false
+  destaquePixCopyMsg.value = null
+  if (!destaquePixPaid.value) {
+    destaquePixAnalyticsMeta.value = null
+    destaquePixPaidAnalyticsSent = false
+  }
+}
+
+function closeDestaquePixModalAfterPaid() {
+  closeDestaquePixModal()
+  destaquePixPaid.value = false
+  destaquePixQr.value = null
+  destaquePixBr.value = ''
+  destaquePixOrderUuid.value = null
+  destaquePixAnalyticsMeta.value = null
+  destaquePixPaidAnalyticsSent = false
+}
+
+async function copyDestaquePix() {
+  destaquePixCopyMsg.value = null
+  if (!destaquePixBr.value || !import.meta.client) {
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(destaquePixBr.value)
+    destaquePixCopyMsg.value = 'Código copiado.'
+  } catch {
+    destaquePixCopyMsg.value = 'Não foi possível copiar.'
+  }
+}
+
+async function mockConfirmDestaquePix() {
+  const id = destaquePixOrderUuid.value
+  if (!id) {
+    return
+  }
+  try {
+    await request('/v1/me/highlight/mock-confirm-payment', {
+      method: 'POST',
+      body: { order_uuid: id },
+    })
+    const st = await request<{ status: string }>('/v1/me/highlight/payment-status', {
+      query: { order_uuid: id },
+    })
+    if (st.status === 'paid') {
+      stopDestaquePixPolling()
+      firePortalDestaquePixPaidAnalytics()
+      destaquePixPaid.value = true
+      await refreshProfile()
+      await loadFinanceSectionData()
+      await loadWhatsappMetrics()
+    }
+  } catch (e: unknown) {
+    financeErr.value =
+      extractLaravelErrorMessage(e, ['order_uuid', 'pix']) ?? 'Não foi possível simular o pagamento.'
+  }
+}
+
+async function startDestaquePix() {
+  financeErr.value = ''
+  const stars = finSelectedStars.value
+  const q = financeQuote.value
+  if (q) {
+    if (stars < q.min_selectable_stars) {
+      financeErr.value = 'Escolha um nível de estrelas válido.'
+      return
+    }
+  } else if (financeNeedsQuoteForPurchase.value) {
+    financeErr.value = 'Atualize o plano (cotação) antes de pagar o upgrade.'
+    return
+  } else {
+    const tmin = effectiveFinancePricing.value?.tier_min ?? 1
+    if (stars < tmin) {
+      financeErr.value = 'Escolha um nível de estrelas válido.'
+      return
+    }
+  }
+  financePixBusy.value = true
+  try {
+    const pix = await request<{
+      order_uuid: string
+      br_code: string
+      amount_brl: number
+      mock?: boolean
+      pricing?: { is_upgrade?: boolean; gross_brl?: number; amount_brl?: number }
+    }>('/v1/me/highlight/pix', {
+      method: 'POST',
+      body: { stars, period_months: finPeriodMonths.value },
+    })
+    destaquePixPaidAnalyticsSent = false
+    destaquePixAnalyticsMeta.value = {
+      stars,
+      period_months: finPeriodMonths.value,
+      is_upgrade: Boolean(pix.pricing?.is_upgrade),
+    }
+    destaquePixOrderUuid.value = pix.order_uuid
+    destaquePixBr.value = pix.br_code
+    destaquePixAmount.value = pix.amount_brl
+    destaquePixMock.value = Boolean(pix.mock)
+    destaquePixPaid.value = false
+    destaquePixQr.value = null
+    const pr = pix.pricing
+    if (pr?.is_upgrade) {
+      destaquePixPricingNote.value =
+        'Upgrade: paga o valor integral do plano; o tempo restante no nível anterior é convertido para o novo nível (pro-rata).'
+    } else {
+      destaquePixPricingNote.value = ''
+    }
+    destaquePixModalOpen.value = true
+    portalDestaquePixGenerated({
+      transaction_id: pix.order_uuid,
+      value: pix.amount_brl,
+      stars,
+      period_months: finPeriodMonths.value,
+      mock: Boolean(pix.mock),
+      is_upgrade: Boolean(pr?.is_upgrade),
+    })
+    const QRCode = (await import('qrcode')).default
+    destaquePixQr.value = await QRCode.toDataURL(pix.br_code, {
+      width: 260,
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' },
+    })
+    startDestaquePixPolling()
+  } catch (e: unknown) {
+    financeErr.value =
+      extractLaravelErrorMessage(e, ['stars', 'period_months', 'pix', 'profile']) ??
+      'Não foi possível gerar o PIX.'
+    destaquePixAnalyticsMeta.value = null
+  } finally {
+    financePixBusy.value = false
+  }
+}
+
+watch(activeSection, (s) => {
+  msg.value = ''
+  err.value = false
+  if (s === 'metricas') {
+    void loadWhatsappMetrics()
+  }
+  if (s === 'financeiro') {
+    void loadFinanceSectionData()
+  }
+})
+
 async function load() {
   loading.value = true
   msg.value = ''
@@ -1708,6 +2546,7 @@ onMounted(() => load())
 
 onUnmounted(() => {
   stopWaResendTicker()
+  stopDestaquePixPolling()
 })
 
 async function onStateChange() {

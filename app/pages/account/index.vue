@@ -31,6 +31,13 @@
             Editar perfil
           </NuxtLink>
           <NuxtLink
+            v-if="profileOk && isApprovedAdvertiser"
+            to="/conta/perfil?secao=financeiro"
+            class="rounded-lg border border-amber-600/45 bg-amber-950/25 px-4 py-2 text-sm font-medium text-amber-100/95 transition hover:bg-amber-950/45"
+          >
+            Financeiro
+          </NuxtLink>
+          <NuxtLink
             v-if="showAccountSecurityAndSupport"
             to="/conta/seguranca"
             class="rounded-lg border border-violet-700/50 bg-violet-950/30 px-4 py-2 text-sm font-medium text-violet-200/95 transition hover:bg-violet-950/50"
@@ -288,14 +295,20 @@ const profileOk = ref(false)
 const profileLocationSummary = ref<string | null>(null)
 const profileLocationLoading = ref(false)
 
-const profileSectionLinks = [
-  { secao: 'dados', label: 'Dados pessoais' },
-  { secao: 'perfil', label: 'Nome profissional, bio e link' },
-  { secao: 'local', label: 'Local' },
-  { secao: 'whatsapp', label: 'WhatsApp do anúncio' },
-  { secao: 'redes', label: 'Redes' },
-  { secao: 'midias', label: 'Mídias' },
-] as const
+const profileSectionLinks = computed(() => {
+  const rows: { secao: string; label: string }[] = [
+    { secao: 'dados', label: 'Dados pessoais' },
+    { secao: 'perfil', label: 'Nome profissional, bio e link' },
+    { secao: 'local', label: 'Local' },
+    { secao: 'whatsapp', label: 'WhatsApp do anúncio' },
+    { secao: 'redes', label: 'Redes' },
+    { secao: 'midias', label: 'Mídias' },
+  ]
+  if (profileDetail.value?.approval_status === 'approved') {
+    rows.push({ secao: 'metricas', label: 'Métricas' }, { secao: 'financeiro', label: 'Financeiro' })
+  }
+  return rows
+})
 
 /** Admin ou anunciante já aprovado — anunciante em pré-cadastro/análise não vê estes atalhos. */
 const showAccountSecurityAndSupport = computed(

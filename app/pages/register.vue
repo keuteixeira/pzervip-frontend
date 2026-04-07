@@ -796,8 +796,8 @@
               <label class="block text-xs font-medium text-zinc-500">Pix copia e cola</label>
               <textarea
                 readonly
-                rows="3"
-                class="input resize-none font-mono text-xs text-zinc-200"
+                rows="4"
+                class="form-input min-h-[5.5rem] resize-none break-all font-mono text-xs leading-relaxed text-zinc-200"
                 :value="pixBrCode"
               />
               <div class="flex flex-wrap gap-2">
