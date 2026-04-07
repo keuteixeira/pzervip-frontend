@@ -14,6 +14,24 @@
     <p v-else-if="errorMsg" class="text-red-400">{{ errorMsg }}</p>
 
     <template v-else-if="detail">
+      <nav class="flex flex-wrap gap-1 border-b border-zinc-800 pb-3" aria-label="Secções do anunciante">
+        <button
+          v-for="t in adminTabs"
+          :key="t.id"
+          type="button"
+          class="rounded-lg px-3 py-2 text-sm font-medium transition"
+          :class="
+            adminTab === t.id
+              ? 'bg-zinc-800 text-white shadow-sm'
+              : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
+          "
+          @click="adminTab = t.id"
+        >
+          {{ t.label }}
+        </button>
+      </nav>
+
+      <div v-show="adminTab === 'resumo'" class="mt-6 space-y-6">
       <section class="rounded-xl border border-emerald-900/40 bg-emerald-950/15 p-6">
         <h2 class="text-lg font-semibold text-emerald-100">Visão geral</h2>
         <p class="mt-1 text-sm text-emerald-100/75">
@@ -51,6 +69,19 @@
               <span v-if="detail.premium_tier != null" class="text-zinc-400"> · tier {{ detail.premium_tier }}</span>
             </dd>
           </div>
+          <div v-if="(detail.highlight_stars_cached ?? 0) > 0 || (detail.destaque_effective_remaining_seconds ?? 0) > 0">
+            <dt class="text-zinc-500">Tempo de destaque restante (estimado)</dt>
+            <dd class="text-zinc-200">
+              {{ formatDestaqueDuration(detail.destaque_effective_remaining_seconds ?? 0) }}
+              <span v-if="detail.user_paused_listing" class="mt-1 block text-xs text-zinc-500">
+                Destaque pausado — anúncio inativo; o tempo não decorre enquanto estiver pausado.
+              </span>
+            </dd>
+          </div>
+          <div v-if="(detail.highlight_stars_cached ?? 0) > 0">
+            <dt class="text-zinc-500">Nível de estrelas (cache)</dt>
+            <dd class="text-zinc-200">{{ detail.highlight_stars_cached }} ★</dd>
+          </div>
           <div>
             <dt class="text-zinc-500">Tipo de perfil / serviço</dt>
             <dd class="text-zinc-200">
@@ -85,6 +116,19 @@
         </div>
       </section>
 
+      <section
+        v-if="detail.portal_text_pending?.has_pending"
+        class="rounded-xl border border-sky-900/40 bg-sky-950/15 px-4 py-3 text-sm text-sky-100/95"
+      >
+        <NuxtLink to="/admin/texto-perfil" class="font-medium text-brand hover:underline">Nome e bio (fila)</NuxtLink>
+        <span class="text-sky-100/80">
+          — este perfil tem alterações de nome profissional e/ou biografia aguardando análise. Aprove ou recuse em
+          «Nome e bio» no menu.
+        </span>
+      </section>
+      </div>
+
+      <div v-show="adminTab === 'perfil'" class="space-y-6">
       <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
         <h2 class="text-lg font-semibold text-white">Localização e apresentação</h2>
         <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
@@ -101,17 +145,6 @@
             <dd class="text-zinc-200">{{ detail.registration.has_venue ? 'Sim' : 'Não' }}</dd>
           </div>
         </dl>
-      </section>
-
-      <section
-        v-if="detail.portal_text_pending?.has_pending"
-        class="rounded-xl border border-sky-900/40 bg-sky-950/15 px-4 py-3 text-sm text-sky-100/95"
-      >
-        <NuxtLink to="/admin/texto-perfil" class="font-medium text-brand hover:underline">Nome e bio (fila)</NuxtLink>
-        <span class="text-sky-100/80">
-          — este perfil tem alterações de nome profissional e/ou biografia aguardando análise. Aprove ou recuse em
-          «Nome e bio» no menu.
-        </span>
       </section>
 
       <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
@@ -180,12 +213,35 @@
           {{ saving ? 'Salvando…' : 'Salvar alterações' }}
         </button>
       </section>
+      </div>
+
+      <div v-show="adminTab === 'financeiro'" class="space-y-6">
+      <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
+        <h2 class="text-lg font-semibold text-white">Estado do destaque</h2>
+        <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt class="text-zinc-500">Tempo restante (estimado, com anúncio ativo)</dt>
+            <dd class="text-zinc-200">{{ formatDestaqueDuration(detail.destaque_effective_remaining_seconds ?? 0) }}</dd>
+          </div>
+          <div>
+            <dt class="text-zinc-500">Saldo em segundos (BD, antes do relógio em tempo real)</dt>
+            <dd class="font-mono text-xs text-zinc-400">{{ detail.destaque_remaining_seconds }} s</dd>
+          </div>
+          <div>
+            <dt class="text-zinc-500">Início do relógio (último tick)</dt>
+            <dd class="text-zinc-300">{{ detail.destaque_clock_started_at ? formatDateTime(detail.destaque_clock_started_at) : '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-zinc-500">Estrelas (cache)</dt>
+            <dd class="text-zinc-200">{{ detail.highlight_stars_cached ?? '—' }}</dd>
+          </div>
+        </dl>
+      </section>
 
       <section class="rounded-xl border border-amber-900/40 bg-amber-950/20 p-6">
         <h2 class="text-lg font-semibold text-amber-100">Destaque gratuito (cortesia)</h2>
         <p class="mt-1 text-sm text-amber-100/80">
-          Credita tempo de destaque sem PIX. Perfil precisa estar <strong>aprovado</strong>. Atual:
-          {{ detail.destaque_remaining_seconds }}s · estrelas cache: {{ detail.highlight_stars_cached ?? '—' }}
+          Credita tempo de destaque sem PIX. Perfil precisa estar <strong>aprovado</strong>.
         </p>
         <div class="mt-4 flex flex-wrap items-end gap-3">
           <label class="text-sm">
@@ -208,6 +264,62 @@
         <p v-if="grantMsg" class="mt-2 text-sm" :class="grantOk ? 'text-emerald-400' : 'text-red-400'">{{ grantMsg }}</p>
       </section>
 
+      <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-lg font-semibold text-white">Pedidos e pagamentos (destaque / PIX)</h2>
+          <button
+            type="button"
+            class="rounded-lg border border-zinc-600 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800"
+            :disabled="highlightOrdersLoading"
+            @click="fetchHighlightOrders"
+          >
+            {{ highlightOrdersLoading ? 'A atualizar…' : 'Atualizar lista' }}
+          </button>
+        </div>
+        <p v-if="highlightOrdersErr" class="mt-2 text-sm text-red-400">{{ highlightOrdersErr }}</p>
+        <p v-else-if="highlightOrdersLoading && highlightOrders.length === 0" class="mt-3 text-sm text-zinc-500">
+          A carregar…
+        </p>
+        <div v-else-if="highlightOrders.length === 0" class="mt-3 text-sm text-zinc-500">Nenhum pedido registado.</div>
+        <div v-else class="mt-4 overflow-x-auto">
+          <table class="w-full min-w-[720px] border-collapse text-left text-sm">
+            <thead>
+              <tr class="border-b border-zinc-700 text-xs uppercase tracking-wide text-zinc-500">
+                <th class="py-2 pr-3">Criado</th>
+                <th class="py-2 pr-3">Estado</th>
+                <th class="py-2 pr-3">Valor</th>
+                <th class="py-2 pr-3">★ / meses</th>
+                <th class="py-2 pr-3">Gateway</th>
+                <th class="py-2 pr-3">Notas</th>
+                <th class="py-2">UUID</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="o in highlightOrders"
+                :key="o.order_uuid"
+                class="border-b border-zinc-800/80 text-zinc-300"
+              >
+                <td class="py-2 pr-3 align-top whitespace-nowrap">{{ formatDateTime(o.created_at) }}</td>
+                <td class="py-2 pr-3 align-top">{{ financeOrderStatusLabel(o.payment_status) }}</td>
+                <td class="py-2 pr-3 align-top">{{ formatBrlAdmin(o.amount_brl) }}</td>
+                <td class="py-2 pr-3 align-top">{{ o.stars }} ★ · {{ o.period_months }} m</td>
+                <td class="py-2 pr-3 align-top font-mono text-xs">{{ o.gateway || '—' }}</td>
+                <td class="py-2 pr-3 align-top text-xs text-zinc-400">
+                  <span v-if="o.admin_grant">Cortesia admin</span>
+                  <span v-else-if="o.is_upgrade">Upgrade</span>
+                  <span v-if="o.paid_at" class="block text-zinc-500">Pago: {{ formatDateTime(o.paid_at) }}</span>
+                  <span v-if="o.failure_reason" class="block text-red-300/90">{{ o.failure_reason }}</span>
+                </td>
+                <td class="py-2 align-top font-mono text-[10px] text-zinc-500 break-all">{{ o.order_uuid }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      </div>
+
+      <div v-show="adminTab === 'cadastro'" class="space-y-6">
       <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
         <h2 class="text-lg font-semibold text-white">Conta (usuário)</h2>
         <ul class="mt-2 space-y-1 text-sm text-zinc-400">
@@ -279,7 +391,9 @@
           Abrir tela de revisão de cadastro (remover arquivos, aprovar) →
         </NuxtLink>
       </section>
+      </div>
 
+      <div v-show="adminTab === 'midias'" class="space-y-6">
       <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
         <h2 class="text-lg font-semibold text-white">Mídias deste perfil</h2>
         <p class="mt-1 text-sm text-zinc-500">Verificação de identidade e mídias do site, com moderação.</p>
@@ -471,6 +585,7 @@
 
         <p v-if="!mediaList.length" class="mt-4 text-sm text-zinc-500">Nenhuma mídia listada.</p>
       </section>
+      </div>
 
       <ProfileMediaLightbox
         v-model="adminLightboxOpen"
@@ -524,6 +639,8 @@ type ProfileDetail = {
   premium_tier?: number | null
   highlight_stars_cached: number | null
   destaque_remaining_seconds: number
+  destaque_effective_remaining_seconds?: number
+  destaque_clock_started_at?: string | null
   user_paused_listing: boolean
   public_profile_visible_when_paused?: boolean
   listing_visibility_locked_until?: string | null
@@ -557,6 +674,32 @@ type ProfileDetail = {
   } | null
 }
 
+type AdminTabId = 'resumo' | 'perfil' | 'financeiro' | 'cadastro' | 'midias'
+
+type HighlightOrderRow = {
+  order_uuid: string
+  amount_brl: number
+  stars: number
+  period_months: number
+  payment_status: string
+  paid_at: string | null
+  created_at: string | null
+  failure_reason?: string | null
+  gateway: string
+  is_upgrade: boolean
+  admin_grant: boolean
+}
+
+const adminTabs: { id: AdminTabId; label: string }[] = [
+  { id: 'resumo', label: 'Resumo' },
+  { id: 'perfil', label: 'Perfil e edição' },
+  { id: 'financeiro', label: 'Destaque e financeiro' },
+  { id: 'cadastro', label: 'Cadastro' },
+  { id: 'midias', label: 'Mídias' },
+]
+
+const adminTab = ref<AdminTabId>('resumo')
+
 const KYC_COLLECTIONS = new Set(['id_document_front', 'id_document_back', 'selfie', 'video'])
 
 const loading = ref(true)
@@ -578,6 +721,10 @@ const grant = reactive({ stars: 3, months: 1 })
 const granting = ref(false)
 const grantMsg = ref('')
 const grantOk = ref(true)
+
+const highlightOrders = ref<HighlightOrderRow[]>([])
+const highlightOrdersLoading = ref(false)
+const highlightOrdersErr = ref<string | null>(null)
 
 const mediaList = ref<
   {
@@ -718,6 +865,51 @@ function formatDateTime(iso: string | null | undefined) {
   }
 }
 
+function formatDestaqueDuration(sec: number) {
+  const s = Math.max(0, Math.floor(sec))
+  const d = Math.floor(s / 86400)
+  if (d >= 1) {
+    return `${d} dia(s)`
+  }
+  const h = Math.floor(s / 3600)
+  if (h >= 1) {
+    return `${h} h`
+  }
+  const m = Math.max(0, Math.floor(s / 60))
+  return m >= 1 ? `${m} min` : s > 0 ? `${s} s` : '0 s'
+}
+
+function formatBrlAdmin(n: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
+}
+
+function financeOrderStatusLabel(s: string) {
+  if (s === 'paid') {
+    return 'Pago'
+  }
+  if (s === 'pending') {
+    return 'Pendente'
+  }
+  if (s === 'failed' || s === 'cancelled' || s === 'expired') {
+    return s === 'failed' ? 'Falhou' : s === 'cancelled' ? 'Cancelado' : 'Expirado'
+  }
+  return s
+}
+
+async function fetchHighlightOrders() {
+  highlightOrdersErr.value = null
+  highlightOrdersLoading.value = true
+  try {
+    const r = await request<{ data?: HighlightOrderRow[] }>(`/v1/admin/profiles/${id.value}/highlight-orders`)
+    highlightOrders.value = Array.isArray(r.data) ? r.data : []
+  } catch {
+    highlightOrdersErr.value = 'Não foi possível carregar os pedidos.'
+    highlightOrders.value = []
+  } finally {
+    highlightOrdersLoading.value = false
+  }
+}
+
 function formatAddress(a: AddressJson) {
   const parts = [
     a.street && a.number ? `${a.street}, ${a.number}` : a.street,
@@ -742,6 +934,7 @@ async function load() {
     const p = await request<ProfileDetail>(`/v1/admin/profiles/${id.value}`)
     detail.value = p
     applyDetailToForm(p)
+    void fetchHighlightOrders()
     const mediaOk = await fetchAdminMediaList()
     if (!mediaOk) {
       mediaModerationMsg.value =
@@ -814,6 +1007,7 @@ async function grantDestaque() {
     detail.value = p
     grantMsg.value = 'Destaque creditado.'
     grantOk.value = true
+    void fetchHighlightOrders()
   } catch (e: unknown) {
     const err = e as { data?: { message?: string; errors?: Record<string, string[]> } }
     grantMsg.value =
