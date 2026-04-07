@@ -29,9 +29,12 @@
     <template v-else>
       <div>
         <p class="text-sm font-medium text-brand">{{ genderTitle }}</p>
-        <h1 class="mt-1 text-3xl font-bold tracking-tight text-white md:text-4xl">
-          {{ genderTitle }} em {{ ctx.city.name }}
+        <h1 class="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl md:text-4xl md:leading-tight">
+          {{ cityPageH1 }}
         </h1>
+        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-500">
+          {{ citySeoIntro }}
+        </p>
         <p class="mt-2 text-lg text-zinc-400">
           {{ totalFiltered }}
           {{ totalFiltered === 1 ? 'perfil encontrado' : 'perfis encontrados' }}
@@ -111,6 +114,13 @@
 <script setup lang="ts">
 import { usePublicExploreApi } from '~/composables/usePublicExploreApi'
 import type { AttendimentoSlug, ExploreCityProfilesResponse, GenderSlug, ProfileSummary } from '~/types/explore-catalog'
+import {
+  cityListPageH1,
+  cityListSeoDescription,
+  cityListSeoIntro,
+  cityListSeoTitle,
+  metaKeywordsForGender,
+} from '~/utils/explore-seo-copy'
 
 definePageMeta({
   layout: 'default',
@@ -118,7 +128,10 @@ definePageMeta({
 })
 
 const route = useRoute()
+const runtimeConfig = useRuntimeConfig()
 const { fetchCityProfiles } = usePublicExploreApi()
+
+const siteBase = computed(() => String(runtimeConfig.public.siteUrl || '').replace(/\/$/, ''))
 
 const gender = computed(() => route.params.gender as string)
 const uf = computed(() => route.params.uf as string)
@@ -159,6 +172,10 @@ const ctx = computed(() => {
       slug: d.city.slug,
       name: d.city.name,
       count: d.city.count,
+    },
+    state: {
+      uf: d.state.uf,
+      name: d.state.name,
     },
   }
 })
@@ -224,19 +241,105 @@ const restList = computed(() =>
 )
 const totalFiltered = computed(() => filteredProfiles.value.length)
 
+/** Total da cidade para meta (não muda com filtro de atendimento — evita título/descrição “piscando”). */
+const totalCityProfilesForSeo = computed(() => {
+  const d = cityPayload.value
+  if (!d) {
+    return 0
+  }
+  const c = d.city.count
+  if (typeof c === 'number' && c > 0) {
+    return c
+  }
+  return d.profiles.length
+})
+
+const citySeoIntro = computed(() => {
+  if (!ctx.value) {
+    return ''
+  }
+  return cityListSeoIntro(ctx.value.city.name, ctx.value.state.uf, gender.value)
+})
+
+const cityPageH1 = computed(() => {
+  if (!ctx.value) {
+    return ''
+  }
+  return cityListPageH1(ctx.value.city.name, gender.value)
+})
+
+/** BreadcrumbList: ajuda o Google a exibir caminho com nome da cidade na SERP. */
+const cityBreadcrumbJsonLd = computed(() => {
+  if (!ctx.value || !siteBase.value) {
+    return null
+  }
+  const base = siteBase.value
+  const g = gender.value
+  const ufLower = ctx.value.state.uf.toLowerCase()
+  const pathOnly = route.path.split('?')[0] || ''
+  const items: { name: string; path: string }[] = [
+    { name: 'Início', path: '/' },
+    { name: 'Explorar', path: '/explorar' },
+    { name: genderTitle.value, path: `/explorar/${g}` },
+    {
+      name: `${ctx.value.state.name} (${ctx.value.state.uf.toUpperCase()})`,
+      path: `/explorar/${g}/estado/${ufLower}`,
+    },
+    { name: ctx.value.city.name, path: pathOnly },
+  ]
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((it, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: it.name,
+      item: `${base}${it.path.startsWith('/') ? it.path : `/${it.path}`}`,
+    })),
+  }
+})
+
+useHead(() => {
+  const d = cityBreadcrumbJsonLd.value
+  if (!d) {
+    return {}
+  }
+  const pathOnly = route.path.split('?')[0] || ''
+  return {
+    script: [
+      {
+        key: `explore-city-breadcrumb-${pathOnly}`,
+        type: 'application/ld+json',
+        textContent: JSON.stringify(d),
+      },
+    ],
+  }
+})
+
 usePublicPageSeo({
   title: computed(() => {
     if (!ctx.value) {
       return 'Cidade'
     }
-    return `${genderTitle.value} em ${ctx.value.city.name}`
+    return cityListSeoTitle(ctx.value.city.name, ctx.value.state.uf, gender.value)
   }),
   description: computed(() => {
     if (!ctx.value) {
       return 'Perfis por cidade no Prazer.Vip.'
     }
-    const n = totalFiltered.value
-    return `${n} ${n === 1 ? 'perfil' : 'perfis'} de ${genderTitle.value.toLowerCase()} em ${ctx.value.city.name}. Filtros por tipo de atendimento.`
+    return cityListSeoDescription(
+      ctx.value.city.name,
+      ctx.value.state.uf,
+      gender.value,
+      totalCityProfilesForSeo.value,
+    )
+  }),
+  keywords: computed(() => {
+    if (!ctx.value) {
+      return undefined
+    }
+    const geo = `${ctx.value.city.name}, ${ctx.value.state.uf.toUpperCase()}, Brasil`
+    return `${metaKeywordsForGender(gender.value)}, ${geo}`
   }),
 })
 </script>

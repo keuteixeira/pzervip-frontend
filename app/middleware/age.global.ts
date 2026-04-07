@@ -1,29 +1,21 @@
+import { isAgeGateExemptPath, safeInternalNextPath } from '~/utils/age-gate-routes'
+
 export default defineNuxtRouteMiddleware((to) => {
   const { isAgeConfirmed } = useAgeGate()
 
   if (to.path === '/') {
     if (isAgeConfirmed()) {
-      return navigateTo('/explorar')
+      const raw = to.query.next
+      const next = Array.isArray(raw) ? raw[0] : raw
+      const path = safeInternalNextPath(next)
+      return navigateTo(path || '/explorar')
     }
     return
   }
 
-  const allowWithoutAge =
-    to.path.startsWith('/login') ||
-    to.path.startsWith('/auth') ||
-    to.path.startsWith('/cadastro') ||
-    to.path.startsWith('/admin') ||
-    to.path === '/contato' ||
-    to.path === '/politica-de-privacidade' ||
-    to.path === '/termos-de-servico' ||
-    to.path === '/sobre-nos' ||
-    to.path === '/anunciar'
-
-  if (allowWithoutAge) {
+  if (isAgeGateExemptPath(to.path)) {
     return
   }
 
-  if (to.path.startsWith('/explorar') && !isAgeConfirmed()) {
-    return navigateTo('/')
-  }
+  // Demais rotas: a verificação é feita com overlay no layout (mantém URL e meta tags da página para SEO).
 })

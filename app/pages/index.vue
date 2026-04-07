@@ -23,6 +23,8 @@
 </template>
 
 <script setup lang="ts">
+import { safeInternalNextPath } from '~/utils/age-gate-routes'
+
 definePageMeta({
   layout: 'default',
 })
@@ -34,10 +36,12 @@ usePublicPageSeo({
 })
 
 const { confirmAge } = useAgeGate()
+const route = useRoute()
 const router = useRouter()
 
 function entrar() {
   confirmAge()
-  router.replace('/explorar')
+  const path = safeInternalNextPath(route.query.next)
+  router.replace(path || '/explorar')
 }
 </script>

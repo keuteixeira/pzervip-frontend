@@ -76,6 +76,7 @@
 import { usePublicExploreApi } from '~/composables/usePublicExploreApi'
 import type { ExploreStateCitiesResponse, GenderSlug, StateItem } from '~/types/explore-catalog'
 import { cityThumbUrl } from '~/types/explore-catalog'
+import { metaKeywordsForGender, stateListSeoDescription, stateListSeoTitle } from '~/utils/explore-seo-copy'
 
 definePageMeta({
   layout: 'default',
@@ -135,15 +136,21 @@ usePublicPageSeo({
     if (!s) {
       return `${genderTitle.value} — Estado`
     }
-    return `${genderTitle.value} em ${s.name} (${s.uf}) — cidades`
+    return stateListSeoTitle(s.name, s.uf, gender.value)
   }),
   description: computed(() => {
     const s = state.value
-    const g = genderTitle.value
     if (!s) {
-      return `Cidades e perfis ${g} no Prazer.Vip.`
+      return `Cidades e perfis ${genderTitle.value} no Prazer.Vip.`
     }
-    return `Lista de cidades em ${s.name} (${s.uf}) com perfis ${g.toLowerCase()} no Prazer.Vip.`
+    return stateListSeoDescription(s.name, s.uf, gender.value)
+  }),
+  keywords: computed(() => {
+    if (!genderOk.value || !state.value) {
+      return undefined
+    }
+    const s = state.value
+    return `${metaKeywordsForGender(gender.value)}, ${s.name}, ${s.uf.toUpperCase()}, Brasil`
   }),
 })
 </script>

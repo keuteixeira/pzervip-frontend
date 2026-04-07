@@ -15,8 +15,8 @@
         <h2
           class="mx-auto mt-6 max-w-3xl text-lg font-normal leading-relaxed text-zinc-400 md:text-xl md:leading-relaxed"
         >
-          Descubra pessoas, como acompanhantes e massagistas, organizados por localização.
-          Conecte-se facilmente com pessoas próximas a você.
+          Garotas e garotos de programa, acompanhantes masculinos e femininas, massagistas e trans — tudo por cidade.
+          Busque sua cidade ou selecione uma cidade na lista de destaque.
         </h2>
 
         <div
@@ -32,20 +32,87 @@
           </NuxtLink>
         </div>
       </section>
+
+      <section
+        v-if="topCities.length > 0"
+        class="mx-auto mt-14 max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-900/40 px-5 py-8 text-left md:mt-20 md:px-8"
+      >
+        <h2 class="text-xl font-semibold text-white md:text-2xl">Cidades em destaque</h2>
+        <ul class="mt-6 space-y-4" role="list">
+          <li
+            v-for="c in topCities"
+            :key="`${c.uf}-${c.slug}`"
+            class="flex flex-col gap-2 border-b border-zinc-800/80 pb-4 last:border-0 last:pb-0 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1"
+          >
+            <span class="font-medium text-white">{{ c.name }}</span>
+            <span class="text-sm text-zinc-500">({{ c.uf }})</span>
+            <span class="hidden text-zinc-600 sm:inline" aria-hidden="true">·</span>
+            <span class="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+              <NuxtLink
+                v-if="c.mulheres > 0"
+                :to="`/explorar/mulheres/cidade/${c.uf.toLowerCase()}/${c.slug}`"
+                class="text-brand underline-offset-2 hover:underline"
+              >
+                Mulheres em {{ c.name }}
+              </NuxtLink>
+              <NuxtLink
+                v-if="c.homens > 0"
+                :to="`/explorar/homens/cidade/${c.uf.toLowerCase()}/${c.slug}`"
+                class="text-brand underline-offset-2 hover:underline"
+              >
+                Homens em {{ c.name }}
+              </NuxtLink>
+              <NuxtLink
+                v-if="c.trans > 0"
+                :to="`/explorar/trans/cidade/${c.uf.toLowerCase()}/${c.slug}`"
+                class="text-brand underline-offset-2 hover:underline"
+              >
+                Trans em {{ c.name }}
+              </NuxtLink>
+            </span>
+          </li>
+        </ul>
+      </section>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { usePublicExploreApi } from '~/composables/usePublicExploreApi'
+import { topCitiesFromExploreSummaries } from '~/utils/explore-hub-top-cities'
+import { exploreHubMetaKeywords, exploreHubSeoDescription, exploreHubSeoTitle } from '~/utils/explore-seo-copy'
+
 definePageMeta({
   layout: 'default',
   path: '/explorar',
 })
 
 usePublicPageSeo({
-  title: 'Explorar',
-  description:
-    'Encontre perfis por cidade: homens, mulheres e trans. Diretório para maiores de 18 anos no Brasil.',
+  title: exploreHubSeoTitle(),
+  description: exploreHubSeoDescription(),
+  keywords: exploreHubMetaKeywords,
+})
+
+const { fetchSummary } = usePublicExploreApi()
+
+const { data: exploreSummaries } = await useAsyncData(
+  'explore-hub-summaries-all-genders',
+  async () => {
+    const [homens, mulheres, trans] = await Promise.all([
+      fetchSummary('homens'),
+      fetchSummary('mulheres'),
+      fetchSummary('trans'),
+    ])
+    return { homens, mulheres, trans }
+  },
+)
+
+const topCities = computed(() => {
+  const raw = exploreSummaries.value
+  if (!raw) {
+    return []
+  }
+  return topCitiesFromExploreSummaries(raw.homens, raw.mulheres, raw.trans, 16)
 })
 
 const categories = [

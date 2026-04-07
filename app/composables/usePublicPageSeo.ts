@@ -6,6 +6,8 @@ import { toValue, type MaybeRefOrGetter } from 'vue'
 export function usePublicPageSeo(opts: {
   title: MaybeRefOrGetter<string>
   description: MaybeRefOrGetter<string>
+  /** Pouco peso no Google; útil para outros buscadores e consistência. */
+  keywords?: MaybeRefOrGetter<string | undefined>
   image?: MaybeRefOrGetter<string | undefined>
   robots?: MaybeRefOrGetter<string>
 }) {
@@ -29,6 +31,11 @@ export function usePublicPageSeo(opts: {
     ogType: 'website',
     ogUrl: canonical,
     twitterCard: 'summary_large_image',
+    ...(opts.keywords
+      ? {
+          keywords: () => toValue(opts.keywords) || undefined,
+        }
+      : {}),
     ...(opts.image
       ? {
           ogImage: () => toValue(opts.image) || undefined,

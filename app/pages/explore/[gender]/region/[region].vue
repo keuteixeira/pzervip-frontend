@@ -51,6 +51,7 @@
 <script setup lang="ts">
 import { usePublicExploreApi } from '~/composables/usePublicExploreApi'
 import type { ExploreRegionStatesResponse, GenderSlug, RegionSlug } from '~/types/explore-catalog'
+import { metaKeywordsForGender, regionListSeoDescription, regionListSeoTitle } from '~/utils/explore-seo-copy'
 
 definePageMeta({
   layout: 'default',
@@ -99,14 +100,19 @@ const totalProfiles = computed(() => states.value.reduce((acc, s) => acc + s.tot
 usePublicPageSeo({
   title: computed(() =>
     genderOk.value && regionOk.value && regionTitle.value
-      ? `${genderTitle.value} — ${regionTitle.value}`
+      ? regionListSeoTitle(regionTitle.value, gender.value)
       : 'Explorar',
   ),
   description: computed(() => {
-    if (!genderOk.value || !regionOk.value) {
+    if (!genderOk.value || !regionOk.value || !regionTitle.value) {
       return 'Região no Prazer.Vip.'
     }
-    return `Estados da região ${regionTitle.value}: explore perfis ${genderTitle.value.toLowerCase()} por UF.`
+    return regionListSeoDescription(regionTitle.value, gender.value)
   }),
+  keywords: computed(() =>
+    genderOk.value && regionOk.value && regionTitle.value
+      ? `${metaKeywordsForGender(gender.value)}, região ${regionTitle.value}, Brasil`
+      : undefined,
+  ),
 })
 </script>

@@ -1,5 +1,6 @@
 <template>
   <div>
+    <AgeGateOverlay />
     <header class="relative z-[90] border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
       <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
         <NuxtLink

@@ -22,7 +22,7 @@
         <p class="text-sm font-medium text-brand">{{ genderTitle }}</p>
         <h1 class="text-3xl font-bold tracking-tight text-white md:text-4xl">Escolha sua cidade</h1>
         <h2 class="text-lg font-normal text-zinc-400 md:text-xl">
-          Encontre {{ genderPhrase }} na sua região
+          {{ genderHubSubheading }}
         </h2>
         <p class="text-lg text-zinc-300">
           <span class="tabular-nums font-semibold text-white">{{ totalProfiles }}</span>
@@ -146,6 +146,12 @@
 import { usePublicExploreApi } from '~/composables/usePublicExploreApi'
 import type { ExploreSummaryResponse, GenderSlug, RegionItem } from '~/types/explore-catalog'
 import { cityThumbUrl } from '~/types/explore-catalog'
+import {
+  genderHubSeoDescription,
+  genderHubSeoTitle,
+  genderHubVisibleSubheading,
+  metaKeywordsForGender,
+} from '~/utils/explore-seo-copy'
 
 definePageMeta({
   layout: 'default',
@@ -169,13 +175,7 @@ const genderTitle = computed(() => {
   return m[gender.value] ?? gender.value
 })
 
-const genderPhrase = computed(() => {
-  const g = gender.value as GenderSlug
-  if (g === 'trans') {
-    return 'pessoas trans'
-  }
-  return genderTitle.value.toLowerCase()
-})
+const genderHubSubheading = computed(() => genderHubVisibleSubheading(gender.value))
 
 function statePreviewLimit(uf: string): number {
   return uf.toUpperCase() === 'SP' ? 18 : 9
@@ -215,13 +215,10 @@ const regions = computed((): RegionItem[] => {
 const totalProfiles = computed(() => summaryData.value?.totalProfiles ?? 0)
 
 usePublicPageSeo({
-  title: computed(() =>
-    genderOk.value ? `${genderTitle.value} — Escolha sua cidade` : 'Explorar',
-  ),
+  title: computed(() => (genderOk.value ? genderHubSeoTitle(gender.value) : 'Explorar')),
   description: computed(() =>
-    genderOk.value
-      ? `Explore anúncios de ${genderPhrase.value} por cidade e região no Prazer.Vip. Perfis por localização.`
-      : 'Explorar categorias no Prazer.Vip.',
+    genderOk.value ? genderHubSeoDescription(gender.value) : 'Explorar categorias no Prazer.Vip.',
   ),
+  keywords: computed(() => (genderOk.value ? metaKeywordsForGender(gender.value) : undefined)),
 })
 </script>

@@ -83,7 +83,7 @@
       </div>
 
       <p v-if="sent" class="rounded-xl border border-emerald-900/50 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-200">
-        Mensagem recebida. Obrigado — a nossa equipa analisará o seu pedido e responderá por e-mail quando for
+        Mensagem recebida. Obrigado — a nossa equipa analisará a sua mensagem e responderá por e-mail quando for
         necessário.
       </p>
       <p v-if="errorMsg" class="text-sm text-red-400">{{ errorMsg }}</p>
