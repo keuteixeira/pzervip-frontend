@@ -7,8 +7,8 @@ export function buildWhatsAppSendUrl(phoneDigits: string, displayName: string): 
   const name = displayName.trim()
   const text =
     name.length > 0
-      ? `Olá! Vi o perfil de ${name} no Prazer.Vip e gostaria de conversar com você. Podemos alinhar um horário?`
-      : 'Olá! Vi seu perfil no Prazer.Vip e gostaria de conversar com você. Podemos alinhar um horário?'
+      ? `Olá! Vi o perfil de ${name} no Prazer.Vip e gostaria de agendar com você. Quais os horários disponíveis?`
+      : 'Olá! Vi seu perfil no Prazer.Vip e gostaria de agendar com você. Quais os horários disponíveis?'
   const params = new URLSearchParams({
     phone,
     text,
