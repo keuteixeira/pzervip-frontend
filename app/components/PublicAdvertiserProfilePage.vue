@@ -228,10 +228,10 @@
           </div>
 
           <section
-            v-if="vm.premium && vm.premiumBenefits.length > 0"
+            v-if="!vm.premium && vm.premiumBenefits.length > 0"
             class="w-full rounded-xl border border-amber-500/30 bg-amber-500/5 p-5 md:p-6"
           >
-            <h2 class="text-lg font-semibold text-amber-100">Destaques do plano</h2>
+            <h2 class="text-lg font-semibold text-amber-100">Destaques do plano com destaque</h2>
             <ul class="mt-4 space-y-2 text-sm text-zinc-300">
               <li v-for="(b, i) in vm.premiumBenefits" :key="i" class="flex gap-2">
                 <span class="text-amber-400/90" aria-hidden="true">✓</span>
@@ -525,6 +525,12 @@ function vmFromApi(a: ApiPublicAdvertiser): ProfileView {
   const serviceLabel =
     st === 'masseuse' ? 'Massagista' : st === 'companion' ? 'Acompanhante' : 'Anúncio profissional'
   const premium = a.plan_type === 'premium' || (a.premium_tier ?? 0) > 0 || (a.highlight_stars_cached ?? 0) > 0
+  const destaquePlanPitch = [
+    'Perfil verificado',
+    'Destaque no catálogo',
+    'Mais visibilidade para o seu anúncio',
+    'Mais mídias na sua galeria',
+  ]
   const digits = a.whatsapp?.replace(/\D/g, '') ?? ''
   return {
     displayName: a.professional_name ?? 'Perfil',
@@ -546,9 +552,7 @@ function vmFromApi(a: ApiPublicAdvertiser): ProfileView {
     galleryPhotos,
     socialLinks: a.social_links && Object.keys(a.social_links).length > 0 ? a.social_links : undefined,
     premium,
-    premiumBenefits: premium
-      ? ['Perfil verificado', 'Destaque no catálogo', 'Mais visibilidade para o seu anúncio']
-      : [],
+    premiumBenefits: premium ? [] : destaquePlanPitch,
     comments: normalizeApiComments(a.comments),
     highlightStars: typeof a.highlight_stars_cached === 'number' ? a.highlight_stars_cached : undefined,
   }
