@@ -1238,7 +1238,16 @@ const registrationWhatsappVerified = computed(() =>
   Boolean(user.value?.advertiser_profile?.registration_whatsapp_verified_at),
 )
 
+/** GET /v1/config/registration-verification — alinhado ao .env do backend. */
+const registrationVerificationConfig = ref({
+  require_email_otp: true,
+  require_whatsapp_otp: true,
+})
+
 const needsEmailOtpPanel = computed(() => {
+  if (!registrationVerificationConfig.value.require_email_otp) {
+    return false
+  }
   if (!hasToken.value || !user.value || user.value.role !== 'advertiser') {
     return false
   }
@@ -1249,6 +1258,9 @@ const needsEmailOtpPanel = computed(() => {
 })
 
 const needsWhatsappOtpPanel = computed(() => {
+  if (!registrationVerificationConfig.value.require_whatsapp_otp) {
+    return false
+  }
   if (step.value !== 2) {
     return false
   }
@@ -1545,6 +1557,24 @@ const avatarFileName = ref('')
 const galleryUploading = ref(0)
 const galleryError = ref('')
 const galleryItems = ref<{ id: number; name: string }[]>([])
+
+async function loadRegistrationVerificationConfig() {
+  try {
+    const c = await request<{
+      require_email_otp?: boolean
+      require_whatsapp_otp?: boolean
+    }>('/v1/config/registration-verification', { skipAuth: true })
+    registrationVerificationConfig.value = {
+      require_email_otp: c.require_email_otp !== false,
+      require_whatsapp_otp: c.require_whatsapp_otp !== false,
+    }
+  } catch {
+    registrationVerificationConfig.value = {
+      require_email_otp: true,
+      require_whatsapp_otp: true,
+    }
+  }
+}
 
 async function loadRegisterMediaConfig() {
   try {
@@ -2131,6 +2161,7 @@ onMounted(async () => {
   }
   const tabActive = localStorage.getItem(CADASTRO_TAB_KEY) === '1'
 
+  await loadRegistrationVerificationConfig()
   await fetchMe()
 
   /** Retomar rascunho sempre que houver sessão de anunciante inativo — não só com marca na tab (senão o e-mail OTP não reenvia ao voltar). */
@@ -2164,6 +2195,10 @@ watch(showPurgeSection, (v) => {
 
 async function sendRegistrationEmailCode(silent: boolean, opts?: { manageBusy?: boolean }) {
   if (!hasToken.value || registrationEmailVerified.value) {
+    return
+  }
+  if (!registrationVerificationConfig.value.require_email_otp) {
+    await fetchMe()
     return
   }
   formError.value = null
@@ -2451,7 +2486,7 @@ async function loadProfileIntoWizard(): Promise<boolean> {
    * aparecia (texto «Enviamos um código…») mas nenhum envio tinha sido feito.
    */
   const emailStillPending = !registrationEmailVerified.value
-  if (emailStillPending) {
+  if (emailStillPending && registrationVerificationConfig.value.require_email_otp) {
     step.value = 1
     emailOtpDigits.value = [...emptyOtpDigits()]
     await sendRegistrationEmailCode(false, { manageBusy: false })
@@ -2460,7 +2495,7 @@ async function loadProfileIntoWizard(): Promise<boolean> {
   try {
     const p = await request<Record<string, unknown>>('/v1/me/profile')
     hydrateFromProfile(p)
-    if (!p.registration_email_verified_at) {
+    if (!p.registration_email_verified_at && registrationVerificationConfig.value.require_email_otp) {
       step.value = 1
       emailOtpDigits.value = [...emptyOtpDigits()]
       return true
@@ -2625,7 +2660,7 @@ function validateStepForNext(s: number): string | null {
     if (draftErr) {
       return draftErr
     }
-    if (!registrationWhatsappVerified.value) {
+    if (registrationVerificationConfig.value.require_whatsapp_otp && !registrationWhatsappVerified.value) {
       return 'Envie e confirme o código de verificação do WhatsApp para este número.'
     }
     return null
@@ -2782,7 +2817,7 @@ async function next() {
     return
   }
   if (step.value === 1 && hasToken.value && !showStep1CreateForm.value) {
-    if (!registrationEmailVerified.value) {
+    if (registrationVerificationConfig.value.require_email_otp && !registrationEmailVerified.value) {
       formError.value = 'Confirme o código enviado ao seu e-mail antes de continuar.'
       return
     }
@@ -2821,7 +2856,7 @@ async function next() {
       formError.value = draftErr
       return
     }
-    if (!registrationWhatsappVerified.value) {
+    if (registrationVerificationConfig.value.require_whatsapp_otp && !registrationWhatsappVerified.value) {
       if (!whatsappOtpGateOpen.value) {
         busy.value = true
         await nextTick()
