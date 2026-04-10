@@ -57,8 +57,18 @@
             <span class="mb-1 block text-zinc-500">Bio</span>
             <textarea v-model="edit.bio" rows="4" class="admin-input min-h-[100px]" />
           </label>
+          <label class="block text-sm text-zinc-300 sm:col-span-2">
+            <span class="mb-1 block text-zinc-500">Nome oficial (documento)</span>
+            <input
+              type="text"
+              class="admin-input cursor-default bg-zinc-950/50 text-zinc-200"
+              readonly
+              tabindex="-1"
+              :value="(detail.user?.name ?? '').trim() || '—'"
+            />
+          </label>
           <label class="block text-sm text-zinc-300">
-            <span class="mb-1 block text-zinc-500">WhatsApp (apenas números)</span>
+            <span class="mb-1 block text-zinc-500">WhatsApp</span>
             <input v-model="edit.whatsapp" type="text" class="admin-input" />
           </label>
           <label class="block text-sm text-zinc-300">
