@@ -31,9 +31,9 @@
         <h2 class="text-xl font-semibold text-white">Bem-vindo ao cadastro</h2>
         <p class="mt-2 text-sm leading-relaxed text-zinc-400">
           Para completar seu cadastro como anunciante, você precisará fornecer algumas informações e documentos
-          importantes.
+          importantes, verifique nas próximas etapas.
         </p>
-        <p class="mt-4 text-sm font-medium text-zinc-300">Documentos necessários:</p>
+        <!--<p class="mt-4 text-sm font-medium text-zinc-300">Documentos necessários:</p>
         <ul class="mt-2 list-inside list-disc space-y-1 text-sm text-zinc-400">
           <li>1 foto para banner (obrigatória)</li>
           <li>1 foto de perfil (obrigatória — rosto visível)</li>
@@ -41,7 +41,7 @@
           <li>Foto do documento de identificação (frente e verso)</li>
           <li>Selfie para verificação</li>
           <li>Vídeo de verificação (autenticar o cadastro)</li>
-        </ul>
+        </ul>-->
         <p class="mt-4 text-xs text-amber-200/80">
           <strong>Importante:</strong> todas as etapas devem ser finalizadas para concluir o cadastro com sucesso.
         </p>
