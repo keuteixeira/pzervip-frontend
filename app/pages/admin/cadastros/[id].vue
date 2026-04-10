@@ -59,13 +59,7 @@
           </label>
           <label class="block text-sm text-zinc-300 sm:col-span-2">
             <span class="mb-1 block text-zinc-500">Nome oficial (documento)</span>
-            <input
-              type="text"
-              class="admin-input cursor-default bg-zinc-950/50 text-zinc-200"
-              readonly
-              tabindex="-1"
-              :value="(detail.user?.name ?? '').trim() || '—'"
-            />
+            <input v-model="edit.account_name" type="text" class="admin-input" maxlength="255" />
           </label>
           <label class="block text-sm text-zinc-300">
             <span class="mb-1 block text-zinc-500">WhatsApp</span>
@@ -760,6 +754,7 @@ const approvalMsg = ref('')
 const approvalOk = ref(true)
 
 const edit = reactive({
+  account_name: '',
   professional_name: '',
   bio: '',
   whatsapp: '',
@@ -808,6 +803,7 @@ function syncFormFromDetail() {
   if (!d) {
     return
   }
+  edit.account_name = d.user?.name ?? ''
   edit.professional_name = d.professional_name ?? ''
   edit.bio = d.bio ?? ''
   edit.whatsapp = d.whatsapp ?? ''
@@ -903,6 +899,7 @@ async function saveDetails() {
     const p = await request<ProfileDetail>(`/v1/admin/profiles/${id.value}/details`, {
       method: 'PATCH',
       body: {
+        account_name: edit.account_name.trim(),
         professional_name: edit.professional_name.trim() || null,
         bio: edit.bio.trim() || null,
         whatsapp: edit.whatsapp.trim() || null,
