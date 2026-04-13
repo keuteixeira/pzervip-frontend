@@ -1,3 +1,5 @@
+import { isAdminSitePath } from '~/utils/admin-route'
+
 declare global {
   interface Window {
     dataLayer?: Record<string, unknown>[]
@@ -28,8 +30,17 @@ export type PortalDestaquePixAnalyticsPayload = {
  * `prazervip_portal_destaque_pix_generated`, `prazervip_portal_destaque_pix_paid`.
  */
 export function usePrazervipAnalytics() {
-  function pushLayer(obj: Record<string, unknown>) {
+  const route = useRoute()
+
+  function analyticsDisabledHere(): boolean {
     if (!import.meta.client) {
+      return true
+    }
+    return isAdminSitePath(route.path)
+  }
+
+  function pushLayer(obj: Record<string, unknown>) {
+    if (!import.meta.client || analyticsDisabledHere()) {
       return
     }
     window.dataLayer = window.dataLayer || []
@@ -37,7 +48,7 @@ export function usePrazervipAnalytics() {
   }
 
   function gtagEvent(name: string, params: Record<string, unknown>) {
-    if (!import.meta.client) {
+    if (!import.meta.client || analyticsDisabledHere()) {
       return
     }
     const g = window.gtag

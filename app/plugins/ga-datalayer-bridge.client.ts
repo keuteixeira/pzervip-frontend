@@ -3,7 +3,10 @@
  * Só ativa quando **não** há NUXT_PUBLIC_GA_MEASUREMENT_ID (GA carregado só pelo GTM ou outro script).
  *
  * Com measurement ID no Nuxt, usePrazervipAnalytics já chama gtag — este bridge ficaria desligado para não duplicar.
+ * Não espelha no painel `/admin`.
  */
+import { isAdminSitePath } from '~/utils/admin-route'
+
 export default defineNuxtPlugin(() => {
   if (!import.meta.client) {
     return
@@ -18,8 +21,12 @@ export default defineNuxtPlugin(() => {
     return
   }
 
+  const router = useRouter()
   const orig = dl.push.bind(dl)
   function maybeGa4FromPrazervip(obj: unknown) {
+    if (isAdminSitePath(router.currentRoute.value.path)) {
+      return
+    }
     if (!obj || typeof obj !== 'object') {
       return
     }
