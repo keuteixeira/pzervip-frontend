@@ -1,6 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { brandAssets } from './app/config/brand-assets'
 
+/** Mesmo fallback usado em server/utils/seo-site-base.ts (sem NUXT_PUBLIC_SITE_URL em produção, canonical/schema quebram). */
+const siteUrl = (process.env.NUXT_PUBLIC_SITE_URL || 'https://prazer.vip').replace(/\/$/, '')
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
@@ -24,6 +27,22 @@ export default defineNuxtConfig({
       link: [
         { rel: 'icon', type: 'image/png', href: brandAssets.iconSquare },
         { rel: 'apple-touch-icon', href: brandAssets.iconSquare },
+      ],
+      /** Entidade da marca p/ Google (elegibilidade a knowledge panel) — estático, sitewide, não depende de dado de página. */
+      script: [
+        {
+          key: 'org-jsonld',
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: 'Prazer.Vip',
+            url: siteUrl,
+            logo: `${siteUrl}/web-app-manifest-512x512.png`,
+            description:
+              'Prazer.Vip — plataforma de classificados para maiores de 18 anos. Anúncios por cidade, região e categoria.',
+          }),
+        },
       ],
     },
   },

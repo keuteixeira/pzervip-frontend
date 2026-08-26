@@ -84,6 +84,8 @@ definePageMeta({
 })
 
 const route = useRoute()
+const runtimeConfig = useRuntimeConfig()
+const siteBase = computed(() => String(runtimeConfig.public.siteUrl || '').replace(/\/$/, ''))
 const { fetchStateCities } = usePublicExploreApi()
 
 const gender = computed(() => route.params.gender as string)
@@ -154,5 +156,49 @@ usePublicPageSeo({
   }),
   /** Estado sem perfis publicados ainda: evita indexar página vazia (thin content). */
   robots: computed(() => (state.value && state.value.totalProfiles > 0 ? 'index, follow' : 'noindex, follow')),
+})
+
+/** BreadcrumbList: ajuda o Google a exibir caminho (Explorar > Gênero > Estado) na SERP. */
+const stateBreadcrumbJsonLd = computed(() => {
+  const s = state.value
+  if (!s || !siteBase.value || !genderOk.value) {
+    return null
+  }
+  const base = siteBase.value
+  const g = gender.value
+  const pathOnly = route.path.split('?')[0] || ''
+  const items: { name: string; path: string }[] = [
+    { name: 'Início', path: '/' },
+    { name: 'Explorar', path: '/explorar' },
+    { name: genderTitle.value, path: `/explorar/${g}` },
+    { name: `${s.name} (${s.uf.toUpperCase()})`, path: pathOnly },
+  ]
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((it, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: it.name,
+      item: `${base}${it.path.startsWith('/') ? it.path : `/${it.path}`}`,
+    })),
+  }
+})
+
+useHead(() => {
+  const d = stateBreadcrumbJsonLd.value
+  if (!d) {
+    return {}
+  }
+  const pathOnly = route.path.split('?')[0] || ''
+  return {
+    script: [
+      {
+        key: `explore-state-breadcrumb-${pathOnly}`,
+        type: 'application/ld+json',
+        textContent: JSON.stringify(d),
+      },
+    ],
+  }
 })
 </script>

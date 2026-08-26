@@ -49,7 +49,8 @@ watch(
     if (pending.value || !slug.value) {
       return
     }
-    navigateTo(destinationPath(), { replace: true })
+    /** 301 (não o 302 padrão do navigateTo): URL legada foi permanentemente substituída — consolida a autoridade na nova. */
+    navigateTo(destinationPath(), { replace: true, redirectCode: 301 })
   },
   { immediate: true },
 )

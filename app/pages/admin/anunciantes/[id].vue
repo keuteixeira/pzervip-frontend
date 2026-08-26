@@ -116,6 +116,23 @@
         </div>
       </section>
 
+      <section class="rounded-xl border border-red-900/50 bg-red-950/15 p-6">
+        <h2 class="text-lg font-semibold text-red-100">Zona de risco</h2>
+        <p class="mt-1 text-sm text-red-100/75">
+          Exclui a conta deste anunciante (soft delete + anonimização) — some do site e deste painel imediatamente.
+          Mídias, dados pessoais e o anúncio público são removidos; sem período de graça, diferente do pedido feito
+          pelo próprio anunciante.
+        </p>
+        <button
+          type="button"
+          class="mt-4 inline-flex rounded-lg border border-red-700 bg-red-900/40 px-4 py-2 text-sm font-medium text-red-100 hover:bg-red-900/60 disabled:opacity-60"
+          :disabled="deletingAdvertiser"
+          @click="deleteAdvertiser"
+        >
+          {{ deletingAdvertiser ? 'Excluindo…' : 'Excluir anunciante' }}
+        </button>
+      </section>
+
       <section
         v-if="detail.portal_text_pending?.has_pending"
         class="rounded-xl border border-sky-900/40 bg-sky-950/15 px-4 py-3 text-sm text-sky-100/95"
@@ -1086,6 +1103,54 @@ async function openMedia(m: (typeof mediaList.value)[number]) {
     return
   }
   await openAdminLightboxFromList(adminLightboxableAll.value, idx)
+}
+
+const deletingAdvertiser = ref(false)
+
+async function deleteAdvertiser() {
+  const name = detail.value?.professional_name || `perfil #${id.value}`
+  const step1 = await swalConfirm({
+    title: 'Excluir anunciante?',
+    text: `«${name}» vai sumir do site e deste painel imediatamente — mídias e dados pessoais são apagados. Essa ação não tem período de graça.`,
+    icon: 'warning',
+    confirmButtonText: 'Continuar',
+    cancelButtonText: 'Cancelar',
+  })
+  if (!step1) {
+    return
+  }
+  const step2 = await swalConfirm({
+    title: 'Tem certeza?',
+    text: 'Confirme mais uma vez para excluir definitivamente esta conta.',
+    icon: 'warning',
+    confirmButtonText: 'Sim, excluir',
+    cancelButtonText: 'Cancelar',
+  })
+  if (!step2) {
+    return
+  }
+
+  deletingAdvertiser.value = true
+  try {
+    await request(`/v1/admin/profiles/${id.value}`, {
+      method: 'DELETE',
+      body: { confirm: true },
+    })
+    await swalAlert({
+      title: 'Anunciante excluído',
+      text: 'A conta foi removida do site e do painel.',
+      icon: 'success',
+    })
+    await navigateTo('/admin/anunciantes')
+  } catch (e: unknown) {
+    await swalAlert({
+      title: 'Não foi possível excluir',
+      text: apiErrorMessage(e, 'Tente novamente em instantes.'),
+      icon: 'error',
+    })
+  } finally {
+    deletingAdvertiser.value = false
+  }
 }
 
 async function removeMedia(m: (typeof mediaList.value)[number]) {

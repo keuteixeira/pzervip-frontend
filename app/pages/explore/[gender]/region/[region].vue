@@ -59,6 +59,8 @@ definePageMeta({
 })
 
 const route = useRoute()
+const runtimeConfig = useRuntimeConfig()
+const siteBase = computed(() => String(runtimeConfig.public.siteUrl || '').replace(/\/$/, ''))
 const { fetchRegionStates } = usePublicExploreApi()
 
 const gender = computed(() => route.params.gender as string)
@@ -116,5 +118,48 @@ usePublicPageSeo({
   ),
   /** Região sem perfis publicados ainda: evita indexar página vazia (thin content). */
   robots: computed(() => (totalProfiles.value > 0 ? 'index, follow' : 'noindex, follow')),
+})
+
+/** BreadcrumbList: ajuda o Google a exibir caminho (Explorar > Gênero > Região) na SERP. */
+const regionBreadcrumbJsonLd = computed(() => {
+  if (!siteBase.value || !genderOk.value || !regionOk.value || !regionTitle.value) {
+    return null
+  }
+  const base = siteBase.value
+  const g = gender.value
+  const pathOnly = route.path.split('?')[0] || ''
+  const items: { name: string; path: string }[] = [
+    { name: 'Início', path: '/' },
+    { name: 'Explorar', path: '/explorar' },
+    { name: genderTitle.value, path: `/explorar/${g}` },
+    { name: regionTitle.value, path: pathOnly },
+  ]
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((it, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: it.name,
+      item: `${base}${it.path.startsWith('/') ? it.path : `/${it.path}`}`,
+    })),
+  }
+})
+
+useHead(() => {
+  const d = regionBreadcrumbJsonLd.value
+  if (!d) {
+    return {}
+  }
+  const pathOnly = route.path.split('?')[0] || ''
+  return {
+    script: [
+      {
+        key: `explore-region-breadcrumb-${pathOnly}`,
+        type: 'application/ld+json',
+        textContent: JSON.stringify(d),
+      },
+    ],
+  }
 })
 </script>
