@@ -152,5 +152,7 @@ usePublicPageSeo({
     const s = state.value
     return `${metaKeywordsForGender(gender.value)}, ${s.name}, ${s.uf.toUpperCase()}, Brasil`
   }),
+  /** Estado sem perfis publicados ainda: evita indexar página vazia (thin content). */
+  robots: computed(() => (state.value && state.value.totalProfiles > 0 ? 'index, follow' : 'noindex, follow')),
 })
 </script>

@@ -341,5 +341,7 @@ usePublicPageSeo({
     const geo = `${ctx.value.city.name}, ${ctx.value.state.uf.toUpperCase()}, Brasil`
     return `${metaKeywordsForGender(gender.value)}, ${geo}`
   }),
+  /** Cidade sem perfis publicados ainda: evita indexar página vazia (thin content). */
+  robots: computed(() => (totalCityProfilesForSeo.value > 0 ? 'index, follow' : 'noindex, follow')),
 })
 </script>

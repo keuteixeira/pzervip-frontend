@@ -41,6 +41,14 @@
 
       <div class="mx-auto max-w-7xl px-4">
         <div class="mt-8 space-y-6">
+          <div class="text-center">
+            <h1 class="text-2xl font-bold leading-tight text-white md:text-3xl">{{ vm.displayName }}</h1>
+            <p class="mt-1 text-sm text-zinc-400">
+              {{ vm.serviceLabel }}
+              <template v-if="vm.cityName"> em {{ vm.cityName }}<span v-if="vm.stateUf"> · {{ vm.stateUf }}</span></template>
+            </p>
+          </div>
+
           <section class="w-full rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 md:p-6 text-center">
             <h2 class="text-lg font-semibold text-white">Local</h2>
             <p class="mt-2 text-sm leading-relaxed text-zinc-300">
@@ -631,6 +639,51 @@ usePublicPageSeo({
     return truncateForMeta(`${v.displayName} — ${v.serviceLabel} no Prazer.Vip.${tail}`, 160)
   }),
   image: computed(() => vm.value?.bannerUrl || vm.value?.avatarUrl),
+})
+
+/** BreadcrumbList: ajuda o Google a exibir caminho (Explorar > Gênero > Cidade > Nome) na SERP. */
+const profileBreadcrumbJsonLd = computed(() => {
+  const v = vm.value
+  const siteBase = String(config.public.siteUrl || '').replace(/\/$/, '')
+  if (!v || !siteBase) {
+    return null
+  }
+  const pathOnly = route.path.split('?')[0] || ''
+  const items: { name: string; path: string }[] = [
+    { name: 'Início', path: '/' },
+    { name: 'Explorar', path: `/explorar/${v.exploreGenderSlug}` },
+  ]
+  if (v.cityName) {
+    items.push({ name: v.cityName, path: `/explorar/${v.exploreGenderSlug}` })
+  }
+  items.push({ name: v.displayName, path: pathOnly })
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((it, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: it.name,
+      item: `${siteBase}${it.path}`,
+    })),
+  }
+})
+
+useHead(() => {
+  const d = profileBreadcrumbJsonLd.value
+  if (!d) {
+    return {}
+  }
+  const pathOnly = route.path.split('?')[0] || ''
+  return {
+    script: [
+      {
+        key: `profile-breadcrumb-${pathOnly}`,
+        type: 'application/ld+json',
+        textContent: JSON.stringify(d),
+      },
+    ],
+  }
 })
 
 const whatsappUrl = computed(() => {

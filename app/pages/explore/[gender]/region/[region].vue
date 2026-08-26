@@ -114,5 +114,7 @@ usePublicPageSeo({
       ? `${metaKeywordsForGender(gender.value)}, região ${regionTitle.value}, Brasil`
       : undefined,
   ),
+  /** Região sem perfis publicados ainda: evita indexar página vazia (thin content). */
+  robots: computed(() => (totalProfiles.value > 0 ? 'index, follow' : 'noindex, follow')),
 })
 </script>

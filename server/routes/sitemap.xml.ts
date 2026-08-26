@@ -1,6 +1,7 @@
 import {
   fetchExploreSummaries,
   pathsFromExploreSummaries,
+  pathsFromProfilesSitemap,
   staticIndexablePaths,
 } from '../utils/build-sitemap-urls'
 import { escapeXml, getApiBase, getPublicSiteBase } from '../utils/seo-site-base'
@@ -12,9 +13,12 @@ export default defineEventHandler(async (event) => {
   setResponseHeader(event, 'Content-Type', 'application/xml; charset=utf-8')
   setResponseHeader(event, 'Cache-Control', 'public, max-age=3600')
 
-  const summaries = await fetchExploreSummaries(apiBase)
-  const dynamicPaths = pathsFromExploreSummaries(summaries)
-  const allPaths = [...new Set([...staticIndexablePaths(), ...dynamicPaths])].sort()
+  const [summaries, profilePaths] = await Promise.all([
+    fetchExploreSummaries(apiBase),
+    pathsFromProfilesSitemap(apiBase),
+  ])
+  const hubPaths = pathsFromExploreSummaries(summaries)
+  const allPaths = [...new Set([...staticIndexablePaths(), ...hubPaths, ...profilePaths])].sort()
 
   const lastmod = new Date().toISOString().slice(0, 10)
 

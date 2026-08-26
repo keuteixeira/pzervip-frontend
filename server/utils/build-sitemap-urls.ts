@@ -30,9 +30,28 @@ export function staticIndexablePaths(): string[] {
   ]
 }
 
+interface SitemapProfilesResponse {
+  profiles?: { public_slug?: string; tipo_atendimento?: 'acompanhante' | 'massagista' }[]
+}
+
 /**
- * Agrega URLs do catálogo público a partir dos três summaries da API.
- * Perfis individuais (/acompanhante/…) ficam de fora até existir endpoint de listagem em massa.
+ * URLs dos perfis públicos (/acompanhante/:slug, /massagista/:slug) — a maior parte do
+ * conteúdo indexável do site. Usa o endpoint de listagem em massa dedicado ao sitemap.
+ */
+export async function pathsFromProfilesSitemap(apiBase: string): Promise<string[]> {
+  const base = apiBase.replace(/\/$/, '')
+  try {
+    const res = await $fetch<SitemapProfilesResponse>(`${base}/v1/public/advertisers/sitemap`)
+    return (res.profiles || [])
+      .filter((p) => p.public_slug && p.tipo_atendimento)
+      .map((p) => `/${p.tipo_atendimento}/${p.public_slug}`)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Agrega URLs do catálogo público (hubs de região/estado/cidade) a partir dos três summaries da API.
  */
 export function pathsFromExploreSummaries(
   summaries: Record<GenderSlug, ExploreSummaryResponse | null>,
