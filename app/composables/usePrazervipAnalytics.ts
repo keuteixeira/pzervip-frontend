@@ -75,7 +75,7 @@ export function usePrazervipAnalytics() {
       items: [
         {
           item_id: 'cadastro_premium',
-          item_name: 'Cadastro anunciante — Premium',
+          item_name: 'Cadastro anunciante Premium',
           price: p.value,
           quantity: 1,
         },
@@ -101,7 +101,7 @@ export function usePrazervipAnalytics() {
       items: [
         {
           item_id: 'cadastro_premium',
-          item_name: 'Cadastro anunciante — Premium',
+          item_name: 'Cadastro anunciante Premium',
           price: p.value,
           quantity: 1,
         },
@@ -131,7 +131,7 @@ export function usePrazervipAnalytics() {
       items: [
         {
           item_id: itemId,
-          item_name: `Destaque portal — ${p.stars} estrela(s) × ${p.period_months} mês(es)`,
+          item_name: `Destaque portal: ${p.stars} estrela(s) × ${p.period_months} mês(es)`,
           price: p.value,
           quantity: 1,
         },
@@ -161,7 +161,7 @@ export function usePrazervipAnalytics() {
       items: [
         {
           item_id: itemId,
-          item_name: `Destaque portal — ${p.stars} estrela(s) × ${p.period_months} mês(es)`,
+          item_name: `Destaque portal: ${p.stars} estrela(s) × ${p.period_months} mês(es)`,
           price: p.value,
           quantity: 1,
         },

@@ -7,7 +7,8 @@ export default defineNuxtRouteMiddleware((to) => {
     path.startsWith('/admin') ||
     path.startsWith('/conta') ||
     path.startsWith('/entrar') ||
-    path === '/login'
+    path === '/login' ||
+    path.startsWith('/confirmar-email')
 
   if (blocked) {
     useHead({

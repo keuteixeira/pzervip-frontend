@@ -74,7 +74,7 @@
             <dd class="text-zinc-200">
               {{ formatDestaqueDuration(detail.destaque_effective_remaining_seconds ?? 0) }}
               <span v-if="detail.user_paused_listing" class="mt-1 block text-xs text-zinc-500">
-                Destaque pausado — anúncio inativo; o tempo não decorre enquanto estiver pausado.
+                Destaque pausado: anúncio inativo; o tempo não decorre enquanto estiver pausado.
               </span>
             </dd>
           </div>
@@ -119,18 +119,37 @@
       <section class="rounded-xl border border-red-900/50 bg-red-950/15 p-6">
         <h2 class="text-lg font-semibold text-red-100">Zona de risco</h2>
         <p class="mt-1 text-sm text-red-100/75">
-          Exclui a conta deste anunciante (soft delete + anonimização) — some do site e deste painel imediatamente.
-          Mídias, dados pessoais e o anúncio público são removidos; sem período de graça, diferente do pedido feito
-          pelo próprio anunciante.
+          Suspender some o anúncio do site e impede o login, sem apagar dados. Excluir anonimiza e remove a conta
+          imediatamente (sem período de graça).
         </p>
-        <button
-          type="button"
-          class="mt-4 inline-flex rounded-lg border border-red-700 bg-red-900/40 px-4 py-2 text-sm font-medium text-red-100 hover:bg-red-900/60 disabled:opacity-60"
-          :disabled="deletingAdvertiser"
-          @click="deleteAdvertiser"
-        >
-          {{ deletingAdvertiser ? 'Excluindo…' : 'Excluir anunciante' }}
-        </button>
+        <div class="mt-4 flex flex-wrap gap-3">
+          <button
+            v-if="detail.user?.account_status !== 'suspended'"
+            type="button"
+            class="inline-flex rounded-lg border border-amber-700 bg-amber-900/40 px-4 py-2 text-sm font-medium text-amber-100 hover:bg-amber-900/60 disabled:opacity-60"
+            :disabled="suspendingAdvertiser"
+            @click="suspendAdvertiser"
+          >
+            {{ suspendingAdvertiser ? 'Suspendendo…' : 'Suspender perfil' }}
+          </button>
+          <button
+            v-else
+            type="button"
+            class="inline-flex rounded-lg border border-emerald-700 bg-emerald-900/40 px-4 py-2 text-sm font-medium text-emerald-100 hover:bg-emerald-900/60 disabled:opacity-60"
+            :disabled="suspendingAdvertiser"
+            @click="unsuspendAdvertiser"
+          >
+            {{ suspendingAdvertiser ? 'Reativando…' : 'Reativar perfil' }}
+          </button>
+          <button
+            type="button"
+            class="inline-flex rounded-lg border border-red-700 bg-red-900/40 px-4 py-2 text-sm font-medium text-red-100 hover:bg-red-900/60 disabled:opacity-60"
+            :disabled="deletingAdvertiser"
+            @click="deleteAdvertiser"
+          >
+            {{ deletingAdvertiser ? 'Excluindo…' : 'Excluir anunciante' }}
+          </button>
+        </div>
       </section>
 
       <section
@@ -139,7 +158,7 @@
       >
         <NuxtLink to="/admin/texto-perfil" class="font-medium text-brand hover:underline">Nome e bio (fila)</NuxtLink>
         <span class="text-sky-100/80">
-          — este perfil tem alterações de nome profissional e/ou biografia aguardando análise. Aprove ou recuse em
+          Este perfil tem alterações de nome profissional e/ou biografia aguardando análise. Aprove ou recuse em
           «Nome e bio» no menu.
         </span>
       </section>
@@ -169,7 +188,7 @@
         <ul class="mt-3 space-y-2 text-sm text-zinc-300">
           <li>
             <span class="text-zinc-500">Anúncio pausado (site):</span>
-            {{ detail.user_paused_listing ? 'Sim — não aparece na listagem' : 'Não — ativo no site' }}
+            {{ detail.user_paused_listing ? 'Sim, não aparece na listagem' : 'Não, ativo no site' }}
           </li>
           <li>
             <span class="text-zinc-500">Com anúncio pausado, link público:</span>
@@ -1106,12 +1125,77 @@ async function openMedia(m: (typeof mediaList.value)[number]) {
 }
 
 const deletingAdvertiser = ref(false)
+const suspendingAdvertiser = ref(false)
+
+async function suspendAdvertiser() {
+  const name = detail.value?.professional_name || `perfil #${id.value}`
+  const ok = await swalConfirm({
+    title: 'Suspender perfil?',
+    text: `«${name}» some do site e a conta não entra até você reativar. Os dados ficam guardados.`,
+    icon: 'warning',
+    confirmButtonText: 'Suspender',
+    cancelButtonText: 'Cancelar',
+  })
+  if (!ok) {
+    return
+  }
+  suspendingAdvertiser.value = true
+  try {
+    const p = await request<ProfileDetail>(`/v1/admin/profiles/${id.value}/suspend`, { method: 'POST' })
+    detail.value = p
+    await swalAlert({
+      title: 'Perfil suspenso',
+      text: 'O anúncio não aparece no site e o login está bloqueado.',
+      icon: 'success',
+    })
+  } catch (e: unknown) {
+    await swalAlert({
+      title: 'Não foi possível suspender',
+      text: apiErrorMessage(e, 'Tente novamente em instantes.'),
+      icon: 'error',
+    })
+  } finally {
+    suspendingAdvertiser.value = false
+  }
+}
+
+async function unsuspendAdvertiser() {
+  const name = detail.value?.professional_name || `perfil #${id.value}`
+  const ok = await swalConfirm({
+    title: 'Reativar perfil?',
+    text: `«${name}» volta a poder entrar e o anúncio volta ao site (se estiver aprovado).`,
+    icon: 'question',
+    confirmButtonText: 'Reativar',
+    cancelButtonText: 'Cancelar',
+  })
+  if (!ok) {
+    return
+  }
+  suspendingAdvertiser.value = true
+  try {
+    const p = await request<ProfileDetail>(`/v1/admin/profiles/${id.value}/unsuspend`, { method: 'POST' })
+    detail.value = p
+    await swalAlert({
+      title: 'Perfil reativado',
+      text: 'A conta pode entrar de novo.',
+      icon: 'success',
+    })
+  } catch (e: unknown) {
+    await swalAlert({
+      title: 'Não foi possível reativar',
+      text: apiErrorMessage(e, 'Tente novamente em instantes.'),
+      icon: 'error',
+    })
+  } finally {
+    suspendingAdvertiser.value = false
+  }
+}
 
 async function deleteAdvertiser() {
   const name = detail.value?.professional_name || `perfil #${id.value}`
   const step1 = await swalConfirm({
     title: 'Excluir anunciante?',
-    text: `«${name}» vai sumir do site e deste painel imediatamente — mídias e dados pessoais são apagados. Essa ação não tem período de graça.`,
+    text: `«${name}» vai sumir do site e deste painel imediatamente. Mídias e dados pessoais são apagados. Essa ação não tem período de graça.`,
     icon: 'warning',
     confirmButtonText: 'Continuar',
     cancelButtonText: 'Cancelar',

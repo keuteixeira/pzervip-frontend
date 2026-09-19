@@ -55,7 +55,7 @@ definePageMeta({
 usePublicPageSeo({
   title: 'Termos de serviço',
   description:
-    'Termos de utilização do Prazer.Vip — regras para visitantes e anunciantes. Conteúdo para maiores de 18 anos.',
+    'Termos de utilização do Prazer.Vip: regras para visitantes e anunciantes. Conteúdo para maiores de 18 anos.',
 })
 
 const updated = '28 de março de 2026'

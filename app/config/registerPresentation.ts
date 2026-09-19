@@ -24,7 +24,7 @@ export const REGISTER_COVER_ASPECT_RATIO =
   REGISTER_COVER.suggestedWidthPx / REGISTER_COVER.suggestedHeightPx
 
 export const REGISTER_GALLERY_DEFAULTS = {
-  min: 3,
+  min: 1,
   max: 5,
 } as const
 

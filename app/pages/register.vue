@@ -3,26 +3,11 @@
     <!-- Cabeçalho alinhado ao fluxo "Cadastro de Anunciante" do WordPress/Elementor -->
     <div class="border-b border-zinc-800 pb-8 text-center">
       <p class="text-sm font-medium text-brand">Cadastro de Anunciante</p>
-      <h1 class="mt-2 text-2xl font-bold text-white md:text-3xl">Complete as etapas do cadastro</h1>
+      <h1 class="mt-2 text-2xl font-bold text-white md:text-3xl">Crie seu anúncio</h1>
       <p class="mt-2 text-sm text-zinc-400">
-        Depois de concluir, o perfil segue para <strong class="text-zinc-300">análise da equipe</strong>.
+        Poucos dados para começar. Depois o perfil segue para
+        <strong class="text-zinc-300">análise da equipe</strong>.
       </p>
-      <div class="mt-6 flex flex-wrap justify-center gap-2">
-        <span
-          v-for="n in totalSteps"
-          :key="n"
-          class="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition"
-          :class="
-            n === step
-              ? 'bg-brand text-white'
-              : n < step
-                ? 'bg-emerald-900/40 text-emerald-400'
-                : 'bg-zinc-800 text-zinc-500'
-          "
-        >
-          {{ n }}
-        </span>
-      </div>
     </div>
 
     <!-- 1 — Conta: nome, CPF e e-mail (senha na etapa 2) -->
@@ -30,20 +15,19 @@
       <div class="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
         <h2 class="text-xl font-semibold text-white">Bem-vindo ao cadastro</h2>
         <p class="mt-2 text-sm leading-relaxed text-zinc-400">
-          Para completar seu cadastro como anunciante, você precisará fornecer algumas informações e documentos
-          importantes, verifique nas próximas etapas.
+          Nome, e-mail e CPF iguais ao documento. Em seguida você monta o anúncio, sem burocracia extra.
         </p>
         <!--<p class="mt-4 text-sm font-medium text-zinc-300">Documentos necessários:</p>
         <ul class="mt-2 list-inside list-disc space-y-1 text-sm text-zinc-400">
           <li>1 foto para banner (obrigatória)</li>
-          <li>1 foto de perfil (obrigatória — rosto visível)</li>
-          <li>Mídias para galeria — fotos e/ou vídeos (quantidade mínima obrigatória na etapa)</li>
+          <li>1 foto de perfil (obrigatória, rosto visível)</li>
+          <li>Mídias para galeria: fotos e/ou vídeos (quantidade mínima obrigatória na etapa)</li>
           <li>Foto do documento de identificação (frente e verso)</li>
           <li>Selfie para verificação</li>
           <li>Vídeo de verificação (autenticar o cadastro)</li>
         </ul>-->
-        <p class="mt-4 text-xs text-amber-200/80">
-          <strong>Importante:</strong> todas as etapas devem ser finalizadas para concluir o cadastro com sucesso.
+        <p class="mt-4 text-xs text-zinc-500">
+          Você pode salvar e voltar depois com o mesmo e-mail e senha.
         </p>
       </div>
 
@@ -229,7 +213,7 @@
       <div v-if="needsAccountPassword" class="space-y-3 rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
         <p class="text-sm font-medium text-white">Senha para entrar no site</p>
         <p class="text-xs text-zinc-500">
-          Defina uma senha para usar em <strong class="text-zinc-400">Entrar</strong> com e-mail depois da aprovação do cadastro.
+          Use esta senha em <strong class="text-zinc-400">Entrar</strong> para continuar o cadastro ou acompanhar a análise.
         </p>
         <input v-model="accountPassword" type="password" autocomplete="new-password" placeholder="Senha (mín. 8) *" class="input" />
         <input
@@ -257,7 +241,6 @@
           <p class="mb-1 text-xs font-medium text-zinc-500">Data de nascimento</p>
           <BirthDatePicker v-model="draft.birth_date" />
         </div>
-        <input v-model="draft.mother_name" type="text" placeholder="Nome completo da mãe *" class="input sm:col-span-2" />
         <div class="min-w-0 self-start">
           <p class="mb-1 text-xs font-medium text-zinc-500">E-mail de contato *</p>
           <input v-model="draft.contact_email" type="email" placeholder="contato@exemplo.com" class="input" />
@@ -274,38 +257,6 @@
             class="input"
             @input="onWhatsappInput"
           />
-        </div>
-      </div>
-
-      <h3 class="pt-4 text-lg font-medium text-white">Endereço</h3>
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div>
-          <p class="mb-1 text-xs font-medium text-zinc-500">CEP *</p>
-          <input
-            :value="draft.address.zipcode"
-            type="text"
-            inputmode="numeric"
-            autocomplete="postal-code"
-            placeholder="00000-000"
-            maxlength="9"
-            class="input"
-            @blur="fetchViaCep"
-            @input="onCepInput"
-          />
-          <p v-if="cepLoading" class="mt-1 text-xs text-zinc-500">Consultando CEP…</p>
-          <p v-if="cepError" class="mt-1 text-xs text-amber-400">{{ cepError }}</p>
-        </div>
-        <div>
-          <p class="mb-1 text-xs font-medium text-zinc-500">Rua *</p>
-          <input v-model="draft.address.street" type="text" placeholder="Logradouro" class="input" />
-        </div>
-        <div>
-          <p class="mb-1 text-xs font-medium text-zinc-500">Número *</p>
-          <input v-model="draft.address.number" type="text" placeholder="Número da casa/apartamento" class="input" />
-        </div>
-        <div>
-          <p class="mb-1 text-xs font-medium text-zinc-500">Bairro *</p>
-          <input v-model="draft.address.neighborhood" type="text" placeholder="Bairro" class="input" />
         </div>
       </div>
 
@@ -361,9 +312,9 @@
       </div>
     </section>
 
-    <!-- 3 — Dados profissionais -->
-    <section v-show="step === 3" class="mt-10 space-y-4">
-      <h2 class="text-xl font-semibold text-white">Dados profissionais</h2>
+    <!-- Anúncio: nome profissional + local (mesma tela que dados pessoais) -->
+    <section v-show="step === 2" class="mt-10 space-y-4">
+      <h2 class="text-xl font-semibold text-white">Seu anúncio</h2>
       <input v-model="draft.professional_name" type="text" placeholder="Nome profissional *" class="input" />
       <p class="text-xs text-zinc-500">Este é o nome que aparecerá no perfil público (diferente do nome legal na etapa 1).</p>
       <div>
@@ -406,12 +357,12 @@
       </div>
     </section>
 
-    <!-- 4 — Documentos -->
-    <section v-show="step === 4" class="mt-10 space-y-6">
-      <h2 class="text-xl font-semibold text-white">Documentos</h2>
+    <!-- Fotos e documento -->
+    <section v-show="step === 3" class="mt-10 space-y-6">
+      <h2 class="text-xl font-semibold text-white">Documento e selfie</h2>
       <p class="text-sm text-zinc-400">
-        Envie os quatro arquivos obrigatórios. Imagens: JPG, PNG ou WebP (até
-        {{ registerImageMaxMbDisplay }}&nbsp;MB). Vídeo: MP4, WebM ou MOV (até 50&nbsp;MB).
+        Frente do documento e uma selfie. Imagens: JPG, PNG ou WebP (até
+        {{ registerImageMaxMbDisplay }}&nbsp;MB).
       </p>
       <div
         v-for="doc in docLabels"
@@ -458,9 +409,8 @@
       </div>
     </section>
 
-    <!-- 5 — Local do primeiro anúncio -->
-    <section v-show="step === 5" class="mt-10 space-y-4">
-      <h2 class="text-xl font-semibold text-white">Local do primeiro anúncio</h2>
+    <section v-show="step === 2" class="mt-10 space-y-4">
+      <h2 class="text-xl font-semibold text-white">Cidade do anúncio</h2>
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="min-w-0">
           <p class="mb-1 text-xs font-medium text-zinc-500">Estado *</p>
@@ -512,23 +462,22 @@
       </div>
     </section>
 
-    <!-- 6 — Apresentação e fotos -->
-    <section v-show="step === 6" class="mt-10 space-y-6">
-      <h2 class="text-xl font-semibold text-white">Apresentação e fotos</h2>
+    <section v-show="step === 3" class="mt-10 space-y-6">
+      <h2 class="text-xl font-semibold text-white">Fotos do anúncio</h2>
       <textarea
         v-model="draft.bio"
         rows="6"
-        placeholder="Texto de apresentação * — serviços, especialidades, experiência. Não inclua telefones ou links."
+        placeholder="Texto de apresentação (opcional): serviços, especialidades. Sem telefones ou links."
         class="input min-h-[140px] resize-y"
       />
 
       <div>
-        <p class="font-medium text-zinc-200">Foto para capa (banner) *</p>
+        <p class="font-medium text-zinc-200">Foto para capa (banner)</p>
         <ul class="mt-2 list-inside list-disc space-y-1 text-xs text-zinc-500">
           <li>
             Tamanho sugerido:
             <strong class="text-zinc-400">{{ REGISTER_COVER.suggestedSizeLabel }}</strong>
-            — {{ REGISTER_COVER.aspectHint }}
+            ({{ REGISTER_COVER.aspectHint }})
           </li>
           <li>Formatos: {{ REGISTER_COVER.formatsHint }} Até {{ REGISTER_COVER.maxFileMb }} MB.</li>
         </ul>
@@ -569,7 +518,7 @@
           <li>
             Tamanho sugerido:
             <strong class="text-zinc-400">{{ REGISTER_PROFILE_AVATAR.suggestedSizeLabel }}</strong>
-            — {{ REGISTER_PROFILE_AVATAR.hint }}
+            ({{ REGISTER_PROFILE_AVATAR.hint }})
           </li>
           <li>Formatos: {{ REGISTER_PROFILE_AVATAR.formatsHint }} Até {{ REGISTER_PROFILE_AVATAR.maxFileMb }} MB.</li>
         </ul>
@@ -605,7 +554,7 @@
           Fotos e vídeos da galeria * ({{ galleryRules.min }} a {{ galleryRules.max }} mídias)
         </p>
         <p class="mt-1 text-xs text-zinc-500">
-          Envie fotos nítidas e/ou vídeos curtos; é obrigatório atingir a quantidade mínima de mídias.
+          Uma foto nítida já basta para começar; você pode acrescentar mais depois.
         </p>
         <div
           role="button"
@@ -654,8 +603,7 @@
       </div>
     </section>
 
-    <!-- 7 — Plano + termos -->
-    <section v-show="step === 7" class="mt-10 space-y-6">
+    <section v-show="step === 4" class="mt-10 space-y-6">
       <h2 class="text-xl font-semibold text-white">Escolha seu plano</h2>
       <div class="grid gap-4 md:grid-cols-2">
         <button
@@ -705,14 +653,14 @@
               :key="s"
               type="button"
               class="text-xl leading-none transition hover:scale-110"
-              :title="`Nível ${s} — ${formatBrl(priceForPremiumTier(s))}/mês`"
+              :title="`Nível ${s}: ${formatBrl(priceForPremiumTier(s))}/mês`"
               @click.stop="setPremiumTier(s)"
             >
               {{ s <= draft.premium_tier ? '★' : '☆' }}
             </button>
           </div>
           <p v-if="draft.plan_type === 'premium'" class="mt-2 text-xs text-zinc-500">
-            Selecionado: nível <strong class="text-zinc-300">{{ draft.premium_tier }}</strong> —
+            Selecionado: nível <strong class="text-zinc-300">{{ draft.premium_tier }}</strong>:
             {{ formatBrl(premiumSelectedPrice) }}/mês
           </p>
           <ul class="mt-4 space-y-2 text-sm text-zinc-400">
@@ -720,6 +668,43 @@
             <li>PIX no final do cadastro; análise após confirmação</li>
           </ul>
         </button>
+      </div>
+
+      <div v-if="draft.plan_type === 'premium'" class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
+        <h3 class="text-lg font-medium text-white">Endereço para o plano</h3>
+        <p class="text-xs text-zinc-500">
+          Usamos só para ativar o destaque. Não aparece no anúncio. O público vê apenas a cidade.
+        </p>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <p class="mb-1 text-xs font-medium text-zinc-500">CEP *</p>
+            <input
+              :value="draft.address.zipcode"
+              type="text"
+              inputmode="numeric"
+              autocomplete="postal-code"
+              placeholder="00000-000"
+              maxlength="9"
+              class="input"
+              @blur="fetchViaCep"
+              @input="onCepInput"
+            />
+            <p v-if="cepLoading" class="mt-1 text-xs text-zinc-500">Consultando CEP…</p>
+            <p v-if="cepError" class="mt-1 text-xs text-amber-400">{{ cepError }}</p>
+          </div>
+          <div>
+            <p class="mb-1 text-xs font-medium text-zinc-500">Rua *</p>
+            <input v-model="draft.address.street" type="text" placeholder="Logradouro" class="input" />
+          </div>
+          <div>
+            <p class="mb-1 text-xs font-medium text-zinc-500">Número *</p>
+            <input v-model="draft.address.number" type="text" placeholder="Número da casa/apartamento" class="input" />
+          </div>
+          <div>
+            <p class="mb-1 text-xs font-medium text-zinc-500">Bairro *</p>
+            <input v-model="draft.address.neighborhood" type="text" placeholder="Bairro" class="input" />
+          </div>
+        </div>
       </div>
     </section>
 
@@ -928,7 +913,7 @@ usePublicPageSeo({
     'Finalize o cadastro como anunciante no Prazer.Vip: dados, mídias, plano e pagamento via PIX quando aplicável.',
 })
 
-const totalSteps = 7
+const totalSteps = 4
 const step = ref(1)
 
 const imageCropOpen = ref(false)
@@ -1240,8 +1225,8 @@ const registrationWhatsappVerified = computed(() =>
 
 /** GET /v1/config/registration-verification — alinhado ao .env do backend. */
 const registrationVerificationConfig = ref({
-  require_email_otp: true,
-  require_whatsapp_otp: true,
+  require_email_otp: false,
+  require_whatsapp_otp: false,
 })
 
 const needsEmailOtpPanel = computed(() => {
@@ -1363,7 +1348,7 @@ function onAdvertCityChange(e: Event) {
 watch(
   () => step.value,
   async (s) => {
-    if (s !== 5) {
+    if (s !== 2) {
       return
     }
     await loadStates()
@@ -1402,9 +1387,7 @@ watch(
 
 const docLabels = [
   { key: 'frente', label: 'Documento (frente) *', purpose: 'id_document_front', accept: 'image/*' },
-  { key: 'verso', label: 'Documento (verso) *', purpose: 'id_document_back', accept: 'image/*' },
   { key: 'selfie', label: 'Selfie *', purpose: 'selfie', accept: 'image/*' },
-  { key: 'video', label: 'Vídeo de verificação *', purpose: 'video', accept: 'video/*' },
 ] as const
 
 type DocItem = (typeof docLabels)[number]
@@ -1456,7 +1439,7 @@ function verificationHint(doc: DocItem) {
     return verificationErrors[doc.key]
   }
   if (mediaIdForDoc(doc)) {
-    return verificationFileNames[doc.key] || 'Arquivo enviado — clique ou arraste para substituir'
+    return verificationFileNames[doc.key] || 'Arquivo enviado. Clique ou arraste para substituir'
   }
   return 'Clique ou arraste o arquivo até aqui'
 }
@@ -1565,13 +1548,13 @@ async function loadRegistrationVerificationConfig() {
       require_whatsapp_otp?: boolean
     }>('/v1/config/registration-verification', { skipAuth: true })
     registrationVerificationConfig.value = {
-      require_email_otp: c.require_email_otp !== false,
-      require_whatsapp_otp: c.require_whatsapp_otp !== false,
+      require_email_otp: c.require_email_otp === true,
+      require_whatsapp_otp: c.require_whatsapp_otp === true,
     }
   } catch {
     registrationVerificationConfig.value = {
-      require_email_otp: true,
-      require_whatsapp_otp: true,
+      require_email_otp: false,
+      require_whatsapp_otp: false,
     }
   }
 }
@@ -1800,7 +1783,7 @@ const coverHint = computed(() => {
     return coverError.value
   }
   if (draft.cover_media_id) {
-    return coverFileName.value || 'Imagem de capa enviada — clique ou arraste para substituir'
+    return coverFileName.value || 'Imagem de capa enviada. Clique ou arraste para substituir'
   }
   return 'Clique ou arraste uma imagem até aqui'
 })
@@ -1813,7 +1796,7 @@ const avatarHint = computed(() => {
     return avatarError.value
   }
   if (draft.portal_avatar_media_id) {
-    return avatarFileName.value || 'Foto de perfil enviada — clique ou arraste para substituir'
+    return avatarFileName.value || 'Foto de perfil enviada. Clique ou arraste para substituir'
   }
   return 'Clique ou arraste a foto do rosto até aqui'
 })
@@ -2366,21 +2349,13 @@ async function submitWhatsappOtp() {
     await nextTick()
     whatsappOtpGateOpen.value = false
 
-    /**
-     * Com senha já definida e dados da etapa 2 ok, avançar já para «Dados profissionais» (evita outro «Próximo»
-     * só para sair do cartão de WhatsApp).
-     */
     if (step.value === 2 && !needsAccountPassword.value) {
-      const draftErr = validateStep2DraftOnly()
-      if (draftErr == null && registrationWhatsappVerified.value) {
-        try {
-          await persistStep({ manageBusy: false })
-          step.value = 3
-        } catch (e: unknown) {
-          formError.value =
-            extractLaravelErrorMessage(e, ['current_step', 'form_status']) ??
-            'Não foi possível salvar o progresso. Use «Próximo» para tentar de novo.'
-        }
+      try {
+        await persistStep({ manageBusy: false })
+      } catch (e: unknown) {
+        formError.value =
+          extractLaravelErrorMessage(e, ['current_step', 'form_status']) ??
+          'Não foi possível salvar o progresso. Use «Próximo» para tentar de novo.'
       }
     }
   } catch (e: unknown) {
@@ -2473,6 +2448,24 @@ function hydrateFromProfile(p: Record<string, unknown>) {
   }
 }
 
+/**
+ * Wizard atual grava 1–4. Passos 5–7 só existem em rascunhos da época das 7 telas.
+ * Antes, current_step=4 (plano) era lido como tela de documentos.
+ */
+function mapStoredWizardStep(raw: number): number {
+  const n = Number.isFinite(raw) ? raw : 1
+  if (n <= 1) {
+    return 1
+  }
+  if (n <= 4) {
+    return n
+  }
+  if (n <= 6) {
+    return 3
+  }
+  return 4
+}
+
 /** Com token válido: carrega perfil salvo e posiciona o passo (incl. etapa 2 se falta senha). */
 async function loadProfileIntoWizard(): Promise<boolean> {
   if (!hasToken.value) {
@@ -2487,7 +2480,6 @@ async function loadProfileIntoWizard(): Promise<boolean> {
    */
   const emailStillPending = !registrationEmailVerified.value
   if (emailStillPending && registrationVerificationConfig.value.require_email_otp) {
-    step.value = 1
     emailOtpDigits.value = [...emptyOtpDigits()]
     await sendRegistrationEmailCode(false, { manageBusy: false })
   }
@@ -2495,12 +2487,11 @@ async function loadProfileIntoWizard(): Promise<boolean> {
   try {
     const p = await request<Record<string, unknown>>('/v1/me/profile')
     hydrateFromProfile(p)
-    if (!p.registration_email_verified_at && registrationVerificationConfig.value.require_email_otp) {
-      step.value = 1
-      emailOtpDigits.value = [...emptyOtpDigits()]
+    if (p.form_status === 'complete') {
+      await navigateTo('/conta')
       return true
     }
-    let s = Math.min(Math.max(Number(p.current_step) || 1, 1), totalSteps)
+    let s = mapStoredWizardStep(Number(p.current_step) || 1)
     if (needsAccountPassword.value && s < 2) {
       s = 2
     }
@@ -2620,27 +2611,10 @@ function isAtLeast18YearsOld(isoDate: string): boolean {
   return age >= 18
 }
 
-/** Etapa 2: valida rascunho (sem exigir OTP de WhatsApp — isso abre após «Próximo»). */
-function validateStep2DraftOnly(): string | null {
-  if (!draft.birth_date) {
-    return 'Informe a data de nascimento.'
-  }
-  if (!isAtLeast18YearsOld(draft.birth_date)) {
-    return 'É necessário ter pelo menos 18 anos para continuar o cadastro.'
-  }
-  if (!draft.mother_name.trim()) {
-    return 'Informe o nome completo da mãe.'
-  }
-  if (!draft.contact_email.trim()) {
-    return 'Informe o e-mail de contato.'
-  }
-  const w = phoneDigits(draft.whatsapp)
-  if (w.length < 10 || w.length > 13) {
-    return 'Informe um WhatsApp válido (DDD + número; ao salvar usamos só números).'
-  }
+function validateInvoiceAddress(): string | null {
   const cep = draft.address.zipcode.replace(/\D/g, '')
   if (cep.length !== 8) {
-    return 'Informe o CEP com 8 dígitos.'
+    return 'Informe o CEP com 8 dígitos para ativar o plano.'
   }
   if (!draft.address.street.trim()) {
     return 'Informe o logradouro (rua).'
@@ -2654,6 +2628,24 @@ function validateStep2DraftOnly(): string | null {
   return null
 }
 
+/** Tela 2: dados pessoais (sem endereço). WhatsApp OTP abre após «Próximo». */
+function validateStep2DraftOnly(): string | null {
+  if (!draft.birth_date) {
+    return 'Informe a data de nascimento.'
+  }
+  if (!isAtLeast18YearsOld(draft.birth_date)) {
+    return 'É necessário ter pelo menos 18 anos para continuar o cadastro.'
+  }
+  if (!draft.contact_email.trim()) {
+    return 'Informe o e-mail de contato.'
+  }
+  const w = phoneDigits(draft.whatsapp)
+  if (w.length < 10 || w.length > 13) {
+    return 'Informe um WhatsApp válido (DDD + número; ao salvar usamos só números).'
+  }
+  return null
+}
+
 function validateStepForNext(s: number): string | null {
   if (s === 2) {
     const draftErr = validateStep2DraftOnly()
@@ -2663,9 +2655,6 @@ function validateStepForNext(s: number): string | null {
     if (registrationVerificationConfig.value.require_whatsapp_otp && !registrationWhatsappVerified.value) {
       return 'Envie e confirme o código de verificação do WhatsApp para este número.'
     }
-    return null
-  }
-  if (s === 3) {
     if (!draft.professional_name.trim()) {
       return 'Informe o nome profissional.'
     }
@@ -2675,20 +2664,6 @@ function validateStepForNext(s: number): string | null {
     if (!draft.service_type) {
       return 'Selecione o tipo de atendimento.'
     }
-    return null
-  }
-  if (s === 4) {
-    if (
-      !draft.id_document_front_media_id ||
-      !draft.id_document_back_media_id ||
-      !draft.selfie_media_id ||
-      !draft.video_media_id
-    ) {
-      return 'Envie os quatro arquivos: documento (frente e verso), selfie e vídeo de verificação.'
-    }
-    return null
-  }
-  if (s === 5) {
     if (draft.state_id == null || Number.isNaN(Number(draft.state_id))) {
       return 'Selecione o estado.'
     }
@@ -2703,12 +2678,9 @@ function validateStepForNext(s: number): string | null {
     }
     return null
   }
-  if (s === 6) {
-    if (!draft.bio.trim()) {
-      return 'Preencha o texto de apresentação.'
-    }
-    if (!draft.cover_media_id) {
-      return 'Envie a foto de capa (banner).'
+  if (s === 3) {
+    if (!draft.id_document_front_media_id || !draft.selfie_media_id) {
+      return 'Envie a frente do documento e a selfie.'
     }
     if (!draft.portal_avatar_media_id) {
       return 'Envie a foto do perfil (rosto visível).'
@@ -2720,6 +2692,15 @@ function validateStepForNext(s: number): string | null {
     }
     if (n > max) {
       return `No máximo ${max} mídia(s) na galeria.`
+    }
+    return null
+  }
+  if (s === 4) {
+    if (draft.plan_type !== 'basic' && draft.plan_type !== 'premium') {
+      return 'Selecione o plano básico ou premium.'
+    }
+    if (draft.plan_type === 'premium') {
+      return validateInvoiceAddress()
     }
     return null
   }
@@ -2783,7 +2764,7 @@ async function next() {
         formError.value =
           lookup.message ??
           (lookup.registration_state === 'pending_review'
-            ? 'Seu cadastro está em análise. Aguarde a aprovação para poder entrar.'
+            ? 'Seu cadastro já foi enviado e está em análise. Use Entrar com e-mail e senha para acompanhar.'
             : 'Não é possível iniciar um novo cadastro com estes dados. Use Entrar ou outro e-mail.')
         return
       }
@@ -2817,10 +2798,6 @@ async function next() {
     return
   }
   if (step.value === 1 && hasToken.value && !showStep1CreateForm.value) {
-    if (registrationVerificationConfig.value.require_email_otp && !registrationEmailVerified.value) {
-      formError.value = 'Confirme o código enviado ao seu e-mail antes de continuar.'
-      return
-    }
     busy.value = true
     await nextTick()
     try {
@@ -2988,6 +2965,9 @@ function registrationPixError(e: unknown): string {
   if (d?.errors?.form_status?.[0]) {
     return d.errors.form_status[0]
   }
+  if (d?.errors?.address_json?.[0]) {
+    return d.errors.address_json[0]
+  }
   if (typeof d?.message === 'string') {
     return d.message
   }
@@ -2999,6 +2979,11 @@ async function submitFinal() {
     return
   }
   formError.value = null
+  const planErr = validateStepForNext(4)
+  if (planErr) {
+    formError.value = planErr
+    return
+  }
   if (draft.plan_type === 'premium') {
     clampPremiumTier()
   }

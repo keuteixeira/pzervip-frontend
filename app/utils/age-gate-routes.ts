@@ -8,6 +8,7 @@ export function isAgeGateExemptPath(path: string): boolean {
     path.startsWith('/auth') ||
     path.startsWith('/entrar') ||
     path.startsWith('/cadastro') ||
+    path.startsWith('/confirmar-email') ||
     path.startsWith('/admin') ||
     path.startsWith('/conta') ||
     path === '/contato' ||

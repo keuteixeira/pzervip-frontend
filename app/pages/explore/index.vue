@@ -15,7 +15,7 @@
         <h2
           class="mx-auto mt-6 max-w-3xl text-lg font-normal leading-relaxed text-zinc-400 md:text-xl md:leading-relaxed"
         >
-          Garotas e garotos de programa, acompanhantes masculinos e femininas, massagistas e trans — tudo por cidade.
+          Garotas e garotos de programa, acompanhantes masculinos e femininas, massagistas e trans, tudo por cidade.
           Busque sua cidade ou selecione uma cidade na lista de destaque.
         </h2>
 

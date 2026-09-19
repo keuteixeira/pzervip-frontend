@@ -6,7 +6,7 @@
         <NuxtLink
           to="/"
           class="flex min-w-0 shrink items-center gap-2"
-          aria-label="Prazer.Vip — início"
+          aria-label="Início do Prazer.Vip"
         >
           <img
             :src="brand.logoHorizontal"

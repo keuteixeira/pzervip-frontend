@@ -64,8 +64,28 @@ export function adminPaymentStatusLabel(status?: string | null): string {
 export function adminGatewayLabel(gateway?: string | null): string {
   const k = normKey(gateway)
   if (k === 'pix') return 'PIX'
+  if (k === 'woovi') return 'PIX (Woovi)'
   if (k === 'admin') return 'Manual (Admin)'
   return gateway?.trim() || '—'
+}
+
+export function adminPaymentPurposeLabel(purpose?: string | null): string {
+  const k = normKey(purpose)
+  if (k === 'registration_subscription') return 'Cadastro premium'
+  if (k === 'portal_destaque') return 'Destaque'
+  if (k === 'admin_grant') return 'Cortesia'
+  return purpose?.trim() || '—'
+}
+
+export function adminContactSubjectLabel(type?: string | null): string {
+  const k = normKey(type)
+  if (k === 'denuncia_perfil') return 'Denúncia de perfil'
+  if (k === 'duvida_geral') return 'Dúvida geral'
+  if (k === 'sugestao') return 'Sugestão'
+  if (k === 'problema_tecnico') return 'Problema técnico'
+  if (k === 'conta_anunciante') return 'Conta / pagamentos'
+  if (k === 'outro') return 'Outro'
+  return type?.trim() || '—'
 }
 
 export function adminMediaModerationStatusLabel(status?: string | null): string {

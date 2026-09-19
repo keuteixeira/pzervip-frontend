@@ -14,7 +14,7 @@
       class="mt-10 w-full max-w-md rounded-xl bg-brand px-6 py-4 text-base font-semibold text-white shadow-lg shadow-rose-900/40 transition hover:bg-brand-muted"
       @click="entrar"
     >
-      Sou maior de 18 anos — Entrar
+      Sou maior de 18 anos. Entrar
     </button>
     <p class="mt-8 text-xs text-zinc-600">
       Se não tem idade legal, clique <a href="https://www.google.com" class="text-brand hover:underline">aqui</a>.

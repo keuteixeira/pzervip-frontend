@@ -3,9 +3,9 @@
     <header class="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-900/90 backdrop-blur">
       <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:py-4">
         <NuxtLink
-          to="/admin/cadastros"
+          to="/admin"
           class="flex min-w-0 shrink items-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          aria-label="Painel administrativo — início"
+          aria-label="Início do painel administrativo"
         >
           <img
             :src="brandAssets.logoHorizontal"
@@ -30,6 +30,14 @@
         </nav>
 
         <div class="flex shrink-0 items-center gap-2">
+          <a
+            :href="horizonUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hidden rounded-lg px-2 py-1.5 text-xs text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300 md:inline-block"
+          >
+            Filas
+          </a>
           <NuxtLink
             to="/explorar"
             class="hidden rounded-lg px-2 py-1.5 text-xs text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300 md:inline-block"
@@ -92,6 +100,15 @@
             </li>
           </ul>
           <div class="mt-3 flex flex-col gap-2 border-t border-zinc-800 pt-3">
+            <a
+              :href="horizonUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="rounded-lg px-3 py-2.5 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+              @click="mobileMenuOpen = false"
+            >
+              Filas (Horizon)
+            </a>
             <NuxtLink
               to="/explorar"
               class="rounded-lg px-3 py-2.5 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
@@ -125,22 +142,36 @@ const { logout } = useAuth()
 const mobileMenuOpen = ref(false)
 const mobileNavId = 'admin-mobile-nav'
 
+const config = useRuntimeConfig()
+const horizonUrl = computed(() => {
+  const api = String(config.public.apiBase || '').replace(/\/$/, '')
+  return `${api.replace(/\/api$/, '')}/horizon`
+})
+
 const links = [
+  { to: '/admin', label: 'Início' },
   { to: '/admin/cadastros', label: 'Cadastros' },
   { to: '/admin/anunciantes', label: 'Anunciantes' },
   { to: '/admin/texto-perfil', label: 'Nome e bio' },
   { to: '/admin/midias', label: 'Mídias' },
   { to: '/admin/comentarios', label: 'Comentários' },
-  { to: '/admin/destaques', label: 'Destaques' },
+  { to: '/admin/financeiro', label: 'Financeiro' },
   { to: '/admin/chamados', label: 'Chamados' },
+  { to: '/admin/contato', label: 'Contato' },
 ]
 
 function isActive(to: string) {
+  if (to === '/admin') {
+    return route.path === '/admin'
+  }
   if (to === '/admin/anunciantes') {
     return route.path === '/admin/anunciantes' || route.path.startsWith('/admin/anunciantes/')
   }
   if (to === '/admin/cadastros') {
     return route.path === '/admin/cadastros' || route.path.startsWith('/admin/cadastros/')
+  }
+  if (to === '/admin/financeiro') {
+    return route.path === '/admin/financeiro' || route.path.startsWith('/admin/destaques')
   }
   return route.path === to || route.path.startsWith(`${to}/`)
 }

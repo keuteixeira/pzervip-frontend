@@ -634,9 +634,9 @@ usePublicPageSeo({
     const loc = [v.neighborhood, v.cityName, v.stateUf].filter(Boolean).join(' · ')
     const tail = loc ? ` Local: ${loc}.` : ''
     if (v.about) {
-      return truncateForMeta(`${v.displayName} — ${v.serviceLabel}. ${v.about}${tail}`, 160)
+      return truncateForMeta(`${v.displayName}, ${v.serviceLabel}. ${v.about}${tail}`, 160)
     }
-    return truncateForMeta(`${v.displayName} — ${v.serviceLabel} no Prazer.Vip.${tail}`, 160)
+    return truncateForMeta(`${v.displayName}, ${v.serviceLabel} no Prazer.Vip.${tail}`, 160)
   }),
   image: computed(() => vm.value?.bannerUrl || vm.value?.avatarUrl),
 })

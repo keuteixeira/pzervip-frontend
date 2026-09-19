@@ -17,8 +17,8 @@
         serviço, à verificação de identidade e ao cumprimento de obrigações legais.
       </p>
       <p>
-        Durante o acesso ao site, dados técnicos — por exemplo endereço IP, tipo de navegador, idioma e registros de
-        segurança — podem ser tratados para manter o funcionamento estável, prevenir abuso e melhorar a experiência,
+        Durante o acesso ao site, dados técnicos (por exemplo endereço IP, tipo de navegador, idioma e registros de
+        segurança) podem ser tratados para manter o funcionamento estável, prevenir abuso e melhorar a experiência,
         sempre dentro do razoável para a operação da plataforma.
       </p>
       <p>
@@ -75,8 +75,8 @@
 
       <h2 class="pt-6 text-xl font-semibold text-white">5. Segurança</h2>
       <p>
-        Adotamos medidas técnicas e organizacionais proporcionais ao risco — controles de acesso, criptografia em trânsito
-        quando apropriado, boas práticas de armazenamento e monitoramento — para reduzir risco de acesso não autorizado,
+        Adotamos medidas técnicas e organizacionais proporcionais ao risco: controles de acesso, criptografia em trânsito
+        quando apropriado, boas práticas de armazenamento e monitoramento, para reduzir risco de acesso não autorizado,
         perda ou alteração indevida. Nenhum sistema é totalmente isento de risco; em caso de incidente relevante,
         seguiremos os procedimentos legais aplicáveis.
       </p>

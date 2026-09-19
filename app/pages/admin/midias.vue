@@ -3,25 +3,34 @@
     <div>
       <h1 class="text-2xl font-bold text-white">Mídias pendentes</h1>
       <p class="mt-1 text-sm text-zinc-500">
-        Arquivos com moderação “pendente” (galeria, capa, avatar, áudio). Ao recusar, pode informar um motivo — se
+        Arquivos com moderação “pendente” (galeria, capa, avatar, áudio). Ao recusar, pode informar um motivo. Se
         preencher, o anunciante recebe por e-mail com a referência do ficheiro.
       </p>
     </div>
 
-    <p
-      v-if="actionMsg"
-      class="text-sm"
-      :class="actionOk ? 'text-emerald-400' : 'text-red-400'"
-      role="status"
-    >
+    <p v-if="actionMsg" class="text-sm" :class="actionOk ? 'text-emerald-400' : 'text-red-400'" role="status">
       {{ actionMsg }}
     </p>
 
-    <p v-if="loading" class="text-zinc-400">Carregando…</p>
-
-    <ul v-else class="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
-      <li
-        v-for="row in items"
+    <AdminDataTable
+      :q="list.q.value"
+      :page="list.page.value"
+      :last-page="list.lastPage.value"
+      :per-page="list.perPage.value"
+      :total="list.total.value"
+      :from="list.from.value"
+      :to="list.to.value"
+      :loading="list.loading.value"
+      :error="list.error.value"
+      variant="stack"
+      search-placeholder="Arquivo ou nome do perfil"
+      empty-text="Nenhuma mídia pendente."
+      @update:q="onSearch"
+      @update:per-page="list.setPerPage"
+      @page="list.goToPage"
+    >
+      <div
+        v-for="row in list.items.value"
         :key="row.id"
         role="button"
         tabindex="0"
@@ -32,18 +41,13 @@
         <div>
           <p class="font-medium text-brand">{{ row.kind_label || row.collection_name }}</p>
           <p class="font-medium text-white">{{ row.file_name }}</p>
-          <p class="text-xs text-zinc-500">
-            {{ row.mime_type || '—' }} · {{ row.collection_name }} · #{{ row.id }}
-          </p>
+          <p class="text-xs text-zinc-500">{{ row.mime_type || '—' }} · {{ row.collection_name }} · #{{ row.id }}</p>
           <p v-if="row.advertiser_profile" class="text-sm text-zinc-400">
             Perfil: {{ row.advertiser_profile.professional_name || '—' }}
             <span v-if="row.advertiser_profile.approval_status" class="text-zinc-500">
               · cadastro {{ adminApprovalStatusLabel(row.advertiser_profile.approval_status) }}
             </span>
-            <NuxtLink
-              :to="`/admin/anunciantes/${row.advertiser_profile.id}`"
-              class="ml-2 text-brand hover:underline"
-            >
+            <NuxtLink :to="`/admin/anunciantes/${row.advertiser_profile.id}`" class="ml-2 text-brand hover:underline">
               Visualizar
             </NuxtLink>
           </p>
@@ -63,9 +67,7 @@
             :disabled="!row.advertiser_profile || row.id in moderatingByMediaId"
             @click="moderate(row, 'approved')"
           >
-            {{
-              moderatingByMediaId[row.id] === 'approved' ? 'Aprovando…' : 'Aprovar'
-            }}
+            {{ moderatingByMediaId[row.id] === 'approved' ? 'Aprovando…' : 'Aprovar' }}
           </button>
           <button
             type="button"
@@ -73,35 +75,11 @@
             :disabled="!row.advertiser_profile || row.id in moderatingByMediaId"
             @click="moderate(row, 'rejected')"
           >
-            {{
-              moderatingByMediaId[row.id] === 'rejected' ? 'Recusando…' : 'Recusar'
-            }}
+            {{ moderatingByMediaId[row.id] === 'rejected' ? 'Recusando…' : 'Recusar' }}
           </button>
         </div>
-      </li>
-    </ul>
-
-    <p v-if="!loading && items.length === 0" class="text-zinc-500">Nenhuma mídia pendente.</p>
-
-    <div v-if="meta && meta.last_page > 1" class="flex items-center justify-center gap-4 text-sm text-zinc-400">
-      <button
-        type="button"
-        class="rounded border border-zinc-700 px-3 py-1 disabled:opacity-40"
-        :disabled="page <= 1"
-        @click="page--; load()"
-      >
-        Anterior
-      </button>
-      <span>Página {{ meta.current_page }} / {{ meta.last_page }}</span>
-      <button
-        type="button"
-        class="rounded border border-zinc-700 px-3 py-1 disabled:opacity-40"
-        :disabled="page >= meta.last_page"
-        @click="page++; load()"
-      >
-        Próxima
-      </button>
-    </div>
+      </div>
+    </AdminDataTable>
   </div>
 </template>
 
@@ -135,27 +113,15 @@ type Row = {
   } | null
 }
 
-const loading = ref(true)
-const page = ref(1)
-const items = ref<Row[]>([])
-const meta = ref<{ current_page: number; last_page: number } | null>(null)
-/** Por `media.id`: cada linha mantém «Aprovando…» / «Recusando…» até a sua requisição terminar. */
+const list = useAdminList<Row>({ endpoint: '/v1/admin/media/pending' })
 const moderatingByMediaId = ref<Record<number, 'approved' | 'rejected'>>({})
 const openingId = ref<number | null>(null)
 const actionMsg = ref('')
 const actionOk = ref(true)
 
-async function load() {
-  loading.value = true
-  try {
-    const res = await request<{ data: Row[]; current_page: number; last_page: number }>(
-      `/v1/admin/media/pending?page=${page.value}`,
-    )
-    items.value = res.data
-    meta.value = { current_page: res.current_page, last_page: res.last_page }
-  } finally {
-    loading.value = false
-  }
+function onSearch(value: string) {
+  list.q.value = value
+  list.scheduleSearch()
 }
 
 async function openMedia(row: Row) {
@@ -200,19 +166,9 @@ async function moderate(row: Row, moderation_status: 'approved' | 'rejected') {
           ? { moderation_status, moderation_reject_reason }
           : { moderation_status },
     })
-    try {
-      await load()
-    } catch {
-      actionMsg.value =
-        moderation_status === 'approved'
-          ? 'Mídia aprovada. Não foi possível atualizar a lista — atualize a página.'
-          : 'Mídia recusada. Não foi possível atualizar a lista — atualize a página.'
-      actionOk.value = true
-      return
-    }
-    actionMsg.value =
-      moderation_status === 'approved' ? 'Mídia aprovada com sucesso.' : 'Mídia recusada.'
+    actionMsg.value = moderation_status === 'approved' ? 'Mídia aprovada com sucesso.' : 'Mídia recusada.'
     actionOk.value = true
+    await list.load()
   } catch (e: unknown) {
     actionMsg.value = apiErrorMessage(e, 'Não foi possível moderar esta mídia.')
     actionOk.value = false
@@ -223,5 +179,5 @@ async function moderate(row: Row, moderation_status: 'approved' | 'rejected') {
   }
 }
 
-onMounted(() => load())
+onMounted(() => list.load())
 </script>

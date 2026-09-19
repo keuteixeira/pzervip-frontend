@@ -107,10 +107,11 @@ async function onSubmit() {
   try {
     const res = await login(email.value, password.value)
     // Usar `res.user` (não só `user.value`): evita corrida com estado reativo após o POST.
-    if (res.user.role === 'admin') {
-      await navigateTo('/admin/cadastros')
+    const role = String(res.user?.role ?? '').toLowerCase()
+    if (role === 'admin') {
+      await navigateTo('/admin', { replace: true })
     } else {
-      await navigateTo('/conta')
+      await navigateTo('/conta', { replace: true })
     }
   } catch {
     errorMsg.value = error.value

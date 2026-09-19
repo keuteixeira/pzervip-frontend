@@ -4,24 +4,9 @@
       <h1 class="text-2xl font-bold text-white">Nome e biografia</h1>
       <p class="mt-1 text-sm text-zinc-500">
         Alterações enviadas pelos anunciantes para o nome profissional (e link) e para a biografia. Aprovar aplica tudo
-        o que estiver pendente naquele perfil; ao recusar pode escrever um motivo — se preencher, o anunciante recebe
+        o que estiver pendente naquele perfil; ao recusar pode escrever um motivo. Se preencher, o anunciante recebe
         por e-mail com a referência (nome, bio ou ambos).
       </p>
-    </div>
-
-    <div class="flex flex-wrap gap-2">
-      <button
-        v-for="f in filters"
-        :key="f.value"
-        type="button"
-        class="rounded-lg border px-3 py-1.5 text-sm"
-        :class="
-          typeFilter === f.value ? 'border-brand bg-brand/20 text-white' : 'border-zinc-700 text-zinc-400'
-        "
-        @click="selectFilter(f.value)"
-      >
-        {{ f.label }}
-      </button>
     </div>
 
     <p
@@ -33,10 +18,36 @@
       {{ actionMsg }}
     </p>
 
-    <p v-if="loading" class="text-zinc-400">Carregando…</p>
-
-    <ul v-else class="divide-y divide-zinc-800 rounded-xl border border-zinc-800">
-      <li v-for="row in items" :key="row.id" class="space-y-3 px-4 py-4">
+    <AdminDataTable
+      :q="list.q.value"
+      :page="list.page.value"
+      :last-page="list.lastPage.value"
+      :per-page="list.perPage.value"
+      :total="list.total.value"
+      :from="list.from.value"
+      :to="list.to.value"
+      :loading="list.loading.value"
+      :error="list.error.value"
+      variant="stack"
+      search-placeholder="Nome, slug ou e-mail"
+      empty-text="Nenhuma alteração neste filtro."
+      @update:q="onSearch"
+      @update:per-page="list.setPerPage"
+      @page="list.goToPage"
+    >
+      <template #filters>
+        <button
+          v-for="f in filters"
+          :key="f.value"
+          type="button"
+          class="rounded-lg border px-3 py-1.5 text-sm"
+          :class="typeFilter === f.value ? 'border-brand bg-brand/20 text-white' : 'border-zinc-700 text-zinc-400'"
+          @click="selectFilter(f.value)"
+        >
+          {{ f.label }}
+        </button>
+      </template>
+      <div v-for="row in list.items.value" :key="row.id" class="space-y-3 px-4 py-4">
         <div class="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <p class="text-sm font-medium text-white">
@@ -115,30 +126,8 @@
             {{ busyByProfileId[row.id] === 'reject' ? 'Recusando…' : 'Recusar' }}
           </button>
         </div>
-      </li>
-    </ul>
-
-    <p v-if="!loading && items.length === 0" class="text-zinc-500">Nenhuma alteração neste filtro.</p>
-
-    <div v-if="meta && meta.last_page > 1" class="flex items-center justify-center gap-4 text-sm text-zinc-400">
-      <button
-        type="button"
-        class="rounded border border-zinc-700 px-3 py-1 disabled:opacity-40"
-        :disabled="page <= 1"
-        @click="goPrevPage()"
-      >
-        Anterior
-      </button>
-      <span>Página {{ meta.current_page }} / {{ meta.last_page }}</span>
-      <button
-        type="button"
-        class="rounded border border-zinc-700 px-3 py-1 disabled:opacity-40"
-        :disabled="page >= meta.last_page"
-        @click="goNextPage()"
-      >
-        Próxima
-      </button>
-    </div>
+      </div>
+    </AdminDataTable>
   </div>
 </template>
 
@@ -151,7 +140,7 @@ definePageMeta({
   middleware: ['admin' as any],
 })
 
-useHead({ title: 'Nome e biografia — admin' })
+useHead({ title: 'Nome e biografia (admin)' })
 
 type BioDiffSegment = { type: 'context' | 'removed' | 'added'; text: string }
 
@@ -177,10 +166,10 @@ const { request } = useApi()
 const { swalRejectWithReason } = useSwal()
 
 const typeFilter = ref<'all' | 'name' | 'bio'>('all')
-const page = ref(1)
-const loading = ref(true)
-const items = ref<Row[]>([])
-const meta = ref<{ current_page: number; last_page: number } | null>(null)
+const list = useAdminList<Row>({
+  endpoint: '/v1/admin/profiles/pending-portal-text',
+  extraQuery: () => ({ type: typeFilter.value }),
+})
 const actionMsg = ref('')
 const actionOk = ref(true)
 const busyByProfileId = ref<Record<number, 'approve' | 'reject'>>({})
@@ -215,37 +204,19 @@ function isProfileBusy(profileId: number): boolean {
   return Object.prototype.hasOwnProperty.call(busyByProfileId.value, profileId)
 }
 
+function onSearch(value: string) {
+  list.q.value = value
+  list.scheduleSearch()
+}
+
 function selectFilter(value: 'all' | 'name' | 'bio') {
   typeFilter.value = value
-  page.value = 1
-  void load()
-}
-
-function goPrevPage() {
-  page.value--
-  void load()
-}
-
-function goNextPage() {
-  page.value++
-  void load()
+  list.page.value = 1
+  void list.load()
 }
 
 async function load() {
-  loading.value = true
-  try {
-    const res = await request<{
-      data: Row[]
-      current_page: number
-      last_page: number
-    }>(
-      `/v1/admin/profiles/pending-portal-text?type=${encodeURIComponent(typeFilter.value)}&page=${page.value}`,
-    )
-    items.value = res.data
-    meta.value = { current_page: res.current_page, last_page: res.last_page }
-  } finally {
-    loading.value = false
-  }
+  await list.load()
 }
 
 async function approve(profileId: number) {

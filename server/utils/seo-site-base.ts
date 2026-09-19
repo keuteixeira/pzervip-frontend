@@ -12,7 +12,7 @@ export function getPublicSiteBase(): string {
 
 export function getApiBase(): string {
   const config = useRuntimeConfig()
-  return String(config.public.apiBase || 'http://localhost:8000/api').replace(/\/$/, '')
+  return String(config.public.apiBase || 'http://localhost:8085/api').replace(/\/$/, '')
 }
 
 export function escapeXml(s: string): string {

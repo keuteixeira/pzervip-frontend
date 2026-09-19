@@ -1,3 +1,4 @@
+import { advertiserAreaDestination, registerOrProfileDestination } from '~/utils/area-destination'
 import { buildPublicProfilePath } from '~/utils/public-profile-url'
 import { useAdvertiserApproval } from '~/composables/useAdvertiserApproval'
 
@@ -18,15 +19,7 @@ export function useAdvertiserAreaLink() {
   const { user, fetchMe } = useAuth()
   const { isApprovedAdvertiser } = useAdvertiserApproval()
 
-  const advertiserAreaTo = computed(() => {
-    if (!token.value) {
-      return '/login'
-    }
-    if (user.value?.role === 'admin') {
-      return '/admin/cadastros'
-    }
-    return '/conta'
-  })
+  const advertiserAreaTo = computed(() => advertiserAreaDestination(token.value, user.value?.role))
 
   const registerOrMyProfileLabel = computed(() => {
     if (isApprovedAdvertiser.value) {
@@ -35,17 +28,14 @@ export function useAdvertiserAreaLink() {
     return 'Cadastro de Anunciante'
   })
 
-  const registerOrMyProfileTo = computed(() => {
-    if (isApprovedAdvertiser.value) {
-      const slug = user.value?.advertiser_profile?.public_slug?.trim()
-      const st = user.value?.advertiser_profile?.service_type
-      if (slug) {
-        return buildPublicProfilePath(slug, st)
-      }
-      return '/conta/perfil'
-    }
-    return '/cadastro'
-  })
+  const registerOrMyProfileTo = computed(() =>
+    registerOrProfileDestination({
+      isApprovedAdvertiser: isApprovedAdvertiser.value,
+      publicSlug: user.value?.advertiser_profile?.public_slug,
+      serviceType: user.value?.advertiser_profile?.service_type,
+      publicPath: buildPublicProfilePath,
+    }),
+  )
 
   async function hydrateUserIfNeeded() {
     if (token.value && !user.value) {

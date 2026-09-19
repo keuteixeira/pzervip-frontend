@@ -3,6 +3,7 @@
     <div>
       <NuxtLink to="/admin/chamados" class="text-sm text-zinc-500 hover:text-brand">← Voltar</NuxtLink>
       <h1 class="mt-2 text-2xl font-bold text-white">{{ ticket?.title || 'Chamado' }}</h1>
+      <p v-if="loadError" class="mt-2 text-sm text-red-400">{{ loadError }}</p>
       <p v-if="ticket" class="mt-1 text-sm text-zinc-500">
         {{ ticket.user?.name }} · {{ supportStatusLabel(ticket.status) }} · {{ supportSubjectLabel(ticket.subject) }}
       </p>
@@ -65,12 +66,18 @@
 
     <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
       <h2 class="text-sm font-semibold text-white">Responder chamado</h2>
-      <textarea v-model="replyBody" rows="4" class="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm" />
+      <textarea
+        v-model="replyBody"
+        rows="4"
+        class="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white"
+        placeholder="Escreva a resposta…"
+      />
       <label class="mt-2 flex items-center gap-2 text-sm text-zinc-300">
-        <input v-model="internalNote" type="checkbox" />
+        <input v-model="internalNote" type="checkbox" class="accent-brand" />
         Mensagem interna (não visível ao anunciante)
       </label>
-      <input type="file" multiple class="mt-2 block w-full text-sm text-zinc-300" @change="onFilesChange" />
+      <input ref="fileInput" type="file" multiple class="mt-2 block w-full text-sm text-zinc-300" @change="onFilesChange" />
+      <p v-if="replyMsg" class="mt-2 text-sm" :class="replyErr ? 'text-red-400' : 'text-emerald-400'">{{ replyMsg }}</p>
       <button
         type="button"
         class="mt-3 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
@@ -84,6 +91,7 @@
 </template>
 
 <script setup lang="ts">
+import { apiErrorMessage } from '~/utils/api-error-message'
 import { supportPriorities, supportStatusLabel, supportSubjectLabel } from '~/utils/support-ticket-labels'
 
 definePageMeta({
@@ -100,7 +108,11 @@ const assigneeId = ref('')
 const replyBody = ref('')
 const internalNote = ref(false)
 const files = ref<File[]>([])
+const fileInput = ref<HTMLInputElement | null>(null)
 const sending = ref(false)
+const replyMsg = ref('')
+const replyErr = ref(false)
+const loadError = ref('')
 let timer: ReturnType<typeof setInterval> | null = null
 
 function formatDate(iso?: string | null) {
@@ -119,32 +131,64 @@ async function load() {
   messages.value = res.messages
   admins.value = res.admins
   assigneeId.value = res.ticket?.admin_assignee?.id ? String(res.ticket.admin_assignee.id) : ''
+  loadError.value = ''
 }
 
 async function saveMeta() {
-  await request(`/v1/admin/support/tickets/${route.params.id}`, {
-    method: 'PATCH',
-    body: {
-      status: ticket.value.status,
-      priority: ticket.value.priority,
-      admin_assignee_id: assigneeId.value ? Number(assigneeId.value) : null,
-    },
-  })
-  await load()
+  try {
+    await request(`/v1/admin/support/tickets/${route.params.id}`, {
+      method: 'PATCH',
+      body: {
+        status: ticket.value.status,
+        priority: ticket.value.priority,
+        admin_assignee_id: assigneeId.value ? Number(assigneeId.value) : null,
+      },
+    })
+    await load()
+  } catch (e: unknown) {
+    replyErr.value = true
+    replyMsg.value = apiErrorMessage(e, 'Não foi possível salvar as alterações.')
+  }
 }
 
 async function sendReply() {
+  const body = replyBody.value.trim()
+  if (body.length < 2) {
+    replyErr.value = true
+    replyMsg.value = 'Escreva pelo menos 2 caracteres para enviar.'
+    return
+  }
+
   sending.value = true
+  replyMsg.value = ''
+  replyErr.value = false
   try {
-    const fd = new FormData()
-    fd.append('body', replyBody.value.trim())
-    fd.append('is_internal_note', internalNote.value ? '1' : '0')
-    files.value.forEach((f) => fd.append('attachments[]', f))
-    await request(`/v1/admin/support/tickets/${route.params.id}/messages`, { method: 'POST', body: fd })
+    if (files.value.length > 0) {
+      const fd = new FormData()
+      fd.append('body', body)
+      fd.append('is_internal_note', internalNote.value ? '1' : '0')
+      files.value.forEach((f) => fd.append('attachments[]', f))
+      await request(`/v1/admin/support/tickets/${route.params.id}/messages`, { method: 'POST', body: fd })
+    } else {
+      await request(`/v1/admin/support/tickets/${route.params.id}/messages`, {
+        method: 'POST',
+        body: {
+          body,
+          is_internal_note: internalNote.value,
+        },
+      })
+    }
     replyBody.value = ''
     internalNote.value = false
     files.value = []
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
+    replyMsg.value = 'Resposta enviada.'
     await load()
+  } catch (e: unknown) {
+    replyErr.value = true
+    replyMsg.value = apiErrorMessage(e, 'Não foi possível enviar a resposta.')
   } finally {
     sending.value = false
   }
@@ -158,9 +202,13 @@ async function openAttachment(messageId: number, mediaId: number) {
 }
 
 onMounted(async () => {
-  await load()
+  try {
+    await load()
+  } catch (e: unknown) {
+    loadError.value = apiErrorMessage(e, 'Não foi possível carregar o chamado.')
+  }
   timer = setInterval(() => {
-    load()
+    void load().catch(() => {})
   }, 15000)
 })
 

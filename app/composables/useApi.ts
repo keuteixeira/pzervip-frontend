@@ -18,9 +18,10 @@ export function useApi() {
       Accept: 'application/json',
       ...(options.headers as Record<string, string> | undefined),
     }
-    /** multipart precisa do boundary; não definir Content-Type manualmente */
-    if (isFormData && 'Content-Type' in headers) {
+    /** multipart precisa do boundary automático do browser */
+    if (isFormData) {
       delete headers['Content-Type']
+      delete headers['content-type']
     }
     if (token.value) {
       headers.Authorization = `Bearer ${token.value}`

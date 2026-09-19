@@ -119,8 +119,8 @@
             {{
               profileDetail.user_paused_listing
                 ? profileDetail.public_profile_visible_when_paused
-                  ? 'Inativo — link público ainda ativo'
-                  : 'Inativo — anúncio oculto'
+                  ? 'Inativo, link público ainda ativo'
+                  : 'Inativo, anúncio oculto'
                 : 'Perfil ativo'
             }}
           </span>
@@ -147,11 +147,11 @@
           <div class="space-y-2 text-sm text-zinc-300">
             <label class="flex cursor-pointer items-start gap-2">
               <input v-model="pauseChoice" type="radio" value="hide" class="mt-1" />
-              <span>Ocultar o anúncio — o link público deixa de exibir o perfil.</span>
+              <span>Ocultar o anúncio: o link público deixa de exibir o perfil.</span>
             </label>
             <label class="flex cursor-pointer items-start gap-2">
               <input v-model="pauseChoice" type="radio" value="keep" class="mt-1" />
-              <span>Manter o link ativo — visitantes ainda veem o perfil enquanto o anúncio está inativo na gestão.</span>
+              <span>Manter o link ativo: visitantes ainda veem o perfil enquanto o anúncio está inativo na gestão.</span>
             </label>
           </div>
           <button
@@ -316,7 +316,11 @@ const showAccountSecurityAndSupport = computed(
 )
 
 const backToPrecadastroLabel = computed(() =>
-  profileDetail.value?.form_status === 'draft' ? 'Voltar ao pré-cadastro' : 'Retomar cadastro',
+  profileDetail.value?.form_status === 'draft'
+    ? 'Voltar ao pré-cadastro'
+    : profileDetail.value?.approval_status === 'pending'
+      ? 'Acompanhar análise'
+      : 'Retomar cadastro',
 )
 const listingLoading = ref(false)
 const listingMsg = ref<string | null>(null)
@@ -384,7 +388,7 @@ async function hydrateProfileLocationSummary() {
 
     const parts: string[] = []
     if (cityName && uf) {
-      parts.push(`${cityName} — ${uf}`)
+      parts.push(`${cityName}, ${uf}`)
     } else if (cityName) {
       parts.push(cityName)
     } else if (stateName && uf) {
@@ -423,6 +427,11 @@ function listingApiMessage(e: unknown): string {
 async function load() {
   loading.value = true
   try {
+    await fetchMe()
+    if (user.value?.role === 'admin') {
+      await navigateTo('/admin', { replace: true })
+      return
+    }
     try {
       const p = await request<ProfileDetail>('/v1/me/profile')
       profileDetail.value = p
@@ -433,7 +442,6 @@ async function load() {
       profileOk.value = false
       profileLocationSummary.value = null
     }
-    await fetchMe()
   } finally {
     loading.value = false
   }

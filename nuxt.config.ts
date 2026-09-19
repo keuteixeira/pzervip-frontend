@@ -19,7 +19,7 @@ export default defineNuxtConfig({
         {
           name: 'description',
           content:
-            'Prazer.Vip — conteúdo para maiores de 18 anos. Explore anúncios por cidade, região e categoria.',
+            'Prazer.Vip: conteúdo para maiores de 18 anos. Explore anúncios por cidade, região e categoria.',
         },
         { property: 'og:site_name', content: 'Prazer.Vip' },
         { name: 'theme-color', content: '#0a0a0a' },
@@ -40,7 +40,7 @@ export default defineNuxtConfig({
             url: siteUrl,
             logo: `${siteUrl}/web-app-manifest-512x512.png`,
             description:
-              'Prazer.Vip — plataforma de classificados para maiores de 18 anos. Anúncios por cidade, região e categoria.',
+              'Prazer.Vip: plataforma de classificados para maiores de 18 anos. Anúncios por cidade, região e categoria.',
           }),
         },
       ],
@@ -48,14 +48,14 @@ export default defineNuxtConfig({
   },
   devServer: {
     host: 'localhost',
-    port: 5175,
+    port: 5177,
   },
   modules: ['@nuxtjs/tailwindcss'],
   css: ['sweetalert2/dist/sweetalert2.min.css', '~/assets/css/main.css'],
   runtimeConfig: {
     public: {
       apiBase:
-        process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
+        process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8085/api',
       /** URL canónica (sem barra final). Obrigatória em produção para SEO (canonical, og:url). */
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || '',
       /** Google Analytics 4 — ex.: G-XXXXXXXXXX */

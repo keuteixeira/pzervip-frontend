@@ -123,7 +123,7 @@
       </div>
 
       <div class="mt-10 border-t border-zinc-800 pt-8 text-center">
-        <p class="text-sm text-zinc-500">© {{ year }} Prazer.Vip — Todos os direitos reservados.</p>
+        <p class="text-sm text-zinc-500">© {{ year }} Prazer.Vip. Todos os direitos reservados.</p>
         <p class="mt-2 text-sm text-zinc-600">Feito com 💓 para conectar pessoas</p>
       </div>
     </div>

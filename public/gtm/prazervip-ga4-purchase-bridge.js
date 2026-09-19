@@ -33,7 +33,7 @@
     var items = [
       {
         item_id: 'cadastro_premium',
-        item_name: 'Cadastro anunciante — Premium',
+        item_name: 'Cadastro anunciante Premium',
         price: val,
         quantity: 1,
       },

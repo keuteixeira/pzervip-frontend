@@ -8,6 +8,9 @@
           ID {{ id }} · Cadastro: {{ adminApprovalStatusLabel(detail?.approval_status) }} · Formulário:
           {{ adminFormStatusLabel(detail?.form_status) }} · Slug: {{ adminPublicSlugDisplay(detail?.public_slug) }}
         </p>
+        <p v-if="detail?.approval_rejection_reason" class="mt-2 text-sm text-amber-200">
+          Motivo da recusa: {{ detail.approval_rejection_reason }}
+        </p>
       </div>
       <div v-if="detail && detail.approval_status === 'pending'" class="flex flex-wrap gap-2">
         <button
@@ -158,8 +161,8 @@
       <section class="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
         <h2 class="text-lg font-semibold text-white">Arquivos</h2>
         <p class="mt-1 text-sm text-zinc-500">
-          <strong class="font-medium text-zinc-400">Documentos pessoais</strong> — apenas visualização.
-          <strong class="ml-1 font-medium text-zinc-400">Mídias</strong> — capa, perfil, galeria, áudio e vídeos da galeria podem ser removidos se necessário.
+          <strong class="font-medium text-zinc-400">Documentos pessoais</strong>: apenas visualização.
+          <strong class="ml-1 font-medium text-zinc-400">Mídias</strong>: capa, perfil, galeria, áudio e vídeos da galeria podem ser removidos se necessário.
         </p>
         <p class="mt-2 text-xs text-zinc-500">
           Imagens, vídeos e áudio abrem no visualizador (setas ou botões Anterior/Próximo). Outros tipos abrem numa nova aba.
@@ -436,8 +439,8 @@ import {
 import { apiErrorMessage } from '~/utils/api-error-message'
 
 const DOCUMENT_SLOTS = [
-  { regKey: 'id_document_front_media_id' as const, label: 'Documento — frente' },
-  { regKey: 'id_document_back_media_id' as const, label: 'Documento — verso' },
+  { regKey: 'id_document_front_media_id' as const, label: 'Documento (frente)' },
+  { regKey: 'id_document_back_media_id' as const, label: 'Documento (verso)' },
   { regKey: 'selfie_media_id' as const, label: 'Selfie de verificação' },
   { regKey: 'video_media_id' as const, label: 'Vídeo de verificação' },
 ]
@@ -469,7 +472,7 @@ definePageMeta({
 const route = useRoute()
 const id = computed(() => Number(route.params.id))
 const { request } = useApi()
-const { swalConfirm, swalAlert } = useSwal()
+const { swalConfirm, swalAlert, swalRejectWithReason } = useSwal()
 
 const filesTab = ref<'documentos' | 'midias'>('documentos')
 
@@ -506,6 +509,7 @@ type ProfileDetail = {
   professional_name: string | null
   public_slug: string | null
   approval_status: string
+  approval_rejection_reason?: string | null
   form_status: string
   bio: string | null
   whatsapp?: string | null
@@ -695,7 +699,7 @@ const gallerySlotRows = computed(() => {
   ids.forEach((gid, i) => {
     const media = byId.get(gid) ?? null
     rows.push({
-      label: `Galeria — item ${i + 1}`,
+      label: `Galeria, item ${i + 1}`,
       media,
       expectedId: gid,
       state: media ? 'ok' : 'missing',
@@ -706,7 +710,7 @@ const gallerySlotRows = computed(() => {
     const id = mediaId(m)
     if (id != null && !ids.includes(id)) {
       rows.push({
-        label: 'Galeria — arquivo na biblioteca (sem ordem no cadastro)',
+        label: 'Galeria: arquivo na biblioteca (sem ordem no cadastro)',
         media: m,
         expectedId: id,
         state: 'ok',
@@ -932,20 +936,31 @@ async function setApproval(approval_status: 'approved' | 'rejected') {
   if (!detail.value) {
     return
   }
+  let reason: string | undefined
+  if (approval_status === 'rejected') {
+    const { confirmed, reason: typed } = await swalRejectWithReason({
+      title: 'Recusar este cadastro?',
+      text: 'Se escrever um motivo, o anunciante recebe por e-mail e o texto fica na ficha.',
+    })
+    if (!confirmed) {
+      return
+    }
+    reason = typed !== '' ? typed : undefined
+  }
   approvalMsg.value = ''
   busyApproval.value = true
   try {
     await request(`/v1/admin/profiles/${id.value}`, {
       method: 'PATCH',
-      body: { approval_status },
+      body: reason ? { approval_status, reason } : { approval_status },
     })
     try {
       await load()
     } catch {
       approvalMsg.value =
         approval_status === 'approved'
-          ? 'Cadastro aprovado. Não foi possível recarregar a ficha — atualize a página.'
-          : 'Cadastro recusado. Não foi possível recarregar a ficha — atualize a página.'
+          ? 'Cadastro aprovado. Não foi possível recarregar a ficha. Atualize a página.'
+          : 'Cadastro recusado. Não foi possível recarregar a ficha. Atualize a página.'
       approvalOk.value = true
       return
     }

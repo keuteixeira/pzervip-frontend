@@ -136,7 +136,7 @@ usePublicPageSeo({
     }
     const s = state.value
     if (!s) {
-      return `${genderTitle.value} — Estado`
+      return `${genderTitle.value}: estado`
     }
     return stateListSeoTitle(s.name, s.uf, gender.value)
   }),

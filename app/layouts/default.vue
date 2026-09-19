@@ -6,7 +6,7 @@
         <NuxtLink
           to="/"
           class="flex min-w-0 shrink items-center gap-2"
-          aria-label="Prazer.Vip — início"
+          aria-label="Início do Prazer.Vip"
         >
           <img
             :src="brand.logoHorizontal"
@@ -203,6 +203,7 @@
         </div>
       </div>
     </header>
+    <EmailConfirmBanner />
     <main class="bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(225,29,72,0.18),transparent)]">
       <div class="mx-auto max-w-7xl px-4 py-10">
         <slot />

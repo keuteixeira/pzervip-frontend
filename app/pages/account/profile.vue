@@ -843,7 +843,7 @@
                 <span v-else class="mt-2 block text-zinc-300">
                   Sem destaque ativo: o site mostra no máximo {{ galleryPublicBasicCap }} itens (vídeos primeiro, depois
                   fotos, na ordem abaixo). Novos envios só são permitidos com menos de {{ galleryUploadCap }} itens na
-                  lista — se você tinha mais após o destaque acabar, nada some: apague ou reative o destaque para
+                  lista. Se você tinha mais após o destaque acabar, nada some: apague ou reative o destaque para
                   ampliar de novo.
                 </span>
               </p>
@@ -1010,7 +1010,7 @@
                   <span v-if="profile?.plan_type === 'premium'" class="text-zinc-500"> · Premium</span>
                 </p>
                 <p v-else class="mt-2 text-sm text-zinc-400">
-                  Sem destaque pago ativo — use os botões abaixo para ativar e aparecer em evidência no site.
+                  Sem destaque pago ativo. Use os botões abaixo para ativar e aparecer em evidência no site.
                 </p>
 
                 <template v-if="financeStatusHasDestaque">
@@ -1102,14 +1102,14 @@
                     type="button"
                     class="text-xl leading-none transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-25"
                     :disabled="s < financeMinSelectableStarsForUi"
-                    :title="`Nível ${s} — ${formatBrl(priceForFinTier(s))}/mês`"
+                    :title="`Nível ${s}: ${formatBrl(priceForFinTier(s))}/mês`"
                     @click="finSelectedStars = s"
                   >
                     {{ s <= finSelectedStars ? '★' : '☆' }}
                   </button>
                 </div>
                 <p class="text-xs text-zinc-500">
-                  Selecionado: nível <strong class="text-zinc-300">{{ finSelectedStars }}</strong> —
+                  Selecionado: nível <strong class="text-zinc-300">{{ finSelectedStars }}</strong>:
                   {{ formatBrl(priceForFinTier(finSelectedStars)) }}/mês
                 </p>
               </div>
@@ -1119,6 +1119,24 @@
                 <select id="fin-months" v-model.number="finPeriodMonths" class="form-select mt-1">
                   <option v-for="m in 24" :key="'mo-' + m" :value="m">{{ m }} {{ m === 1 ? 'mês' : 'meses' }}</option>
                 </select>
+              </div>
+
+              <div class="mt-6 space-y-3 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+                <p class="text-sm font-medium text-white">Endereço para o destaque</p>
+                <p class="text-xs text-zinc-500">Precisamos para liberar o PIX. Fica só na sua conta.</p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <input
+                    v-model="invoiceAddress.zipcode"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="9"
+                    placeholder="CEP *"
+                    class="form-input"
+                  />
+                  <input v-model="invoiceAddress.street" type="text" placeholder="Rua *" class="form-input" />
+                  <input v-model="invoiceAddress.number" type="text" placeholder="Número *" class="form-input" />
+                  <input v-model="invoiceAddress.neighborhood" type="text" placeholder="Bairro *" class="form-input" />
+                </div>
               </div>
 
               <div class="mt-6 flex flex-wrap gap-3">
@@ -1216,7 +1234,7 @@
           @click.stop
         >
           <template v-if="!destaquePixPaid">
-            <h3 id="destaque-pix-title" class="text-lg font-semibold text-white">PIX — destaque</h3>
+            <h3 id="destaque-pix-title" class="text-lg font-semibold text-white">PIX de destaque</h3>
             <p v-if="destaquePixPricingNote" class="mt-2 text-xs text-zinc-500">{{ destaquePixPricingNote }}</p>
             <div v-if="destaquePixQr" class="mt-5 flex justify-center rounded-xl bg-white p-4">
               <img :src="destaquePixQr" alt="QR Code PIX" width="260" height="260" class="h-[260px] w-[260px] object-contain" />
@@ -1367,6 +1385,14 @@ type Profile = {
   social_links?: SocialLinksPayload | null
   /** Dígitos (ex.: 5511999999999) — número público do anúncio */
   whatsapp?: string | null
+  address_json?: {
+    zipcode?: string | null
+    street?: string | null
+    number?: string | null
+    neighborhood?: string | null
+    city?: string | null
+    state_uf?: string | null
+  } | null
 }
 
 const route = useRoute()
@@ -1390,6 +1416,12 @@ const formBio = ref('')
 const formStateId = ref('')
 const formCityId = ref('')
 const formNeighborhood = ref('')
+const invoiceAddress = reactive({
+  zipcode: '',
+  street: '',
+  number: '',
+  neighborhood: '',
+})
 /** false = sem local próprio; bairro oculto e limpo ao salvar */
 const formHasVenue = ref(true)
 
@@ -1880,7 +1912,7 @@ function galleryOpenActionLabel(id: number): string {
 function moderationStatusLabel(id: number): string {
   const s = galleryMeta(id)?.moderation_status
   if (s === 'approved') {
-    return 'Aprovada — visível no perfil público'
+    return 'Aprovada, visível no perfil público'
   }
   if (s === 'rejected') {
     return 'Recusada pela moderação'
@@ -2009,6 +2041,11 @@ async function refreshProfile() {
   }
   formCityId.value = p.city_id ? String(p.city_id) : ''
   galleryOrder.value = [...(p.gallery_media_ids ?? [])]
+  const aj = p.address_json
+  invoiceAddress.zipcode = typeof aj?.zipcode === 'string' ? aj.zipcode : ''
+  invoiceAddress.street = typeof aj?.street === 'string' ? aj.street : ''
+  invoiceAddress.number = typeof aj?.number === 'string' ? aj.number : ''
+  invoiceAddress.neighborhood = typeof aj?.neighborhood === 'string' ? aj.neighborhood : ''
   const sl = p.social_links
   formSocial.value = {
     instagram: typeof sl?.instagram === 'string' ? sl.instagram : '',
@@ -2462,8 +2499,25 @@ async function startDestaquePix() {
       return
     }
   }
+  const zip = invoiceAddress.zipcode.replace(/\D/g, '')
+  if (zip.length !== 8 || !invoiceAddress.street.trim() || !invoiceAddress.number.trim() || !invoiceAddress.neighborhood.trim()) {
+    financeErr.value = 'Para liberar o destaque, informe CEP, rua, número e bairro.'
+    return
+  }
   financePixBusy.value = true
   try {
+    await request('/v1/me/profile', {
+      method: 'PUT',
+      body: {
+        address_json: {
+          zipcode: zip,
+          street: invoiceAddress.street.trim(),
+          number: invoiceAddress.number.trim(),
+          neighborhood: invoiceAddress.neighborhood.trim(),
+          country: 'BR',
+        },
+      },
+    })
     const pix = await request<{
       order_uuid: string
       br_code: string
@@ -2511,7 +2565,7 @@ async function startDestaquePix() {
     startDestaquePixPolling()
   } catch (e: unknown) {
     financeErr.value =
-      extractLaravelErrorMessage(e, ['stars', 'period_months', 'pix', 'profile']) ??
+      extractLaravelErrorMessage(e, ['stars', 'period_months', 'pix', 'profile', 'address_json']) ??
       'Não foi possível gerar o PIX.'
     destaquePixAnalyticsMeta.value = null
   } finally {
