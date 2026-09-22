@@ -1,9 +1,17 @@
 /**
  * Google Analytics 4 (gtag.js) quando NUXT_PUBLIC_GA_MEASUREMENT_ID está definido.
  * Injeta scripts no DOM (evita bloqueio de innerHTML do Unhead em alguns builds).
- * Não carrega em rotas `/admin` (só injeta após navegação para fora do painel, se a entrada for no admin).
+ * `/admin` não conta: não injeta no painel e, se o GA já estiver no ar (veio do site),
+ * liga `ga-disable-*` e corta o consentimento até sair do admin.
  */
 import { isAdminSitePath } from '~/utils/admin-route'
+
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void
+    dataLayer?: unknown[]
+  }
+}
 
 export default defineNuxtPlugin(() => {
   const id = useRuntimeConfig().public.gaMeasurementId
@@ -12,6 +20,17 @@ export default defineNuxtPlugin(() => {
   }
 
   const { attribution } = useCampaignAttribution()
+  const disableKey = `ga-disable-${id}`
+
+  function setAdminTrackingDisabled(disabled: boolean) {
+    ;(window as unknown as Record<string, boolean>)[disableKey] = disabled
+    const g = window.gtag
+    if (typeof g === 'function') {
+      g('consent', 'update', {
+        analytics_storage: disabled ? 'denied' : 'granted',
+      })
+    }
+  }
 
   function gaConfig(): Record<string, unknown> {
     const config: Record<string, unknown> = {
@@ -57,15 +76,17 @@ export default defineNuxtPlugin(() => {
 
   const router = useRouter()
 
-  function tryInject(path: string) {
+  function syncForPath(path: string) {
     if (isAdminSitePath(path)) {
+      setAdminTrackingDisabled(true)
       return
     }
+    setAdminTrackingDisabled(false)
     inject()
   }
 
-  tryInject(router.currentRoute.value.path)
+  syncForPath(router.currentRoute.value.path)
   router.afterEach((to) => {
-    tryInject(to.path)
+    syncForPath(to.path)
   })
 })
