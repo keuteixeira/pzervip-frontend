@@ -1565,7 +1565,7 @@ async function loadRegisterMediaConfig() {
       gallery_min: number
       gallery_max: number
       image_max_mb?: number
-    }>('/v1/config/register-media')
+    }>('/v1/config/register-media', { skipAuth: true })
     const imb = Number(c.image_max_mb)
     if (Number.isFinite(imb) && imb > 0) {
       registerImageMaxMbDisplay.value = Math.round(imb)
@@ -1624,7 +1624,7 @@ const premiumPayloadResolved = computed(() =>
 
 async function loadPremiumPricing() {
   try {
-    const c = await request<PremiumPricingPayload>('/v1/config/premium-pricing')
+    const c = await request<PremiumPricingPayload>('/v1/config/premium-pricing', { skipAuth: true })
     const tierMin = Math.max(1, Math.floor(Number(c.tier_min)) || 1)
     const tierMax = Math.max(tierMin, Math.floor(Number(c.tier_max)) || 10)
     const unit = Number(c.price_per_tier_brl)
@@ -1723,10 +1723,10 @@ function notifyRegistrationPixPaid() {
 watch(
   () => step.value,
   (s) => {
-    if (s === 6) {
+    if (s === 3) {
       void loadRegisterMediaConfig()
     }
-    if (s === 7) {
+    if (s === 4) {
       void loadPremiumPricing()
     }
   },
@@ -2145,6 +2145,8 @@ onMounted(async () => {
   const tabActive = localStorage.getItem(CADASTRO_TAB_KEY) === '1'
 
   await loadRegistrationVerificationConfig()
+  void loadRegisterMediaConfig()
+  void loadPremiumPricing()
   await fetchMe()
 
   /** Retomar rascunho sempre que houver sessão de anunciante inativo — não só com marca na tab (senão o e-mail OTP não reenvia ao voltar). */
