@@ -6,6 +6,13 @@ import {
 } from '~/utils/campaign-attribution'
 
 describe('atribuição de campanha', () => {
+  it('aceita cid longo do TrafficStars', () => {
+    const cid =
+      'dXNlcl9pZF8zNDYwNTRfOGlIdDBiU1FHQ2tiM1YxMzNEOERSMlFmMldXUlRoZ0psR0pTaW9waUJVaUEwUTlLdHE4MDZEZGozQmtGQnVteFNxandJZTB6djg5QVVIdWtSVEZZbUNud2U2cHJHb2ZMVzlHbkNZQjJsMVdWUDF3VTZsVEo5aHZp_test_postback'
+    expect(sanitizeClickId(cid)).toBe(cid)
+    expect(mergeAttributionFromQuery({ cid }, null)?.cid).toBe(cid)
+  })
+
   it('aceita cid do TrafficStars e assume source', () => {
     const a = mergeAttributionFromQuery({ cid: 'tsclick01ab' }, null)
     expect(a).toEqual({

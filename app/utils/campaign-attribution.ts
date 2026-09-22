@@ -21,7 +21,7 @@ export function sanitizeClickId(raw: string): string | null {
   if (!value || PLACEHOLDER.test(value)) {
     return null
   }
-  if (!/^[A-Za-z0-9._:-]{8,128}$/.test(value)) {
+  if (!/^[A-Za-z0-9._:-]{8,512}$/.test(value)) {
     return null
   }
   return value
