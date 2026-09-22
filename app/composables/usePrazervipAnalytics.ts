@@ -31,6 +31,7 @@ export type PortalDestaquePixAnalyticsPayload = {
  */
 export function usePrazervipAnalytics() {
   const route = useRoute()
+  const { attribution } = useCampaignAttribution()
 
   function analyticsDisabledHere(): boolean {
     if (!import.meta.client) {
@@ -47,14 +48,41 @@ export function usePrazervipAnalytics() {
     window.dataLayer.push(obj)
   }
 
+  function campaignParams(): Record<string, string> {
+    const a = attribution.value
+    if (!a?.cid && !a?.source) {
+      return {}
+    }
+    const out: Record<string, string> = {}
+    if (a.cid) {
+      out.click_id = a.cid
+    }
+    if (a.source) {
+      out.campaign_source = a.source
+    }
+    if (a.campaign) {
+      out.campaign_name = a.campaign
+    }
+    return out
+  }
+
   function gtagEvent(name: string, params: Record<string, unknown>) {
     if (!import.meta.client || analyticsDisabledHere()) {
       return
     }
     const g = window.gtag
     if (typeof g === 'function') {
-      g('event', name, params)
+      g('event', name, { ...campaignParams(), ...params })
     }
+  }
+
+  function generateLead(params: Record<string, unknown> = {}) {
+    gtagEvent('generate_lead', params)
+    pushLayer({
+      event: 'prazervip_generate_lead',
+      ...campaignParams(),
+      ...params,
+    })
   }
 
   function registrationPixGenerated(p: RegistrationPixAnalyticsPayload) {
@@ -170,6 +198,7 @@ export function usePrazervipAnalytics() {
   }
 
   return {
+    generateLead,
     registrationPixGenerated,
     registrationPixPaid,
     portalDestaquePixGenerated,

@@ -40,6 +40,7 @@ export interface AccountDeletionStatus {
 
 export function useAuth() {
   const { request, token } = useApi()
+  const { toApiPayload } = useCampaignAttribution()
   const user = useState<AuthUser | null>('auth-user', () => null)
   const loading = ref(false)
   const error: Ref<string | null> = ref(null)
@@ -71,7 +72,7 @@ export function useAuth() {
     try {
       const res = await request<{ token: string; user: AuthUser }>('/v1/register', {
         method: 'POST',
-        body: payload,
+        body: { ...payload, ...toApiPayload() },
         skipAuth: true,
       })
       token.value = res.token
@@ -92,7 +93,7 @@ export function useAuth() {
     try {
       const res = await request<{ token: string; user: AuthUser }>('/v1/register/resume', {
         method: 'POST',
-        body: payload,
+        body: { ...payload, ...toApiPayload() },
         skipAuth: true,
       })
       token.value = res.token

@@ -11,6 +11,11 @@
         <p v-if="detail?.approval_rejection_reason" class="mt-2 text-sm text-amber-200">
           Motivo da recusa: {{ detail.approval_rejection_reason }}
         </p>
+        <p v-if="detail?.acquisition_click_id" class="mt-2 text-sm text-zinc-500">
+          Campanha: {{ detail.acquisition_source || 'TrafficStars' }}
+          <template v-if="detail.acquisition_campaign">, {{ detail.acquisition_campaign }}</template>
+          , clique {{ detail.acquisition_click_id }}
+        </p>
       </div>
       <div v-if="detail && detail.approval_status === 'pending'" class="flex flex-wrap gap-2">
         <button
@@ -518,6 +523,9 @@ type ProfileDetail = {
   city_id?: number | null
   user?: { name?: string; email?: string }
   registration?: Registration | null
+  acquisition_click_id?: string | null
+  acquisition_source?: string | null
+  acquisition_campaign?: string | null
 }
 
 type MediaRow = {

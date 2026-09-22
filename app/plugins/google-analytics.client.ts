@@ -11,6 +11,32 @@ export default defineNuxtPlugin(() => {
     return
   }
 
+  const { attribution } = useCampaignAttribution()
+
+  function gaConfig(): Record<string, unknown> {
+    const config: Record<string, unknown> = {
+      send_page_view: true,
+      anonymize_ip: true,
+    }
+    const a = attribution.value
+    if (a?.source) {
+      config.campaign_source = a.source
+    }
+    if (a?.medium) {
+      config.campaign_medium = a.medium
+    }
+    if (a?.campaign) {
+      config.campaign_name = a.campaign
+    }
+    if (a?.content) {
+      config.campaign_content = a.content
+    }
+    if (a?.cid) {
+      config.campaign_id = a.cid
+    }
+    return config
+  }
+
   function inject() {
     if (document.querySelector(`script[data-prazervip-ga="${id}"]`)) {
       return
@@ -25,7 +51,7 @@ export default defineNuxtPlugin(() => {
     const safeId = id.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
     const inline = document.createElement('script')
     inline.setAttribute('data-prazervip-ga-init', id)
-    inline.textContent = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${safeId}',{send_page_view:true,anonymize_ip:true});`
+    inline.textContent = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${safeId}',${JSON.stringify(gaConfig())});`
     document.head.appendChild(inline)
   }
 

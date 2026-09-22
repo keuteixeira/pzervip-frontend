@@ -1134,7 +1134,8 @@ if (import.meta.hot) {
 }
 
 const { token, request } = useApi()
-const { registrationPixGenerated, registrationPixPaid } = usePrazervipAnalytics()
+const { generateLead, registrationPixGenerated, registrationPixPaid } = usePrazervipAnalytics()
+const { toApiPayload: campaignApiPayload } = useCampaignAttribution()
 const { register, resumeDraftRegistration, fetchMe, user, deleteDraftRegistration, setPassword } =
   useAuth()
 const hasToken = computed(() => !!token.value)
@@ -2545,6 +2546,7 @@ function bodyFromDraft() {
     gallery_media_ids: draft.gallery_media_ids.length ? draft.gallery_media_ids : null,
     terms_accepted: draft.terms_accepted,
     privacy_policy_accepted: draft.privacy_policy_accepted,
+    ...campaignApiPayload(),
   }
 }
 
@@ -2776,6 +2778,7 @@ async function next() {
         email: form.email.trim(),
         cpf: d,
       })
+      generateLead({ method: 'signup' })
       await fetchMe()
       markCadastroTabActive()
       draft.contact_email = form.email.trim()
@@ -3005,6 +3008,7 @@ async function submitFinal() {
       })
       await fetchMe()
       await loadPremiumPricing()
+      generateLead({ method: 'register', plan_type: 'basic' })
       basicSuccessModalOpen.value = true
       return
     }
