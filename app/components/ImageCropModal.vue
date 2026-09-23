@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <div
-      v-if="modelValue && objectUrl"
+      v-if="modelValue"
       class="fixed inset-0 z-[200] flex flex-col overflow-y-auto bg-black/90 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
@@ -12,15 +12,11 @@
         <p class="text-sm text-zinc-400">
           Arraste para centralizar. Use a roda do mouse ou gestos para aproximar. A área destacada é o que será enviado.
         </p>
-        <div class="max-h-[min(70vh,560px)] w-full overflow-hidden rounded-xl bg-zinc-950">
-          <img
-            ref="imgRef"
-            :src="objectUrl"
-            alt=""
-            class="block max-h-[min(70vh,560px)] w-full"
-            @load="onImgLoad"
-          />
-        </div>
+        <div
+          ref="stageRef"
+          class="img-crop-stage relative h-[min(70vh,560px)] w-full overflow-hidden rounded-xl bg-zinc-950"
+        />
+        <p v-if="initError" class="text-sm text-red-400" role="alert">{{ initError }}</p>
         <div class="flex flex-wrap justify-end gap-2">
           <button
             type="button"
@@ -45,7 +41,8 @@
 </template>
 
 <script setup lang="ts">
-import type Cropper from 'cropperjs'
+import Cropper from 'cropperjs/dist/cropper.esm.js'
+import 'cropperjs/dist/cropper.css'
 
 const props = defineProps<{
   modelValue: boolean
@@ -61,16 +58,24 @@ const emit = defineEmits<{
 }>()
 
 const titleId = `img-crop-${Math.random().toString(36).slice(2, 9)}`
-const imgRef = ref<HTMLImageElement | null>(null)
+const stageRef = ref<HTMLElement | null>(null)
 const objectUrl = ref<string | null>(null)
 let cropper: Cropper | null = null
+let initSeq = 0
 const busy = ref(false)
 const cropperReady = ref(false)
+const initError = ref('')
 
 function destroyCropper() {
   cropper?.destroy()
   cropper = null
   cropperReady.value = false
+}
+
+function clearStage() {
+  if (stageRef.value) {
+    stageRef.value.innerHTML = ''
+  }
 }
 
 function cleanupUrl() {
@@ -80,42 +85,85 @@ function cleanupUrl() {
   }
 }
 
+function resetStage() {
+  initSeq += 1
+  destroyCropper()
+  clearStage()
+  cleanupUrl()
+  initError.value = ''
+}
+
 function onCancel() {
   busy.value = false
-  destroyCropper()
-  cleanupUrl()
+  resetStage()
   emit('update:modelValue', false)
 }
 
-async function onImgLoad() {
-  destroyCropper()
-  const el = imgRef.value
-  if (!el || !props.modelValue) {
+function initCropper(img: HTMLImageElement, seq: number) {
+  if (cropper || seq !== initSeq || !img.isConnected || !props.modelValue) {
     return
   }
-  const { default: CropperCtor } = await import('cropperjs')
-  await import('cropperjs/dist/cropper.css')
-  cropper = new CropperCtor(el, {
-    aspectRatio: props.aspectRatio,
-    viewMode: 1,
-    dragMode: 'move',
-    autoCropArea: 1,
-    responsive: true,
-    background: false,
-  })
-  cropperReady.value = true
+  try {
+    cropper = new Cropper(img, {
+      aspectRatio: props.aspectRatio,
+      viewMode: 1,
+      dragMode: 'move',
+      autoCropArea: 0.8,
+      responsive: true,
+      background: false,
+      guides: true,
+      highlight: true,
+      ready() {
+        if (seq === initSeq) {
+          cropperReady.value = true
+        }
+      },
+    })
+  } catch {
+    if (seq === initSeq) {
+      initError.value = 'Não foi possível abrir o recorte. Tente outra imagem.'
+    }
+  }
+}
+
+async function mountSourceImage() {
+  const seq = ++initSeq
+  destroyCropper()
+  clearStage()
+  cleanupUrl()
+  initError.value = ''
+  if (!props.modelValue || !props.file) {
+    return
+  }
+  objectUrl.value = URL.createObjectURL(props.file)
+  await nextTick()
+  const stage = stageRef.value
+  if (!stage || seq !== initSeq) {
+    return
+  }
+  const img = document.createElement('img')
+  img.alt = ''
+  img.src = objectUrl.value
+  const start = () => {
+    initCropper(img, seq)
+  }
+  img.addEventListener('load', start, { once: true })
+  stage.appendChild(img)
+  if (img.complete && img.naturalWidth > 0) {
+    start()
+  }
 }
 
 watch(
-  () => props.modelValue && props.file,
-  (open) => {
-    destroyCropper()
-    cleanupUrl()
-    if (!open || !props.file) {
+  () => [props.modelValue, props.file] as const,
+  ([open, file]) => {
+    if (!open || !file) {
+      resetStage()
       return
     }
-    objectUrl.value = URL.createObjectURL(props.file)
+    void mountSourceImage()
   },
+  { immediate: true, flush: 'post' },
 )
 
 watch(
@@ -151,8 +199,7 @@ async function onConfirm() {
       'recorte'
     const out = new File([blob], `${base}.jpg`, { type: 'image/jpeg' })
     emit('cropped', out)
-    destroyCropper()
-    cleanupUrl()
+    resetStage()
     emit('update:modelValue', false)
   } finally {
     busy.value = false
@@ -160,7 +207,22 @@ async function onConfirm() {
 }
 
 onBeforeUnmount(() => {
-  destroyCropper()
-  cleanupUrl()
+  resetStage()
 })
 </script>
+
+<style>
+.img-crop-stage img {
+  display: block;
+  max-height: 100%;
+  max-width: 100%;
+}
+
+.img-crop-stage .cropper-container {
+  max-height: 100%;
+}
+
+.img-crop-stage .cropper-container img {
+  max-width: none !important;
+}
+</style>

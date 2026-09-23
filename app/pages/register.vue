@@ -10,12 +10,12 @@
       </p>
     </div>
 
-    <!-- 1 — Conta: nome, CPF e e-mail (senha na etapa 2) -->
-    <section v-show="step === 1" class="mt-10 space-y-6">
+    <!-- 1 — Conta: nome, telefone e e-mail (senha na etapa 2) -->
+    <section v-if="step === 1" class="mt-10 space-y-6">
       <div class="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
         <h2 class="text-xl font-semibold text-white">Bem-vindo ao cadastro</h2>
         <p class="mt-2 text-sm leading-relaxed text-zinc-400">
-          Nome, e-mail e CPF iguais ao documento. Em seguida você monta o anúncio, sem burocracia extra.
+          Nome, WhatsApp e e-mail para começar. Em seguida você monta o anúncio, sem burocracia extra.
         </p>
         <!--<p class="mt-4 text-sm font-medium text-zinc-300">Documentos necessários:</p>
         <ul class="mt-2 list-inside list-disc space-y-1 text-sm text-zinc-400">
@@ -33,24 +33,22 @@
 
       <div v-if="showStep1CreateForm" class="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
         <h3 class="text-lg font-medium text-white">Criar conta</h3>
-        <p class="text-xs text-zinc-500">
-          Nome e CPF devem ser os mesmos do documento. E-mail e CPF são únicos.
-        </p>
+
         <input
           v-model="form.name"
           type="text"
-          placeholder="Nome completo igual ao documento *"
+          placeholder="Nome completo *"
           class="input"
         />
         <input
-          :value="form.cpf"
+          :value="draft.whatsapp"
           type="text"
-          inputmode="numeric"
-          autocomplete="off"
-          placeholder="CPF *"
-          maxlength="14"
+          inputmode="tel"
+          autocomplete="tel"
+          placeholder="WhatsApp *"
+          maxlength="15"
           class="input"
-          @input="onCpfInput"
+          @input="onWhatsappInput"
         />
         <input v-model="form.email" type="email" placeholder="E-mail *" class="input" />
 
@@ -98,7 +96,7 @@
             {{ purgeOpen ? 'Ocultar' : 'Excluir pré-cadastro incompleto' }}
           </button>
           <p class="mt-2 text-xs text-zinc-500">
-            Se começou antes e não finalizou e deseja excluir o pré cadastro, informe o mesmo e-mail e CPF para apagar o rascunho
+            Se começou antes e não finalizou e deseja excluir o pré cadastro, informe o mesmo e-mail e WhatsApp para apagar o rascunho
             e liberar os dados.
           </p>
           <div v-show="purgeOpen" class="mt-4 space-y-3 rounded-xl border border-rose-900/40 bg-rose-950/10 p-4">
@@ -107,18 +105,18 @@
               class="text-xs text-brand hover:underline"
               @click="copyFormToPurge"
             >
-              Copiar e-mail e CPF do formulário acima
+              Copiar e-mail e WhatsApp do formulário acima
             </button>
             <input v-model="purge.email" type="email" placeholder="E-mail da conta" class="input" />
             <input
-              :value="purge.cpf"
+              :value="purge.whatsapp"
               type="text"
-              inputmode="numeric"
-              autocomplete="off"
-              placeholder="CPF"
-              maxlength="14"
+              inputmode="tel"
+              autocomplete="tel"
+              placeholder="WhatsApp"
+              maxlength="16"
               class="input"
-              @input="onPurgeCpfInput"
+              @input="onPurgeWhatsappInput"
             />
             <label class="flex cursor-pointer items-start gap-3 text-sm text-zinc-400">
               <input v-model="purge.confirm" type="checkbox" class="mt-0.5 rounded border-zinc-600" />
@@ -146,13 +144,13 @@
       <div v-else class="rounded-xl border border-zinc-700 bg-zinc-900/40 p-4 text-sm text-zinc-300">
         <p class="font-medium text-white">Continuar nesta página</p>
         <p class="mt-1 text-xs text-zinc-500">
-          Use «Próximo» para seguir. Se fechou o site ou abriu em outra aba, informe de novo nome, e-mail e CPF na etapa
+          Use «Próximo» para seguir. Se fechou o site ou abriu em outra aba, informe de novo nome, e-mail e WhatsApp na etapa
           1 para retomar o rascunho com segurança.
         </p>
         <ul class="mt-3 space-y-1 text-zinc-400">
           <li v-if="user?.name"><span class="text-zinc-500">Nome:</span> {{ user.name }}</li>
           <li v-if="user?.email"><span class="text-zinc-500">E-mail:</span> {{ user.email }}</li>
-          <li><span class="text-zinc-500">CPF:</span> {{ cpfDisplay }}</li>
+          <li><span class="text-zinc-500">WhatsApp:</span> {{ whatsappDisplay }}</li>
         </ul>
       </div>
 
@@ -208,8 +206,18 @@
     </section>
 
     <!-- 2 — Senha da conta + dados pessoais + endereço -->
-    <section v-show="step === 2" class="mt-10 space-y-4">
+    <section v-if="step === 2" class="mt-10 space-y-4">
       <h2 class="text-xl font-semibold text-white">Dados pessoais</h2>
+      <div
+        class="rounded-xl border border-emerald-700/50 border-l-4 border-l-emerald-400 bg-emerald-950/40 px-4 py-3 text-sm leading-relaxed text-emerald-50"
+        role="note"
+      >
+        <p>
+          <strong class="font-semibold text-emerald-50">Privacidade e segurança.</strong>
+          Seus dados pessoais e os documentos que você enviar (frente, verso, selfie e vídeo) ficam
+          protegidos. Servem só para cadastro e análise da equipe.
+        </p>
+      </div>
       <div v-if="needsAccountPassword" class="space-y-3 rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
         <p class="text-sm font-medium text-white">Senha para entrar no site</p>
         <p class="text-xs text-zinc-500">
@@ -232,10 +240,17 @@
           </div>
         </div>
         <div>
-          <p class="mb-1 text-xs font-medium text-zinc-500">CPF</p>
-          <div class="input cursor-not-allowed bg-zinc-950/80 text-zinc-300">
-            {{ cpfDisplay }}
-          </div>
+          <p class="mb-1 text-xs font-medium text-zinc-500">CPF *</p>
+          <input
+            :value="form.cpf"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="000.000.000-00"
+            maxlength="14"
+            class="input"
+            @input="onCpfInput"
+          />
         </div>
         <div>
           <p class="mb-1 text-xs font-medium text-zinc-500">Data de nascimento</p>
@@ -252,10 +267,62 @@
             type="text"
             inputmode="tel"
             autocomplete="tel"
-            placeholder="O mesmo que será usado no seu anúncio"
+            placeholder="WhatsApp *"
             maxlength="15"
             class="input"
             @input="onWhatsappInput"
+          />
+        </div>
+      </div>
+
+      <div class="space-y-4">
+        <h3 class="text-lg font-medium text-white">Selfie e documentos</h3>
+        <p class="text-sm text-zinc-400">
+          Selfie, frente e verso do documento, e um vídeo curto. Use RG, CNH ou outro documento
+          oficial com foto. Imagens: JPG, PNG ou WebP (até
+          {{ registerImageMaxMbDisplay }}&nbsp;MB).
+        </p>
+        <div
+          v-for="doc in docLabels"
+          :key="doc.key"
+          role="button"
+          tabindex="0"
+          class="cursor-pointer rounded-xl border border-dashed p-6 text-center outline-none transition focus-visible:ring-2 focus-visible:ring-brand"
+          :class="verificationDropClass(doc.key)"
+          @click="openVerificationPicker(doc.key)"
+          @keydown.enter.prevent="openVerificationPicker(doc.key)"
+          @keydown.space.prevent="openVerificationPicker(doc.key)"
+          @dragenter.prevent="verificationDragKey = doc.key"
+          @dragleave.prevent="onVerificationDragLeave($event, doc.key)"
+          @dragover.prevent="onVerificationDragOver"
+          @drop.prevent="onVerificationDrop($event, doc)"
+        >
+          <p class="font-medium text-zinc-200">{{ doc.label }}</p>
+          <div
+            v-if="doc.key === 'video'"
+            class="mt-4 rounded-lg border border-amber-900/50 bg-amber-950/25 p-4 text-left text-sm text-amber-100/95"
+          >
+            <p class="font-medium text-amber-200 text-center">Grave um vídeo mostrando corpo e rosto, segurando seu documento e falando:</p>
+            <p class="mt-2 italic leading-relaxed text-white text-center">
+              “Meu nome é {{ verificationVideoSpokenName }}, e quero anunciar no site Prazer.Vip em {{ hoje }}”
+            </p>
+          </div>
+          <p
+            class="text-xs"
+            :class="[
+              doc.key === 'video' ? 'mt-4' : 'mt-2',
+              verificationErrors[doc.key] ? 'text-red-400' : 'text-zinc-500',
+            ]"
+          >
+            {{ verificationHint(doc) }}
+          </p>
+          <input
+            :id="'vdoc-' + doc.key"
+            type="file"
+            class="sr-only"
+            :accept="doc.accept"
+            @click.stop
+            @change="onVerificationInputChange($event, doc)"
           />
         </div>
       </div>
@@ -312,11 +379,69 @@
       </div>
     </section>
 
-    <!-- Anúncio: nome profissional + local (mesma tela que dados pessoais) -->
-    <section v-show="step === 2" class="mt-10 space-y-4">
+    <!-- Anúncio: dados e mídias públicas -->
+    <section v-if="step === 3" class="mt-10 space-y-4">
       <h2 class="text-xl font-semibold text-white">Seu anúncio</h2>
+      <div
+        class="rounded-xl border border-brand/40 border-l-4 border-l-brand bg-brand/10 px-4 py-3 text-sm leading-relaxed text-zinc-200"
+        role="note"
+      >
+        <p>
+          <strong class="font-semibold text-white">Dados públicos.</strong>
+          O que você preencher aqui aparece no anúncio.
+        </p>
+      </div>
       <input v-model="draft.professional_name" type="text" placeholder="Nome profissional *" class="input" />
       <p class="text-xs text-zinc-500">Este é o nome que aparecerá no perfil público (diferente do nome legal na etapa 1).</p>
+      <div>
+        <p class="mb-1 text-sm font-medium text-zinc-200">WhatsApp do anúncio *</p>
+        <p class="mb-2 text-xs text-zinc-500">
+          Número que o visitante vê no anúncio. Pode ser o mesmo da etapa pessoal ou outro, se quiser separar.
+        </p>
+        <p class="mb-2 text-sm text-zinc-400">Usar o mesmo WhatsApp da etapa pessoal? *</p>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            class="rounded-lg border px-4 py-2 text-sm"
+            :class="
+              useSameAdWhatsapp === true
+                ? 'border-brand bg-brand/15 text-white'
+                : 'border-zinc-700 text-zinc-300'
+            "
+            @click="setUseSameAdWhatsapp(true)"
+          >
+            Sim
+          </button>
+          <button
+            type="button"
+            class="rounded-lg border px-4 py-2 text-sm"
+            :class="
+              useSameAdWhatsapp === false
+                ? 'border-brand bg-brand/15 text-white'
+                : 'border-zinc-700 text-zinc-300'
+            "
+            @click="setUseSameAdWhatsapp(false)"
+          >
+            Não
+          </button>
+        </div>
+        <p v-if="useSameAdWhatsapp === true" class="mt-3 text-sm text-zinc-300">
+          Vamos publicar
+          <strong class="text-white">{{ personalWhatsappMasked || 'o número da etapa pessoal' }}</strong>
+          no anúncio.
+        </p>
+        <input
+          v-if="useSameAdWhatsapp === false"
+          :value="draft.professional_whatsapp"
+          type="text"
+          inputmode="tel"
+          autocomplete="tel"
+          placeholder="WhatsApp do anúncio *"
+          maxlength="15"
+          class="input mt-3"
+          @input="onProfessionalWhatsappInput"
+        />
+      </div>
       <div>
         <p class="mb-2 text-sm text-zinc-400">Tipo de perfil *</p>
         <div class="flex flex-wrap gap-2">
@@ -357,59 +482,7 @@
       </div>
     </section>
 
-    <!-- Fotos e documento -->
-    <section v-show="step === 3" class="mt-10 space-y-6">
-      <h2 class="text-xl font-semibold text-white">Documento e selfie</h2>
-      <p class="text-sm text-zinc-400">
-        Frente do documento e uma selfie. Imagens: JPG, PNG ou WebP (até
-        {{ registerImageMaxMbDisplay }}&nbsp;MB).
-      </p>
-      <div
-        v-for="doc in docLabels"
-        :key="doc.key"
-        role="button"
-        tabindex="0"
-        class="cursor-pointer rounded-xl border border-dashed p-6 text-center outline-none transition focus-visible:ring-2 focus-visible:ring-brand"
-        :class="verificationDropClass(doc.key)"
-        @click="openVerificationPicker(doc.key)"
-        @keydown.enter.prevent="openVerificationPicker(doc.key)"
-        @keydown.space.prevent="openVerificationPicker(doc.key)"
-        @dragenter.prevent="verificationDragKey = doc.key"
-        @dragleave.prevent="onVerificationDragLeave($event, doc.key)"
-        @dragover.prevent="onVerificationDragOver"
-        @drop.prevent="onVerificationDrop($event, doc)"
-      >
-        <p class="font-medium text-zinc-200">{{ doc.label }}</p>
-        <div
-          v-if="doc.key === 'video'"
-          class="mt-4 rounded-lg border border-amber-900/50 bg-amber-950/25 p-4 text-left text-sm text-amber-100/95"
-        >
-          <p class="font-medium text-amber-200 text-center">Grave um vídeo mostrando corpo e rosto, segurando seu documento e falando:</p>
-          <p class="mt-2 italic leading-relaxed text-white text-center">
-            “Meu nome é {{ verificationVideoSpokenName }}, e quero anunciar no site Prazer.Vip em {{ hoje }}”
-          </p>
-        </div>
-        <p
-          class="text-xs"
-          :class="[
-            doc.key === 'video' ? 'mt-4' : 'mt-2',
-            verificationErrors[doc.key] ? 'text-red-400' : 'text-zinc-500',
-          ]"
-        >
-          {{ verificationHint(doc) }}
-        </p>
-        <input
-          :id="'vdoc-' + doc.key"
-          type="file"
-          class="sr-only"
-          :accept="doc.accept"
-          @click.stop
-          @change="onVerificationInputChange($event, doc)"
-        />
-      </div>
-    </section>
-
-    <section v-show="step === 2" class="mt-10 space-y-4">
+    <section v-if="step === 3" class="mt-10 space-y-4">
       <h2 class="text-xl font-semibold text-white">Cidade do anúncio</h2>
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="min-w-0">
@@ -462,8 +535,8 @@
       </div>
     </section>
 
-    <section v-show="step === 3" class="mt-10 space-y-6">
-      <h2 class="text-xl font-semibold text-white">Fotos do anúncio</h2>
+    <section v-if="step === 3" class="mt-10 space-y-6">
+      <h2 class="text-xl font-semibold text-white">Fotos e descrição</h2>
       <textarea
         v-model="draft.bio"
         rows="6"
@@ -603,7 +676,7 @@
       </div>
     </section>
 
-    <section v-show="step === 4" class="mt-10 space-y-6">
+    <section v-if="step === 4" class="mt-10 space-y-6">
       <h2 class="text-xl font-semibold text-white">Escolha seu plano</h2>
       <div class="grid gap-4 md:grid-cols-2">
         <button
@@ -953,7 +1026,7 @@ const purgeError = ref<string | null>(null)
 const purgeSuccess = ref<string | null>(null)
 const purge = reactive({
   email: '',
-  cpf: '',
+  whatsapp: '',
   confirm: false,
 })
 
@@ -1175,6 +1248,7 @@ const draft = reactive({
   mother_name: '',
   contact_email: '',
   whatsapp: '',
+  professional_whatsapp: '',
   address: {
     zipcode: '',
     street: '',
@@ -1205,11 +1279,11 @@ const draft = reactive({
 })
 
 const step1IdentityComplete = computed(() => {
-  const d = cpfDigits(form.cpf)
-  return Boolean(form.name.trim() && form.email.trim() && d.length === 11)
+  const wa = phoneDigits(draft.whatsapp)
+  return Boolean(form.name.trim() && form.email.trim() && wa.length >= 10)
 })
 
-/** Com nome, e-mail e CPF preenchidos, sem token de API (ex.: liberar e-mail/CPF antes de criar conta). */
+/** Com nome, e-mail e WhatsApp preenchidos, sem token de API (ex.: liberar e-mail/WhatsApp antes de criar conta). */
 const showPurgeSection = computed(
   () => showStep1CreateForm.value && !hasToken.value && step1IdentityComplete.value,
 )
@@ -1266,12 +1340,43 @@ const needsWhatsappOtpPanel = computed(() => {
 })
 
 const legalNameDisplay = computed(() => user.value?.name?.trim() || '—')
-const cpfDisplay = computed(() => {
-  const raw = user.value?.advertiser_profile?.cpf
-  if (raw && /^\d{11}$/.test(raw)) {
-    return formatCpfMask(raw)
+
+const useSameAdWhatsapp = ref<boolean | null>(null)
+
+const personalWhatsappMasked = computed(() => {
+  const d = phoneDigits(draft.whatsapp)
+  return d.length >= 10 ? formatPhoneBrMask(d) : ''
+})
+
+function setUseSameAdWhatsapp(same: boolean) {
+  useSameAdWhatsapp.value = same
+  if (same) {
+    draft.professional_whatsapp = draft.whatsapp
+    return
   }
-  return formatCpfMask(form.cpf)
+  if (phoneDigits(draft.professional_whatsapp) === phoneDigits(draft.whatsapp)) {
+    draft.professional_whatsapp = ''
+  }
+}
+
+function onProfessionalWhatsappInput(e: Event) {
+  const el = e.target as HTMLInputElement
+  draft.professional_whatsapp = formatPhoneBrMask(el.value)
+}
+
+watch(
+  () => draft.whatsapp,
+  () => {
+    if (useSameAdWhatsapp.value === true) {
+      draft.professional_whatsapp = draft.whatsapp
+    }
+  },
+)
+
+const whatsappDisplay = computed(() => {
+  const raw = user.value?.advertiser_profile?.whatsapp ?? draft.whatsapp
+  const digits = phoneDigits(String(raw ?? ''))
+  return digits ? formatPhoneBrMask(digits) : '—'
 })
 
 const profileTypeOptions = [
@@ -1349,7 +1454,7 @@ function onAdvertCityChange(e: Event) {
 watch(
   () => step.value,
   async (s) => {
-    if (s !== 2) {
+    if (s !== 3) {
       return
     }
     await loadStates()
@@ -1387,8 +1492,10 @@ watch(
 )
 
 const docLabels = [
-  { key: 'frente', label: 'Documento (frente) *', purpose: 'id_document_front', accept: 'image/*' },
   { key: 'selfie', label: 'Selfie *', purpose: 'selfie', accept: 'image/*' },
+  { key: 'frente', label: 'Documento (frente) *', purpose: 'id_document_front', accept: 'image/*' },
+  { key: 'verso', label: 'Documento (verso) *', purpose: 'id_document_back', accept: 'image/*' },
+  { key: 'video', label: 'Vídeo de verificação *', purpose: 'video', accept: 'video/*' },
 ] as const
 
 type DocItem = (typeof docLabels)[number]
@@ -1410,10 +1517,10 @@ const hoje = computed(() => {
   return d.toLocaleDateString('pt-BR')
 })
 
-/** Texto do roteiro do vídeo: usa o nome profissional já informado na etapa anterior. */
+/** Texto do roteiro do vídeo: usa o nome da etapa 1. */
 const verificationVideoSpokenName = computed(() => {
-  const n = draft.professional_name.trim()
-  return n || '[nome profissional]'
+  const n = (user.value?.name ?? form.name).trim()
+  return n || '[seu nome]'
 })
 
 function mediaIdForDoc(doc: DocItem): number | null {
@@ -2061,14 +2168,14 @@ function onWhatsappInput(e: Event) {
   }
 }
 
-function onPurgeCpfInput(e: Event) {
+function onPurgeWhatsappInput(e: Event) {
   const el = e.target as HTMLInputElement
-  purge.cpf = formatCpfMask(el.value)
+  purge.whatsapp = formatPhoneBrMask(el.value)
 }
 
 function copyFormToPurge() {
   purge.email = form.email
-  purge.cpf = form.cpf
+  purge.whatsapp = draft.whatsapp
   purgeError.value = null
   purgeSuccess.value = null
 }
@@ -2076,9 +2183,9 @@ function copyFormToPurge() {
 async function submitPurgeDraft() {
   purgeError.value = null
   purgeSuccess.value = null
-  const d = cpfDigits(purge.cpf)
-  if (!purge.email.trim() || d.length !== 11) {
-    purgeError.value = 'Preencha e-mail e CPF (11 dígitos).'
+  const wa = phoneDigits(purge.whatsapp)
+  if (!purge.email.trim() || wa.length < 10) {
+    purgeError.value = 'Preencha e-mail e WhatsApp com DDD.'
     return
   }
   if (!purge.confirm) {
@@ -2089,21 +2196,21 @@ async function submitPurgeDraft() {
   try {
     await deleteDraftRegistration({
       email: purge.email.trim(),
-      cpf: d,
+      whatsapp: wa,
       confirm: true,
     })
     purgeSuccess.value = 'Pré-cadastro removido. Você pode criar uma nova conta acima.'
     purge.email = ''
-    purge.cpf = ''
+    purge.whatsapp = ''
     purge.confirm = false
   } catch (e: unknown) {
     const err = e as { data?: { errors?: Record<string, string[]> } }
     const msg =
       err.data?.errors?.form_status?.[0] ||
       err.data?.errors?.email?.[0] ||
-      err.data?.errors?.cpf?.[0] ||
+      err.data?.errors?.whatsapp?.[0] ||
       null
-    purgeError.value = msg || 'Não foi possível excluir. Verifique e-mail e CPF.'
+    purgeError.value = msg || 'Não foi possível excluir. Verifique e-mail e WhatsApp.'
   } finally {
     purgeBusy.value = false
   }
@@ -2224,12 +2331,12 @@ async function submitEmailOtp() {
   if (code.length !== 6) {
     return
   }
-  /** Com conta já criada o painel da etapa 1 some — CPF/nome vêm do `user` (API), não do `form`. */
+  /** Com conta já criada o painel da etapa 1 some — WhatsApp/nome vêm do `user` (API), não do `form`. */
   const email = (user.value?.email ?? form.email).trim()
-  const cpf = cpfDigits(user.value?.advertiser_profile?.cpf ?? form.cpf)
+  const whatsapp = phoneDigits(user.value?.advertiser_profile?.whatsapp ?? draft.whatsapp)
   const name = (user.value?.name ?? form.name).trim()
-  if (!email || cpf.length !== 11 || !name) {
-    formError.value = 'Confirme e-mail e CPF da etapa 1 antes de validar o código.'
+  if (!email || whatsapp.length < 10 || !name) {
+    formError.value = 'Confirme e-mail e WhatsApp da etapa 1 antes de validar o código.'
     return
   }
   formError.value = null
@@ -2247,7 +2354,7 @@ async function submitEmailOtp() {
       body: {
         name,
         email,
-        cpf,
+        whatsapp,
         code,
       },
       skipAuth: true,
@@ -2272,6 +2379,10 @@ async function submitEmailOtp() {
     }
     if (pCpf && /^\d{11}$/.test(String(pCpf))) {
       form.cpf = formatCpfMask(String(pCpf))
+    }
+    const pWa = r.user.advertiser_profile?.whatsapp
+    if (pWa) {
+      draft.whatsapp = formatPhoneBrMask(String(pWa))
     }
     emailOtpDigits.value = [...emptyOtpDigits()]
     markCadastroTabActive()
@@ -2409,6 +2520,17 @@ function hydrateFromProfile(p: Record<string, unknown>) {
   if (p.whatsapp != null && String(p.whatsapp).length > 0) {
     draft.whatsapp = formatPhoneBrMask(String(p.whatsapp))
   }
+  if (p.professional_whatsapp != null && String(p.professional_whatsapp).length > 0) {
+    draft.professional_whatsapp = formatPhoneBrMask(String(p.professional_whatsapp))
+    const personal = phoneDigits(draft.whatsapp)
+    const ad = phoneDigits(draft.professional_whatsapp)
+    useSameAdWhatsapp.value = personal.length >= 10 && personal === ad
+  } else {
+    useSameAdWhatsapp.value = null
+  }
+  if (p.cpf != null && String(p.cpf).replace(/\D/g, '').length === 11) {
+    form.cpf = formatCpfMask(String(p.cpf))
+  }
   const ej = p.address_json
   if (ej && typeof ej === 'object') {
     const o = ej as Record<string, string>
@@ -2510,13 +2632,18 @@ async function loadProfileIntoWizard(): Promise<boolean> {
 }
 
 function bodyFromDraft() {
+  if (useSameAdWhatsapp.value === true) {
+    draft.professional_whatsapp = draft.whatsapp
+  }
   const zipDigits = draft.address.zipcode.replace(/\D/g, '').slice(0, 8)
   const waDigits = phoneDigits(draft.whatsapp)
   return {
     mother_name: draft.mother_name || null,
     birth_date: draft.birth_date || null,
     contact_email: draft.contact_email || null,
+    cpf: cpfDigits(form.cpf) || null,
     whatsapp: waDigits || null,
+    professional_whatsapp: phoneDigits(draft.professional_whatsapp) || null,
     professional_name: draft.professional_name || null,
     profile_type: draft.profile_type || null,
     service_type: draft.service_type || null,
@@ -2578,8 +2705,8 @@ function buildStep1Error(): string | null {
   if (!form.email.trim()) {
     missing.push('e-mail')
   }
-  if (cpfDigits(form.cpf).length !== 11) {
-    missing.push('CPF (11 dígitos)')
+  if (phoneDigits(draft.whatsapp).length < 10) {
+    missing.push('WhatsApp com DDD')
   }
   if (missing.length > 0) {
     return `Preencha: ${missing.join(', ')}.`
@@ -2640,6 +2767,9 @@ function validateStep2DraftOnly(): string | null {
   if (!isAtLeast18YearsOld(draft.birth_date)) {
     return 'É necessário ter pelo menos 18 anos para continuar o cadastro.'
   }
+  if (cpfDigits(form.cpf).length !== 11) {
+    return 'Informe um CPF válido com 11 dígitos.'
+  }
   if (!draft.contact_email.trim()) {
     return 'Informe o e-mail de contato.'
   }
@@ -2659,8 +2789,36 @@ function validateStepForNext(s: number): string | null {
     if (registrationVerificationConfig.value.require_whatsapp_otp && !registrationWhatsappVerified.value) {
       return 'Envie e confirme o código de verificação do WhatsApp para este número.'
     }
+    if (!draft.selfie_media_id) {
+      return 'Envie a selfie.'
+    }
+    if (!draft.id_document_front_media_id) {
+      return 'Envie a frente do documento.'
+    }
+    if (!draft.id_document_back_media_id) {
+      return 'Envie o verso do documento.'
+    }
+    if (!draft.video_media_id) {
+      return 'Envie o vídeo de verificação.'
+    }
+    return null
+  }
+  if (s === 3) {
     if (!draft.professional_name.trim()) {
       return 'Informe o nome profissional.'
+    }
+    if (useSameAdWhatsapp.value === null) {
+      return 'Indique se o WhatsApp do anúncio é o mesmo da etapa pessoal.'
+    }
+    if (useSameAdWhatsapp.value === true) {
+      draft.professional_whatsapp = draft.whatsapp
+    }
+    const adWa = phoneDigits(draft.professional_whatsapp)
+    if (adWa.length < 10 || adWa.length > 13) {
+      return 'Informe um WhatsApp válido para o anúncio (DDD + número).'
+    }
+    if (useSameAdWhatsapp.value === false && adWa === phoneDigits(draft.whatsapp)) {
+      return 'Informe um WhatsApp diferente do número pessoal, ou escolha usar o mesmo.'
     }
     if (!draft.profile_type) {
       return 'Selecione o tipo de perfil.'
@@ -2679,12 +2837,6 @@ function validateStepForNext(s: number): string | null {
     }
     if (draft.has_venue === true && !draft.neighborhood.trim()) {
       return 'Informe o bairro do anúncio.'
-    }
-    return null
-  }
-  if (s === 3) {
-    if (!draft.id_document_front_media_id || !draft.selfie_media_id) {
-      return 'Envie a frente do documento e a selfie.'
     }
     if (!draft.portal_avatar_media_id) {
       return 'Envie a foto do perfil (rosto visível).'
@@ -2719,7 +2871,7 @@ async function next() {
       formError.value = err
       return
     }
-    const d = cpfDigits(form.cpf)
+    const wa = phoneDigits(draft.whatsapp)
     busy.value = true
     await nextTick()
     try {
@@ -2729,7 +2881,7 @@ async function next() {
         message: string | null
       }>('/v1/register/lookup', {
         method: 'POST',
-        body: { email: form.email.trim(), cpf: d },
+        body: { email: form.email.trim(), whatsapp: wa },
         skipAuth: true,
       })
 
@@ -2740,12 +2892,12 @@ async function next() {
             await resumeDraftRegistration({
               name: form.name.trim(),
               email: form.email.trim(),
-              cpf: d,
+              whatsapp: wa,
             })
           } catch (e: unknown) {
             formError.value =
-              extractLaravelErrorMessage(e, ['name', 'cpf', 'email']) ??
-              'Não foi possível retomar o cadastro. Verifique nome, e-mail e CPF.'
+              extractLaravelErrorMessage(e, ['name', 'whatsapp', 'email']) ??
+              'Não foi possível retomar o cadastro. Verifique nome, e-mail e WhatsApp.'
             return
           }
           draft.contact_email = form.email.trim()
@@ -2776,7 +2928,7 @@ async function next() {
       await register({
         name: form.name.trim(),
         email: form.email.trim(),
-        cpf: d,
+        whatsapp: wa,
       })
       generateLead({ method: 'signup' })
       await fetchMe()
@@ -2794,9 +2946,9 @@ async function next() {
       await sendRegistrationEmailCode(false, { manageBusy: false })
     } catch (e: unknown) {
       const err = e as { data?: { errors?: Record<string, string[]> } }
-      const msg = err.data?.errors?.cpf?.[0] ?? err.data?.errors?.email?.[0]
+      const msg = err.data?.errors?.whatsapp?.[0] ?? err.data?.errors?.email?.[0]
       formError.value =
-        msg ?? 'Não foi possível criar a conta. E-mail ou CPF podem já estar em uso.'
+        msg ?? 'Não foi possível criar a conta. E-mail ou WhatsApp podem já estar em uso.'
     } finally {
       busy.value = false
     }
@@ -2844,6 +2996,11 @@ async function next() {
         await nextTick()
         try {
           await persistStep({ manageBusy: false })
+        } catch (e: unknown) {
+          formError.value =
+            extractLaravelErrorMessage(e, ['cpf', 'whatsapp']) ??
+            'Não foi possível salvar os dados pessoais. Confira o CPF.'
+          return
         } finally {
           busy.value = false
         }
@@ -2871,7 +3028,7 @@ async function next() {
     step.value += 1
   } catch (e: unknown) {
     formError.value =
-      extractLaravelErrorMessage(e, ['current_step', 'form_status']) ??
+      extractLaravelErrorMessage(e, ['current_step', 'form_status', 'cpf']) ??
       'Não foi possível salvar o progresso. Tente novamente.'
   } finally {
     busy.value = false

@@ -66,7 +66,7 @@ export function useAuth() {
     }
   }
 
-  async function register(payload: { name: string; email: string; cpf: string }) {
+  async function register(payload: { name: string; email: string; whatsapp: string }) {
     loading.value = true
     error.value = null
     try {
@@ -79,15 +79,15 @@ export function useAuth() {
       user.value = res.user
       return res
     } catch (e: unknown) {
-      error.value = laravelErrorMessage(e, ['email', 'cpf', 'name']) ?? 'Erro ao cadastrar.'
+      error.value = laravelErrorMessage(e, ['email', 'whatsapp', 'name']) ?? 'Erro ao cadastrar.'
       throw e
     } finally {
       loading.value = false
     }
   }
 
-  /** Retoma pré-cadastro em rascunho (mesmo nome, e-mail e CPF) quando a senha ainda não foi definida. */
-  async function resumeDraftRegistration(payload: { name: string; email: string; cpf: string }) {
+  /** Retoma pré-cadastro em rascunho (mesmo nome, e-mail e WhatsApp) quando a senha ainda não foi definida. */
+  async function resumeDraftRegistration(payload: { name: string; email: string; whatsapp: string }) {
     loading.value = true
     error.value = null
     try {
@@ -100,7 +100,7 @@ export function useAuth() {
       user.value = res.user
       return res
     } catch (e: unknown) {
-      error.value = laravelErrorMessage(e, ['email', 'cpf', 'name']) ?? 'Não foi possível retomar o cadastro.'
+      error.value = laravelErrorMessage(e, ['email', 'whatsapp', 'name']) ?? 'Não foi possível retomar o cadastro.'
       throw e
     } finally {
       loading.value = false
@@ -181,14 +181,14 @@ export function useAuth() {
     await fetchMe()
   }
 
-  /** Remove pré-cadastro em rascunho (público). Libera e-mail e CPF para novo cadastro. */
-  async function deleteDraftRegistration(payload: { email: string; cpf: string; confirm: boolean }) {
+  /** Remove pré-cadastro em rascunho (público). Libera e-mail e WhatsApp para novo cadastro. */
+  async function deleteDraftRegistration(payload: { email: string; whatsapp: string; confirm: boolean }) {
     try {
       await request<{ message: string }>('/v1/register/draft/delete', {
         method: 'POST',
         body: {
           email: payload.email.trim(),
-          cpf: payload.cpf,
+          whatsapp: payload.whatsapp,
           confirm: payload.confirm,
         },
         skipAuth: true,

@@ -52,6 +52,12 @@ export default defineNuxtConfig({
   },
   modules: ['@nuxtjs/tailwindcss'],
   css: ['sweetalert2/dist/sweetalert2.min.css', '~/assets/css/main.css'],
+  vite: {
+    optimizeDeps: {
+      /** Evita 504 no chunk pré-bundled do Cropper (o recorte some e o botão fica desativado). */
+      exclude: ['cropperjs'],
+    },
+  },
   runtimeConfig: {
     public: {
       apiBase:

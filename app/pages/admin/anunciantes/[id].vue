@@ -227,8 +227,8 @@
             <input v-model="form.professional_name" type="text" class="input mt-1" />
           </label>
           <label class="block text-sm">
-            <span class="text-zinc-500">WhatsApp (só números)</span>
-            <input v-model="form.whatsapp" type="text" class="input mt-1" />
+            <span class="text-zinc-500">WhatsApp do anúncio (só números)</span>
+            <input v-model="form.professional_whatsapp" type="text" class="input mt-1" />
           </label>
           <label class="sm:col-span-2 block text-sm">
             <span class="text-zinc-500">Bio</span>
@@ -669,6 +669,7 @@ type ProfileDetail = {
   bio: string | null
   portal_text_pending?: { has_pending: boolean } | null
   whatsapp: string | null
+  professional_whatsapp?: string | null
   profile_type?: string | null
   service_type?: string | null
   plan_type?: string | null
@@ -746,6 +747,7 @@ const form = reactive({
   professional_name: '',
   bio: '',
   whatsapp: '',
+  professional_whatsapp: '',
   user_paused_listing: false,
 })
 
@@ -960,6 +962,7 @@ function applyDetailToForm(p: ProfileDetail) {
   form.professional_name = p.professional_name || ''
   form.bio = p.bio || ''
   form.whatsapp = p.whatsapp || ''
+  form.professional_whatsapp = p.professional_whatsapp || p.whatsapp || ''
   form.user_paused_listing = p.user_paused_listing
 }
 
@@ -1017,7 +1020,7 @@ async function saveDetails() {
       body: {
         professional_name: form.professional_name || null,
         bio: form.bio || null,
-        whatsapp: form.whatsapp || null,
+        professional_whatsapp: form.professional_whatsapp || null,
         user_paused_listing: form.user_paused_listing,
       },
     })

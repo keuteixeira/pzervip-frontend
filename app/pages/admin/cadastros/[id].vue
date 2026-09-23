@@ -70,8 +70,12 @@
             <input v-model="edit.account_name" type="text" class="admin-input" maxlength="255" />
           </label>
           <label class="block text-sm text-zinc-300">
-            <span class="mb-1 block text-zinc-500">WhatsApp</span>
+            <span class="mb-1 block text-zinc-500">WhatsApp pessoal</span>
             <input v-model="edit.whatsapp" type="text" class="admin-input" />
+          </label>
+          <label class="block text-sm text-zinc-300">
+            <span class="mb-1 block text-zinc-500">WhatsApp do anúncio</span>
+            <input v-model="edit.professional_whatsapp" type="text" class="admin-input" />
           </label>
           <label class="block text-sm text-zinc-300">
             <span class="mb-1 block text-zinc-500">E-mail de contato</span>
@@ -518,6 +522,7 @@ type ProfileDetail = {
   form_status: string
   bio: string | null
   whatsapp?: string | null
+  professional_whatsapp?: string | null
   neighborhood?: string | null
   state_id?: number | null
   city_id?: number | null
@@ -770,6 +775,7 @@ const edit = reactive({
   professional_name: '',
   bio: '',
   whatsapp: '',
+  professional_whatsapp: '',
   contact_email: '',
   mother_name: '',
   birth_date: '',
@@ -819,6 +825,7 @@ function syncFormFromDetail() {
   edit.professional_name = d.professional_name ?? ''
   edit.bio = d.bio ?? ''
   edit.whatsapp = d.whatsapp ?? ''
+  edit.professional_whatsapp = d.professional_whatsapp ?? ''
   edit.neighborhood = d.neighborhood ?? ''
   edit.state_id = d.state_id ? String(d.state_id) : ''
   edit.city_id = d.city_id ? String(d.city_id) : ''
@@ -915,6 +922,7 @@ async function saveDetails() {
         professional_name: edit.professional_name.trim() || null,
         bio: edit.bio.trim() || null,
         whatsapp: edit.whatsapp.trim() || null,
+        professional_whatsapp: edit.professional_whatsapp.trim() || null,
         contact_email: edit.contact_email.trim() || null,
         mother_name: edit.mother_name.trim() || null,
         birth_date: edit.birth_date.trim() || null,

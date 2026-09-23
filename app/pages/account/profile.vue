@@ -1383,8 +1383,10 @@ type Profile = {
   city_change_locked_until?: string | null
   portal_field_cooldown_hours?: number
   social_links?: SocialLinksPayload | null
-  /** Dígitos (ex.: 5511999999999) — número público do anúncio */
+  /** Dígitos (ex.: 5511999999999). Número pessoal do cadastro. */
   whatsapp?: string | null
+  /** Número publicado no anúncio */
+  professional_whatsapp?: string | null
   address_json?: {
     zipcode?: string | null
     street?: string | null
@@ -1461,7 +1463,7 @@ const waResendSecondsLeft = ref(0)
 let waResendInterval: ReturnType<typeof setInterval> | null = null
 
 const profileWhatsappDisplay = computed(() => {
-  const digits = String(profile.value?.whatsapp ?? '').replace(/\D/g, '')
+  const digits = String(profile.value?.professional_whatsapp ?? profile.value?.whatsapp ?? '').replace(/\D/g, '')
   if (digits.length < 10) {
     return '—'
   }
